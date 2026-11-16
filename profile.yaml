@@ -1,0 +1,25 @@
+# The ONLY source of truth for proposals. Gemini may claim nothing that is not here.
+name: Komronbek Ochilov
+location: Tashkent, Uzbekistan (UTC+5)
+languages: [Uzbek, Russian, English]
+title: Full-stack developer — Python/Django, Flutter, AI automation
+bio: ""
+experience_since: 2024
+products:
+  - SalomCRM (salomcrm.uz)
+  - Maskan (mas-kan.uz)
+  - Sith CRM (sithcrm.uz)
+skills:
+  - Python
+  - Django
+  - FastAPI
+  - PostgreSQL
+  - Flutter
+  - React
+  - Telegram bots
+  - n8n
+  - OpenAI/Gemini APIs
+  - web scraping
+  - REST APIs
+portfolio_links: []        # fill in only real links
+min_rate_usd_per_hour: 10

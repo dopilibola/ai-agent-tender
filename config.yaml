@@ -1,0 +1,227 @@
+timezone: Asia/Tashkent
+
+keywords:
+  - Python
+  - Django
+  - FastAPI
+  - Flutter
+  - Telegram bot
+  - n8n
+  - automation
+  - AI/LLM
+  - scraping
+  - CRM
+  - REST API
+  - PostgreSQL
+  - React
+
+filters:
+  budget_min_usd: 10
+  budget_max_usd: 2000
+  max_job_age_hours: 72
+  max_proposals: 25
+  languages: [en, ru, uz]
+
+min_fit_score: 70
+max_proposals_per_day: 10          # kuniga ko'pi bilan nechta taklif kartasi
+max_scores_per_cycle: 15           # bir qidiruvda nechta ishni Gemini baholaydi
+max_llm_calls_per_day: 150         # frilans uchun kunlik Gemini so'rovlari limiti
+quota_warn_threshold: 2          # warn in Telegram when <= this many proposals are left
+tracker_interval_min: 5
+daily_summary_time: "21:00"
+
+platforms:
+  freelancer_com:
+    enabled: true                # ochiq API: qidiruv tokensiz ishlaydi; yuborish hozircha qo'lda
+    dry_run: true                # dry-run = do everything except the final Submit
+    poll_interval_min: 10
+    daily_action_cap: 30
+    monthly_proposal_quota: 10   # free plan bids; adjust to your membership
+  truelancer:
+    enabled: true                # brauzer orqali (Playwright), ochiq sahifalar; login ixtiyoriy
+    dry_run: true
+    poll_interval_min: 60        # 4 sahifa × har soat ≈ 96 sahifa/kun
+    daily_action_cap: 120
+    min_action_delay_s: 20
+    max_action_delay_s: 40
+    monthly_proposal_quota: 10
+    max_project_budget_usd: 100  # free plan limit
+  fl_ru:
+    enabled: true                # ochiq RSS (Программирование); taklif qo'lda joylanadi
+    dry_run: true
+    poll_interval_min: 15
+  kwork:
+    enabled: true                # ochiq "Биржа" sahifasi (Разработка и IT), faqat 1-sahifa
+    dry_run: true
+    poll_interval_min: 15
+  upwork:                        # ochiq API/RSS yo'q (2024 dan yopilgan) — faqat email kuzatuvi orqali
+    enabled: false
+    dry_run: true
+    poll_interval_min: 10
+    daily_action_cap: 20
+    monthly_proposal_quota: null # tracked as Connects balance
+  fiverr:
+    enabled: false
+    dry_run: true
+    poll_interval_min: 15
+
+gemini:
+  # Change these to whichever current models you want — nothing is hardcoded in code.
+  # 16.11.2026: 2.5-* models are closed to new keys; 3.7/3.8-flash were overloaded (503/504).
+  # 17.11.2026 (new key): gemini-3.8-flash and 3.6-flash both answer in ~5 s.
+  fast_model: gemini-3.8-flash   # scoring, summaries, tender analysis
+  strong_model: gemini-3.8-flash # proposals, replies, plans, code
+  temperature: 0.4
+  max_retries: 3                 # spec: 3 urinish, keyin "baholanmagan"
+  timeout_s: 120
+  # USD per 1M tokens, used only for cost logging. Fill in from ai.google.dev/pricing;
+  # models missing here are logged with cost 0.
+  prices: {}
+
+# 📧 Upwork / Fiverr xabarnomalari Gmail orqali (faqat o'qiydi; .env: IMAP_USER, IMAP_APP_PASSWORD)
+email_watch:
+  enabled: true
+  senders: [upwork.com, fiverr.com]
+  poll_interval_min: 5
+  lookback_days: 3
+  max_emails_per_poll: 20
+
+worker:
+  max_fix_iterations: 5
+
+google_sheets_id: null
+
+# ── 🏛 Davlat tenderlari (faqat qidiradi, baholaydi, xabar beradi; hech narsa topshirmaydi) ──
+tenders:
+  enabled: true
+  poll_interval_min: 30
+  request_delay_s: 2.5            # saytga so'rovlar orasidagi pauza (>= 2)
+  page_size: 200
+  scan_descriptions: true         # nomida kalit so'z bo'lmagan yangi lotlarning tavsifini ham tekshirish
+  max_detail_fetches_per_run: 40  # bir tekshiruvda ko'pi bilan nechta lot kartasi ochiladi
+  download_files: true
+  max_file_mb: 25
+  daily_report_time: "09:00"
+  questions_deadline_days_before: 5   # savol muddati API'da yo'q: topshirishdan N kun oldin deb taxmin
+  deposit_reminder_workdays: 3
+  deadline_reminders_hours: [24, 3]
+  sources:
+    etender: {enabled: true}
+    xarid: {enabled: true}        # xarid.uzex.uz — taklif so'rovi (ochiq API)
+    # xt-xarid.uz: robots.txt /api/ ni taqiqlaydi va sayt so'rovlarga javob bermadi (17.11.2026) — o'chiq
+
+  analysis:                       # 🤖 Gemini tahlili (3-bosqich)
+    enabled: true
+    max_doc_tokens: 30000         # bitta lot uchun TZ matni chegarasi (~4 belgi = 1 token)
+    max_requests_per_day: 100     # kuniga ko'pi bilan nechta Gemini so'rovi
+    max_scan_pdf_mb: 50           # skaner PDF Gemini'ga fayl sifatida yuboriladi (shu hajmgacha)
+    max_scan_pdf_pages: 150
+    backfill_per_run: 10          # oldin xabar qilingan, tahlilsiz lotlar — har tekshiruvda nechta
+
+  # Qoidalar: har bir so'z SO'Z BOSHIDAN qidiriladi ("sayt" → "saytini" ham topiladi, "Muzrabot" emas).
+  # So'z oxirida "$" bo'lsa — faqat butun so'z ("bot$" → "bot", lekin "botanika" emas).
+  # Tire va bo'shliq bir xil hisoblanadi. Katta-kichik harf farqi yo'q.
+  keywords:
+    # Bittasi yetarli:
+    strong:
+      - dasturiy ta'minot
+      - дастурий таъминот
+      - программн обеспечен
+      - axborot tizim
+      - ахборот тизим
+      - информационн систем
+      - информационн технолог
+      - axborot texnologiya
+      - ахборот технология
+      - veb sayt
+      - web sayt
+      - веб сайт
+      - sayt
+      - сайт
+      - mobil ilova
+      - мобил илова
+      - мобильн приложен
+      - crm$
+      - erp$
+      - 1c$
+      - 1с$
+      - raqamlashtirish
+      - рақамлаштириш
+      - цифровизац
+      - ma'lumotlar baza
+      - маълумотлар база
+      - баз данных
+      - sun'iy intellekt
+      - сунъий интеллект
+      - искусственн интеллект
+      - texnik topshiriq yozish
+      - техник топшириқ ёзиш
+      - tz yozish
+      - тз ёзиш
+      - разработк программ
+      - разработк сайт
+      - разработк информационн
+    # Kamida 2 tasi kerak (yoki 1 strong bilan birga — u holda baribir o'tadi):
+    weak:
+      - portal
+      - портал
+      - platforma
+      - платформ
+      - avtomatlashtir
+      - автоматлаштир
+      - автоматизац
+      - elektron
+      - электрон
+      - integratsiya
+      - интеграц
+      - bot$
+      - бот$
+      - разработк
+      - ishlab chiqish
+      - ишлаб чиқиш
+      - monitoring
+      - мониторинг
+      - tizim
+      - тизим
+      - систем
+
+  exclude:
+    # Faqat uskuna / mebel / litsenziya qayta sotish. "override" so'zi bo'lsa istisno qo'llanmaydi.
+    terms:
+      - kompyuter
+      - компьютер
+      - noutbuk
+      - ноутбук
+      - printer
+      - принтер
+      - kartrij
+      - картридж
+      - mebel
+      - мебель
+      - монитор$
+      - мониторов$
+      - jihoz
+      - жиҳоз
+      - оборудован
+      - uskuna
+      - ускуна
+      - litsenziya
+      - лицензи
+      - antivirus
+      - антивирус
+      - orgtexnika
+      - оргтехник
+      - mezzanin
+      - мезонин
+    override:
+      - ishlab chiqish
+      - ишлаб чиқиш
+      - разработк
+      - yaratish
+      - яратиш
+      - создани
+      - joriy etish
+      - жорий этиш
+      - внедрен
+      - tz yozish
+      - техник топшириқ

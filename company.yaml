@@ -1,0 +1,9 @@
+# Gemini'ga kontekst sifatida beriladi (3-bosqich). Faqat haqiqiy ma'lumot yozing.
+nomi: "\"QUTLIYA\" MChJ"
+yonalish: dasturiy ta'minot, veb-portallar, mobil ilovalar, CRM/ERP
+royxatdan_otgan: 2026-07-03        # yosh kompaniya
+it_park_rezidenti: true            # QQS bo'yicha buxgalter bilan tasdiqlansin
+yakunlangan_shartnomalar: 0        # kompaniya nomidan tasdiqlangan tajriba yo'q
+jamoa: 2 dasturchi + Claude (AI) bilan ishlaydi
+zakalat_limiti_usd: 1000           # bir vaqtning o'zida jami
+tillar: [uz, ru]

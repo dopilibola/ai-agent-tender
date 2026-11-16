@@ -1,0 +1,16 @@
+.env
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+data/
+browser_profile/
+workspaces/*
+!workspaces/.gitkeep
+screenshots/
+*.log
+.DS_Store
+*.db
+*.db-wal
+*.db-shm

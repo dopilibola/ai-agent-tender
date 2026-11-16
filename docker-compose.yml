@@ -1,0 +1,18 @@
+services:
+  bot:
+    build: .
+    image: ai-agent-tender:latest
+    container_name: ai-agent-tender
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      TZ: Asia/Tashkent
+    volumes:
+      - ./data:/app/data                         # SQLite DB, TZ files, browser profile
+      - ./config.yaml:/app/config.yaml:ro         # edit, then: docker compose restart
+      - ./profile.yaml:/app/profile.yaml:ro
+      - ./company.yaml:/app/company.yaml:ro
+    shm_size: "512mb"                            # Chromium (Truelancer) needs more than the 64 MB default
+    logging:
+      driver: json-file
+      options: {max-size: "20m", max-file: "5"}
