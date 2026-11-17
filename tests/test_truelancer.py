@@ -53,3 +53,13 @@ async def test_each_platform_keeps_its_own_interval(settings, sessionmaker):
     assert calls == {"fast": 7, "slow": 2}
     await svc.run_cycle(t0 + timedelta(minutes=61), force=True)
     assert calls == {"fast": 8, "slow": 3}
+
+
+def test_truelancer_skipped_without_browser(settings, monkeypatch):
+    """On Android/Termux Playwright is not installed: the connector must be skipped, not crash."""
+    import app.connectors as connectors
+
+    monkeypatch.setattr(connectors, "browser_available", lambda: False)
+    assert "truelancer" not in connectors.build_connectors(settings)
+    monkeypatch.setattr(connectors, "browser_available", lambda: True)
+    assert "truelancer" in connectors.build_connectors(settings)

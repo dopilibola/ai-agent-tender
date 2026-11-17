@@ -355,6 +355,9 @@ class FreelanceService:
         lines = ["🩺 <b>Frilans agenti holati</b>"]
         if not self.connectors:
             lines.append("• Hech qaysi platforma yoqilmagan (config.yaml → platforms)")
+        tl = self.cfg.platforms.get("truelancer")
+        if tl and tl.enabled and "truelancer" not in self.connectors:
+            lines.append("• Truelancer: ⏸ bu qurilmada brauzer (Playwright) yo'q — masalan, telefonda o'chadi")
         if "email" not in self.connectors:
             lines.append("• Gmail (Upwork, Fiverr): ⏸ sozlanmagan — .env ga IMAP_USER va IMAP_APP_PASSWORD yozing")
         for name, conn in self.connectors.items():

@@ -1,7 +1,16 @@
 from __future__ import annotations
 
+import importlib.util
+import logging
+
 from app.config import Settings
 from app.connectors.base import Connector
+
+log = logging.getLogger(__name__)
+
+
+def browser_available() -> bool:
+    return importlib.util.find_spec("playwright") is not None
 
 
 def email_configured(settings: Settings) -> bool:
@@ -30,7 +39,9 @@ def build_connectors(settings: Settings, *, gemini=None, sessionmaker=None, noti
         out["fl_ru"] = FlRuConnector()
     if on("kwork"):
         out["kwork"] = KworkConnector()
-    if on("truelancer"):
+    if on("truelancer") and not browser_available():
+        log.warning("truelancer.disabled_no_browser")  # e.g. Android/Termux: no Chromium
+    elif on("truelancer"):
         from app.connectors.truelancer import TruelancerConnector
 
         tl = platforms["truelancer"]

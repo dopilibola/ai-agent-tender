@@ -77,6 +77,19 @@ Mavjud bazani ko'chirish (ixtiyoriy): kompyuterdagi `data/` papkasini serverdagi
 
 ---
 
+## 2a. 📱 Telefonni server qilish (Samsung / Android)
+
+Docker'siz, **Termux** orqali — to'liq qo'llanma: [`docs/telefon.md`](docs/telefon.md).
+Qisqasi: F-Droid'dan Termux + Termux:Boot, Samsung batareya cheklovini o'chirish, keyin:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/dopilibola/ai-agent-tender/main/scripts/termux-setup.sh | bash
+```
+
+Telefonda Truelancer ishlamaydi (Chromium yo'q), qolgan hamma narsa ishlaydi.
+
+---
+
 ## 3. Docker'siz ishga tushirish (lokal)
 
 ```bash

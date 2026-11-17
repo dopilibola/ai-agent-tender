@@ -15,7 +15,7 @@ WORKDIR /app
 
 COPY pyproject.toml ./
 COPY app ./app
-RUN pip install --upgrade pip && pip install -e . \
+RUN pip install --upgrade pip && pip install -e ".[browser]" \
  && python -m playwright install --with-deps chromium \
  && rm -rf /var/lib/apt/lists/*
 
