@@ -90,3 +90,23 @@ tail -n 50 ~/ai-agent-tender/data/bot.log             # oxirgi loglar
 | `pydantic-core` o'rnatilmayapti | `pkg install rust` qayta, keyin `export ANDROID_API_LEVEL=$(getprop ro.build.version.sdk)` va `pip install -e .` |
 | `Conflict: terminated by other getUpdates` | Bot boshqa joyda ham ishlayapti (kompyuter) — o'shani to'xtating |
 | Truelancer ishlamaydi | Kutilgan holat — telefonda brauzer yo'q |
+
+---
+
+## 🖥 Telefonni VPS'dek ishlatish (SSH + web + tunnel)
+
+Bot o'rnatilgandan keyin (yoki o'rniga — skript botni ham o'rnatadi) Termux'da bir marta:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/dopilibola/ai-agent-tender/main/scripts/termux-vps.sh | bash
+# Ubuntu (proot) ham kerak bo'lsa:
+curl -fsSL https://raw.githubusercontent.com/dopilibola/ai-agent-tender/main/scripts/termux-vps.sh | INSTALL_UBUNTU=1 bash
+```
+
+Natija:
+- **SSH**: Mac'dan `ssh -p 8022 <termux_user>@<Tailscale IP>` — faqat kalit bilan, parol o'chiq.
+- **Web**: bot bilan birga `http://localhost:8080/tender/lots` (lotlar jadvali, `?all=1` — hammasi, `/tender/lots.json`).
+  `.env` da `WEB_TOKEN=...` bo'lsa, sahifa faqat `?key=<WEB_TOKEN>` bilan ochiladi.
+- **Tunnel**: `cloudflared` ochiq https link beradi → `grep trycloudflare ~/ai-agent-tender/data/tunnel.log`.
+  Link har qayta ishga tushishda o'zgaradi.
+- Telefon qayta yoqilsa Termux:Boot hammasini (sshd → bot → tunnel) o'zi ko'taradi.

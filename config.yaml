@@ -225,3 +225,10 @@ tenders:
       - внедрен
       - tz yozish
       - техник топшириқ
+
+# 🌐 /tender/lots web sahifasi (bot bilan bitta jarayonda; telefon = server).
+# Tunnel: cloudflared tunnel --url http://localhost:8080   Himoya: .env'da WEB_TOKEN=...
+web:
+  enabled: true
+  host: 0.0.0.0
+  port: 8080

@@ -30,6 +30,7 @@ from app.tenders.bot import router as tenders_router
 from app.tenders.fx import UsdRate
 from app.tenders.service import TenderService
 from app.tenders.sources import build_sources
+from app.web.server import start_web
 
 log = logging.getLogger("freelancehunter")
 
@@ -149,6 +150,7 @@ async def main() -> None:
         scheduler.add_job(tender_service.send_daily_report, "cron", hour=hh, minute=mm,
                           id="tenders_daily_report", max_instances=1, coalesce=True)
     scheduler.start()
+    web_runner = await start_web(settings, sessionmaker)
 
     try:
         await bot.set_my_commands(COMMANDS)
@@ -161,6 +163,8 @@ async def main() -> None:
         await dp.start_polling(bot, allowed_updates=dp.resolve_used_update_types())
     finally:
         scheduler.shutdown(wait=False)
+        if web_runner is not None:
+            await web_runner.cleanup()
         await tender_service.aclose()
         await freelance_service.aclose()
         await bot.session.close()

@@ -51,6 +51,9 @@ class Secrets(BaseSettings):
 
     google_sheets_credentials_file: Path | None = None
 
+    # 🌐 /tender/lots web sahifasi: o'rnatilsa, sahifa faqat ?key=<WEB_TOKEN> bilan ochiladi
+    web_token: SecretStr | None = None
+
 
 # ── config.yaml ─────────────────────────────────────────────────────────────
 class ModelPrice(BaseModel):
@@ -163,6 +166,14 @@ class TendersConfig(BaseModel):
         return v
 
 
+class WebConfig(BaseModel):
+    """🌐 Read-only /tender/lots page served from the same process (phone = server)."""
+
+    enabled: bool = False
+    host: str = "0.0.0.0"
+    port: int = Field(8080, ge=1, le=65535)
+
+
 class AppConfig(BaseModel):
     timezone: str = "Asia/Tashkent"
     keywords: list[str] = []
@@ -179,6 +190,7 @@ class AppConfig(BaseModel):
     worker: WorkerConfig = WorkerConfig()
     email_watch: EmailWatchConfig = EmailWatchConfig()
     tenders: TendersConfig = TendersConfig()
+    web: WebConfig = WebConfig()
     google_sheets_id: str | None = None
 
     @field_validator("timezone")
