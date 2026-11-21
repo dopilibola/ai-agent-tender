@@ -22,6 +22,7 @@ from app.config import Settings
 from app.core.states import JobStatus
 from app.db.models import Job, Lot, LotStatus, SentMessage
 from app.pipeline.service import FreelanceService
+from app.tenders.filters import is_it_lot
 from app.tenders.service import ACTIVE, TenderService
 from app.tenders.timeutil import TASHKENT, as_utc, now_utc
 from app.web import tables, views, xlsx
@@ -177,6 +178,9 @@ async def _query_lots(request: web.Request) -> tuple[list[Lot], dict]:
         order = Lot.deadline_at.asc() if status != "all" else Lot.id.desc()
         lots = list((await s.scalars(stmt.order_by(order).limit(MAX_ROWS))).all())
         open_all = (await s.scalars(select(Lot).where(Lot.status.in_(ACTIVE)))).all()
+    kf = d.tenders.filter if d.tenders else None
+    lots = [lot for lot in lots if is_it_lot(lot, kf)]  # only IT lots on the site
+    open_all = [lot for lot in open_all if is_it_lot(lot, kf)]
     if status != "all":
         lots = [lot for lot in lots if not lot.deadline_at or as_utc(lot.deadline_at) > now]
     lots = tables.sort_rows(lots, tables.LOT_COLS, sort, direction)

@@ -234,3 +234,15 @@ async def test_bulk_lot_actions(client, sessionmaker):
     r = await client.post("/tender/lots/bulk", data={"csrf": "bad", "action": "bid"}, allow_redirects=False)
     assert r.status == 403
     assert (await client.get("/tender/static/app.js")).status == 200
+
+
+async def test_non_it_lots_hidden(client, sessionmaker):
+    async with sessionmaker() as s:
+        s.add(Lot(source="etender", external_id="900001", url="https://etender.uzex.uz/lot/900001",
+                  title="Токарно-винторезный станок", status=LotStatus.NOTIFIED, verdict="YO'Q",
+                  deadline_at=datetime.now(UTC) + timedelta(days=5), analysis={"is_it_lot": False}))
+        await s.commit()
+    await login(client)
+    html = await (await client.get("/tender/lots")).text()
+    assert "525968" in html and "900001" not in html
+    assert "900001" not in await (await client.get("/tender/lots?s=all")).text()

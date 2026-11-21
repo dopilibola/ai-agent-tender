@@ -20,7 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.config import Settings
 from app.db.models import KV, Lot, LotStatus, SeenLot
 from app.tenders import cards
-from app.tenders.filters import KeywordFilter, MatchResult
+from app.tenders.filters import KeywordFilter, MatchResult, is_it_lot
 from app.tenders.http import FileTooLarge
 from app.tenders.schemas import LotFile, LotRecord, LotSummary
 from app.tenders.sources.base import TenderSource
@@ -503,7 +503,8 @@ class TenderService:
             lots = (
                 await s.scalars(select(Lot).where(Lot.status.in_(statuses)).order_by(Lot.deadline_at))
             ).all()
-        return [lot for lot in lots if not lot.deadline_at or as_utc(lot.deadline_at) > now]
+        return [lot for lot in lots
+                if (not lot.deadline_at or as_utc(lot.deadline_at) > now) and is_it_lot(lot, self.filter)]
 
     async def lot_text(self, ref: str | int, *, full: bool = True) -> tuple[Lot | None, str]:
         async with self.sessionmaker() as s:

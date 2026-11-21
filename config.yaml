@@ -161,29 +161,19 @@ tenders:
       - разработк программ
       - разработк сайт
       - разработк информационн
-    # Kamida 2 tasi kerak (yoki 1 strong bilan birga — u holda baribir o'tadi):
+    # Kamida 2 xil tushuncha kerak (yoki 1 strong bilan birga). "|" — bitta tushunchaning yozilishlari
+    # (lotin / kirill / rus): "tizim|тизим|систем" bitta so'z hisoblanadi, shuning uchun lotda
+    # "tizim" ham, "тизим" ham bo'lsa bu 2 emas, 1 ta. "elektron" olib tashlandi — deyarli har bir
+    # lot tavsifida bor ("elektron do'kon", "электронная площадка").
     weak:
-      - portal
-      - портал
-      - platforma
-      - платформ
-      - avtomatlashtir
-      - автоматлаштир
-      - автоматизац
-      - elektron
-      - электрон
-      - integratsiya
-      - интеграц
-      - bot$
-      - бот$
-      - разработк
-      - ishlab chiqish
-      - ишлаб чиқиш
-      - monitoring
-      - мониторинг
-      - tizim
-      - тизим
-      - систем
+      - portal|портал
+      - platforma|платформ
+      - avtomatlashtir|автоматлаштир|автоматизац
+      - integratsiya|интеграц
+      - bot$|бот$
+      - ishlab chiqish|ишлаб чиқиш|разработк
+      - monitoring|мониторинг
+      - tizim|тизим|систем
 
   exclude:
     # Faqat uskuna / mebel / litsenziya qayta sotish. "override" so'zi bo'lsa istisno qo'llanmaydi.

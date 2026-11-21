@@ -69,3 +69,36 @@ def test_fixture_listing(kf):
     hits = {k for k, name in rows.items() if kf.match(name).is_it}
     assert {"523525", "524100", "524795"} <= hits
     assert not hits & {"522909", "524035", "524034"}  # Muzrabot, mezzanin, transport
+
+
+@pytest.mark.parametrize(
+    "title, description",
+    [
+        # Real false positives seen on 21.11.2026: one concept in two scripts used to count as 2 weak words.
+        ("Bo'yoqlash tsexining sovutish tizimini modernizatsiya qilish", "Тизим ... tizim"),
+        ("Master-rejani ishlab chiqish xizmati", "Мастер-режани ишлаб чиқиш"),
+        ("Токарно-винторезный станок", "Электронная площадка, elektron do'kon"),
+        ("Данғара туманидаги коллекторини тизимли таъмирлаш", "tizimli ta'mirlash, систем"),
+    ],
+)
+def test_same_concept_in_two_scripts_is_one_word(kf, title, description):
+    m = kf.match(title, description)
+    assert not m.is_it, m.reason
+
+
+def test_two_different_concepts_still_pass(kf):
+    assert kf.match("Monitoring tizimini joriy etish").is_it
+    assert kf.match("Telegram bot va elektron navbat platformasi").is_it
+
+
+def test_is_it_lot_uses_ai_and_title_rescue(kf):
+    from types import SimpleNamespace as L
+
+    from app.tenders.filters import is_it_lot
+
+    assert is_it_lot(L(title="Токарный станок", analysis=None), kf)  # not analysed yet → keyword stage decided
+    assert not is_it_lot(L(title="Токарный станок", analysis={"is_it_lot": False}), kf)
+    assert is_it_lot(L(title="MedERP", analysis={"is_it_lot": True}), kf)
+    # AI said "not IT", but the title is clearly IT → keep it
+    assert is_it_lot(L(title="Услуга по технической поддержке информационных технологий",
+                       analysis={"is_it_lot": False}), kf)
