@@ -245,7 +245,8 @@ def _sort_inputs(sort: str, direction: str) -> str:
 
 
 def tenders_page(ctx: Ctx, lots: list[Lot], *, q: str, verdict: str, status: str, counts: dict[str, int],
-                 health: dict[str, dict], sort: str = "deadline", direction: str = "asc") -> str:
+                 health: dict[str, dict], sort: str = "deadline", direction: str = "asc", pledge: str = "",
+                 days: str = "", limit_usd: float = 0.0) -> str:
     from app.web.tables import LOT_COLS, table_html
 
     stats = "".join(f'<div class="stat"><b>{n}</b><span>{h(label)}</span></div>' for label, n in [
@@ -261,14 +262,21 @@ def tenders_page(ctx: Ctx, lots: list[Lot], *, q: str, verdict: str, status: str
 <select name="v">{opt("", verdict, "Barcha xulosalar")}{opt("good", verdict, "✅ Qatnashamiz")}
 {opt("maybe", verdict, "🟡 Shartli")}{opt("bad", verdict, "❌ Yo'q")}</select>
 <select name="s">{opt("open", status, "Ochiqlar")}{opt("bidding", status, "📌 Qatnashayotganlar")}
-{opt("all", status, "Hammasi (yopilganlar bilan)")}</select>{_sort_inputs(sort, direction)}
+{opt("all", status, "Hammasi (yopilganlar bilan)")}</select>
+<select name="z" title="Zakalat summasi">{opt("", pledge, "Zakalat: hammasi")}{opt("0", pledge, "Zakalatsiz")}
+{opt("limit", pledge, f"Limit ichida (≤ ${limit_usd:,.0f})".replace(",", " ")) if limit_usd else ""}
+{opt("500", pledge, "≤ $500")}{opt("1000", pledge, "≤ $1 000")}{opt("3000", pledge, "≤ $3 000")}
+{opt("10000", pledge, "≤ $10 000")}</select>
+<select name="d" title="Topshirish muddati">{opt("", days, "Muddat: hammasi")}{opt("1", days, "1 kun ichida tugaydi")}
+{opt("3", days, "3 kun ichida")}{opt("7", days, "7 kun ichida")}{opt("14", days, "14 kun ichida")}
+{opt("30", days, "30 kun ichida")}</select>{_sort_inputs(sort, direction)}
 <button type="submit">Ko'rsatish</button>
-<a class="btn ghost" href="{h(ctx.url("/lots.xlsx", q=q, v=verdict, s=status, sort=sort, dir=direction))}">⬇️ Excel</a>
+<a class="btn ghost" href="{h(ctx.url("/lots.xlsx", q=q, v=verdict, s=status, z=pledge, d=days, sort=sort, dir=direction))}">⬇️ Excel</a>
 </form>"""
     down = [n for n, v in health.items() if v.get("alerted")]
     health_html = (f'<p class="sub">⚠️ Hozir ishlamayapti: {h(", ".join(down))}</p>' if down else "")
     table = table_html(ctx, "/lots", lots, LOT_COLS, sort=sort, direction=direction,
-                       query={"q": q, "v": verdict, "s": status}, detail=lambda lot: ctx.url(f"/lot/{lot.id}"),
+                       query={"q": q, "v": verdict, "s": status, "z": pledge, "d": days}, detail=lambda lot: ctx.url(f"/lot/{lot.id}"),
                        bulk=[("bid", "📌 Qatnashamiz", ""), ("ignore", "🚫 Kerak emas", "ghost"),
                              ("unbid", "↩️ Qatnashmaymiz", "ghost")], noun="lot")
     return layout(ctx, "tenders", f"""<h1>🏛 Davlat IT tenderlari</h1>

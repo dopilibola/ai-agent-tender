@@ -72,6 +72,22 @@ def _usd_cost(lot: Lot) -> float | None:
     return tc.usd(lot.start_cost, lot.currency, lot.usd_rate)
 
 
+def pledge_value_usd(lot: Lot) -> float | None:
+    """Zakalat in USD: 0 when the lot has no deposit, None when it exists but can't be converted."""
+    if not lot.pledge_percent:
+        return 0.0
+    return tc.pledge_usd(lot)
+
+
+def _pledge_cell(lot: Lot) -> str:
+    if not lot.pledge_percent:
+        return '<span class="muted">yo\'q</span>'
+    usd = tc.pledge_usd(lot)
+    return (f'<span title="{h(f"{lot.pledge_percent:g}% = " + tc.money_uzs(lot.pledge_amount, lot.currency))}">'
+            f'{h(f"${usd:,.0f}".replace(",", " ") if usd is not None else tc.money_uzs(lot.pledge_amount, lot.currency))}'
+            "</span>")
+
+
 def _win(lot: Lot) -> int | None:
     w = _a(lot).get("win_chance_percent") or []
     return w[0] if len(w) == 2 else None
@@ -155,6 +171,7 @@ LOT_COLS: list[Col] = [
         lambda c, lot, n: _t(lot.customer_name, 34), lambda lot: lot.customer_name or "", "asc", 35, "mid"),
     Col("price", "Narx", lambda lot: _usd_cost(lot) if _usd_cost(lot) is not None else lot.start_cost,
         lambda c, lot, n: _lot_price(lot), lambda lot: lot.start_cost, "desc", 16, "num"),
+    Col("pledge", "Zakalat", pledge_value_usd, lambda c, lot, n: _pledge_cell(lot), pledge_value_usd, "asc", 12, "num"),
     Col("verdict", "AI xulosa", lambda lot: VERDICT_RANK.get(lot.verdict or ""),
         lambda c, lot, n: _verdict_pill(lot), lambda lot: lot.verdict or "", "desc", 14),
     Col("fit", "Fit", lambda lot: _a(lot).get("fit_score"),

@@ -10,6 +10,7 @@ import contextlib
 import logging
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
+from datetime import timedelta
 from pathlib import Path
 from urllib.parse import urlencode
 
@@ -33,6 +34,9 @@ FLASH = "fh_flash"
 log = logging.getLogger(__name__)
 
 S = JobStatus
+# Lots page filters: ?z= (zakalat, USD) and ?d= (deadline within N days)
+PLEDGE_MAX = {"0": 0.0, "500": 500.0, "1000": 1000.0, "3000": 3000.0, "10000": 10000.0}
+DEADLINE_DAYS = ("1", "3", "7", "14", "30")
 HIDDEN_JOB = (S.SKIPPED, S.FOUND, S.EXPIRED)
 VERDICT_KEY = {"good": "QATNASHAMIZ", "maybe": "SHARTLI", "bad": "YO'Q"}
 LOT_ACTIONS = {"bid": (LotStatus.BIDDING, "📌 Qatnashamiz"), "unbid": (LotStatus.NOTIFIED, "↩️ Qatnashmaymiz"),
@@ -183,6 +187,18 @@ async def _query_lots(request: web.Request) -> tuple[list[Lot], dict]:
     open_all = [lot for lot in open_all if is_it_lot(lot, kf)]
     if status != "all":
         lots = [lot for lot in lots if not lot.deadline_at or as_utc(lot.deadline_at) > now]
+    pledge = request.query.get("z", "")
+    if pledge in PLEDGE_MAX or pledge == "limit":
+        cap = d.tenders.limit_usd if pledge == "limit" and d.tenders else PLEDGE_MAX.get(pledge, 0.0)
+        lots = [lot for lot in lots if (v := tables.pledge_value_usd(lot)) is not None and v <= cap]
+    else:
+        pledge = ""
+    days = request.query.get("d", "")
+    if days in DEADLINE_DAYS:
+        until = now + timedelta(days=int(days))
+        lots = [lot for lot in lots if lot.deadline_at and now < as_utc(lot.deadline_at) <= until]
+    else:
+        days = ""
     lots = tables.sort_rows(lots, tables.LOT_COLS, sort, direction)
     live = [lot for lot in open_all if not lot.deadline_at or as_utc(lot.deadline_at) > now]
     counts = {
@@ -191,7 +207,8 @@ async def _query_lots(request: web.Request) -> tuple[list[Lot], dict]:
         "maybe": sum(lot.verdict == "SHARTLI" for lot in live),
         "bidding": sum(lot.status == LotStatus.BIDDING for lot in live),
     }
-    return lots, {"q": q, "verdict": verdict, "status": status, "counts": counts, "sort": sort,
+    return lots, {"q": q, "verdict": verdict, "status": status, "pledge": pledge, "days": days, "counts": counts,
+                  "sort": sort,
                   "direction": direction}
 
 
@@ -200,7 +217,8 @@ async def tenders_index(request: web.Request) -> web.Response:
     lots, p = await _query_lots(request)
     health = await d.tenders.health() if d.tenders else {}
     ctx = _ctx(request)
-    return _page(request, ctx, views.tenders_page(ctx, lots, health=health, **p))
+    limit = d.tenders.limit_usd if d.tenders else 0.0
+    return _page(request, ctx, views.tenders_page(ctx, lots, health=health, limit_usd=limit, **p))
 
 
 def _xlsx_response(name: str, sheet: str, rows: list, cols) -> web.Response:

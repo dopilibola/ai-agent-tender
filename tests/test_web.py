@@ -246,3 +246,32 @@ async def test_non_it_lots_hidden(client, sessionmaker):
     html = await (await client.get("/tender/lots")).text()
     assert "525968" in html and "900001" not in html
     assert "900001" not in await (await client.get("/tender/lots?s=all")).text()
+
+
+async def test_pledge_and_deadline_filters(client, sessionmaker):
+    now = datetime.now(UTC)
+    async with sessionmaker() as s:
+        s.add_all([
+            Lot(source="etender", external_id="910001", url="https://etender.uzex.uz/lot/910001", title="CRM tizimi",
+                status=LotStatus.NOTIFIED, deadline_at=now + timedelta(days=2), currency="UZS", usd_rate=12_000,
+                pledge_percent=1, pledge_amount=6_000_000),  # $500, ends in 2 days
+            Lot(source="etender", external_id="910002", url="https://etender.uzex.uz/lot/910002", title="ERP tizimi",
+                status=LotStatus.NOTIFIED, deadline_at=now + timedelta(days=20), currency="UZS", usd_rate=12_000,
+                pledge_percent=3, pledge_amount=60_000_000),  # $5 000, ends in 20 days
+        ])
+        await s.commit()
+    await login(client)
+
+    async def ids(query):
+        html = await (await client.get(f"/tender/lots?{query}")).text()
+        return {x for x in ("910001", "910002") if x in html}
+
+    assert await ids("") == {"910001", "910002"}
+    assert await ids("z=1000") == {"910001"}
+    assert await ids("z=10000") == {"910001", "910002"}
+    assert await ids("z=0") == set()
+    assert await ids("d=3") == {"910001"}
+    assert await ids("d=30&z=500") == {"910001"}
+    assert await ids("z=bogus&d=bogus") == {"910001", "910002"}  # unknown values are ignored
+    html = await (await client.get("/tender/lots")).text()
+    assert 'name="z"' in html and 'name="d"' in html and "Zakalat" in html
