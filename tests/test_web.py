@@ -66,7 +66,7 @@ async def csrf(client, path="/tender/") -> str:
 
 
 async def test_everything_needs_login(client):
-    for path in ("/tender/", "/tender/lots", "/tender/jobs", "/tender/lot/1", "/tender/job/1"):
+    for path in ("/tender/", "/tender/feed", "/tender/lots", "/tender/jobs", "/tender/lot/1", "/tender/job/1"):
         r = await client.get(path, allow_redirects=False)
         assert r.status == 303 and r.headers["Location"].startswith("/tender/login"), path
     html = await (await client.get("/tender/login")).text()
@@ -153,7 +153,7 @@ async def test_feed_mirrors_telegram(client, sessionmaker):
     assert len(tg.sent) == 2
 
     await login(client)
-    html = await (await client.get("/tender/")).text()
+    html = await (await client.get("/tender/feed")).text()
     assert "<b>🆕 Yangi IT lot</b>" in html
     assert 'href="https://etender.uzex.uz/lot/525968"' in html
     assert 'href="/tender/lot/7"' in html  # callback button → site page
@@ -236,42 +236,54 @@ async def test_bulk_lot_actions(client, sessionmaker):
     assert (await client.get("/tender/static/app.js")).status == 200
 
 
+async def test_orders_table_and_filters(client):
+    await login(client)
+    html = await (await client.get("/tender/")).text()
+    assert "Zakazlar" in html and "Yutish %" in html and 'name="min"' in html
+    assert "Telegram bot kerak" in html and "Veb-portal" in html  # tenders + freelance in one table
+    assert "<script>alert" not in html and "javascript:alert" not in html
+    html = await (await client.get("/tender/?t=freelance")).text()
+    assert "Telegram bot kerak" in html and "Veb-portal" not in html
+    html = await (await client.get("/tender/?fit=84")).text()  # lot fit 82 drops, job fit 85 stays
+    assert "Telegram bot kerak" in html and "Veb-portal" not in html
+    html = await (await client.get("/tender/?min=1")).text()  # no USD price anywhere → empty
+    assert "Hech narsa topilmadi" in html
+    assert (await client.get("/tender/?min=abc&win=-5&sort=evil")).status == 200
+    html = await (await client.get("/tender/lots?fit=90")).text()
+    assert "Veb-portal" not in html
+    r = await client.get("/tender/orders.xlsx?t=tender")
+    assert r.status == 200 and r.headers["Content-Type"].startswith("application/vnd.openxmlformats")
+
+
+async def test_theme_and_profile(client):
+    r = await client.get("/tender/profile", allow_redirects=False)
+    assert r.status == 303 and r.headers["Location"].startswith("/tender/login")
+    await login(client)
+    html = await (await client.get("/tender/profile")).text()
+    assert 'data-theme="auto"' in html and "Ko'rinish" in html and "Jami tenderlar" in html
+    assert re.search(r'/tender/static/app\.js\?v=[0-9a-f]{10}', html)
+    token = await csrf(client)
+    r = await client.post("/tender/theme", data={"csrf": "bad", "theme": "dark"}, allow_redirects=False)
+    assert r.status == 403
+    r = await client.post("/tender/theme", data={"csrf": token, "theme": "dark", "back": "/tender/lots"},
+                          allow_redirects=False)
+    assert r.status == 303 and r.headers["Location"] == "/tender/lots"
+    assert 'data-theme="dark"' in await (await client.get("/tender/")).text()
+    r = await client.post("/tender/theme", data={"csrf": token, "theme": "toggle", "cur": "dark"}, allow_redirects=False)
+    assert 'data-theme="light"' in await (await client.get("/tender/")).text()
+    r = await client.post("/tender/theme", data={"csrf": token, "theme": "evil"}, allow_redirects=False)
+    assert r.status == 400
+
+
 async def test_non_it_lots_hidden(client, sessionmaker):
+    future = datetime.now(UTC) + timedelta(days=3)
     async with sessionmaker() as s:
-        s.add(Lot(source="etender", external_id="900001", url="https://etender.uzex.uz/lot/900001",
-                  title="Токарно-винторезный станок", status=LotStatus.NOTIFIED, verdict="YO'Q",
-                  deadline_at=datetime.now(UTC) + timedelta(days=5), analysis={"is_it_lot": False}))
+        s.add(Lot(source="etender", external_id="999", url="https://etender.uzex.uz/lot/999",
+                  title="Услуга по технической поддержке информационных технологий", status=LotStatus.NOTIFIED,
+                  deadline_at=future, verdict="YO'Q", analysis={"is_it_lot": False, "summary_uz": "FortiGate xaridi"}))
         await s.commit()
     await login(client)
-    html = await (await client.get("/tender/lots")).text()
-    assert "525968" in html and "900001" not in html
-    assert "900001" not in await (await client.get("/tender/lots?s=all")).text()
-
-
-async def test_pledge_and_deadline_filters(client, sessionmaker):
-    now = datetime.now(UTC)
-    async with sessionmaker() as s:
-        s.add_all([
-            Lot(source="etender", external_id="910001", url="https://etender.uzex.uz/lot/910001", title="CRM tizimi",
-                status=LotStatus.NOTIFIED, deadline_at=now + timedelta(days=2), currency="UZS", usd_rate=12_000,
-                pledge_percent=1, pledge_amount=6_000_000),  # $500, ends in 2 days
-            Lot(source="etender", external_id="910002", url="https://etender.uzex.uz/lot/910002", title="ERP tizimi",
-                status=LotStatus.NOTIFIED, deadline_at=now + timedelta(days=20), currency="UZS", usd_rate=12_000,
-                pledge_percent=3, pledge_amount=60_000_000),  # $5 000, ends in 20 days
-        ])
-        await s.commit()
-    await login(client)
-
-    async def ids(query):
-        html = await (await client.get(f"/tender/lots?{query}")).text()
-        return {x for x in ("910001", "910002") if x in html}
-
-    assert await ids("") == {"910001", "910002"}
-    assert await ids("z=1000") == {"910001"}
-    assert await ids("z=10000") == {"910001", "910002"}
-    assert await ids("z=0") == set()
-    assert await ids("d=3") == {"910001"}
-    assert await ids("d=30&z=500") == {"910001"}
-    assert await ids("z=bogus&d=bogus") == {"910001", "910002"}  # unknown values are ignored
-    html = await (await client.get("/tender/lots")).text()
-    assert 'name="z"' in html and 'name="d"' in html and "Zakalat" in html
+    for path in ("/tender/", "/tender/lots"):
+        html = await (await client.get(path)).text()
+        assert "FortiGate" not in html and "Veb-portal" in html, path
+    assert "FortiGate" in await (await client.get("/tender/lots?s=all")).text()

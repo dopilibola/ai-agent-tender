@@ -99,6 +99,6 @@ def test_is_it_lot_uses_ai_and_title_rescue(kf):
     assert is_it_lot(L(title="Токарный станок", analysis=None), kf)  # not analysed yet → keyword stage decided
     assert not is_it_lot(L(title="Токарный станок", analysis={"is_it_lot": False}), kf)
     assert is_it_lot(L(title="MedERP", analysis={"is_it_lot": True}), kf)
-    # AI said "not IT", but the title is clearly IT → keep it
-    assert is_it_lot(L(title="Услуга по технической поддержке информационных технологий",
-                       analysis={"is_it_lot": False}), kf)
+    # AI read the documents and said "not an IT service" (e.g. FortiGate purchase) → hidden despite the title
+    assert not is_it_lot(L(title="Услуга по технической поддержке информационных технологий",
+                           analysis={"is_it_lot": False}), kf)

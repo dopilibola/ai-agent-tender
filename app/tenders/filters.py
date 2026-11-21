@@ -100,6 +100,7 @@ def is_it_lot(lot, kf: KeywordFilter | None = None) -> bool:
     unless the TITLE itself has a strong IT term (guards against an AI false negative).
     Lots without an analysis yet passed the keyword filter, so they are shown.
     """
-    if (lot.analysis or {}).get("is_it_lot") is not False:
-        return True
-    return bool(kf and kf.match(lot.title).strong)
+    # Strict: the owner does IT *services* only. Once Gemini has read the documents and said "not IT"
+    # (hardware, licence resale, ecology...), the lot is hidden even if its title sounds like IT.
+    # Lots without an analysis yet passed the keyword filter, so they are shown. `kf` kept for callers.
+    return (lot.analysis or {}).get("is_it_lot") is not False

@@ -1,16 +1,17 @@
 """Private dashboard (aiohttp, runs inside the bot process and shares its DB/services).
 
 Every page needs a login (WEB_ADMIN_USER / WEB_ADMIN_PASSWORD from .env). After login the site shows the same
-messages the bot sends to Telegram, plus tender / freelance lists and their buttons.
+messages the bot sends to Telegram, plus one orders table (tenders + freelance) with filters and the
+separate tender / freelance lists and their buttons.
 """
 
 from __future__ import annotations
 
 import contextlib
+import hashlib
 import logging
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
-from datetime import timedelta
 from pathlib import Path
 from urllib.parse import urlencode
 
@@ -30,13 +31,11 @@ from app.web import tables, views, xlsx
 from app.web.auth import COOKIE, SESSION_TTL_S, Auth
 
 FLASH = "fh_flash"
+THEME = "fh_theme"
 
 log = logging.getLogger(__name__)
 
 S = JobStatus
-# Lots page filters: ?z= (zakalat, USD) and ?d= (deadline within N days)
-PLEDGE_MAX = {"0": 0.0, "500": 500.0, "1000": 1000.0, "3000": 3000.0, "10000": 10000.0}
-DEADLINE_DAYS = ("1", "3", "7", "14", "30")
 HIDDEN_JOB = (S.SKIPPED, S.FOUND, S.EXPIRED)
 VERDICT_KEY = {"good": "QATNASHAMIZ", "maybe": "SHARTLI", "bad": "YO'Q"}
 LOT_ACTIONS = {"bid": (LotStatus.BIDDING, "📌 Qatnashamiz"), "unbid": (LotStatus.NOTIFIED, "↩️ Qatnashmaymiz"),
@@ -73,7 +72,7 @@ def _ctx(request: web.Request) -> views.Ctx:
         with contextlib.suppress(ValueError):
             flash = bytes.fromhex(raw).decode("utf-8", "ignore")
     return views.Ctx(d.base, d.title, exp, d.auth.csrf(exp) if exp else None, d.auth.enabled,
-                     here=request.path_qs, flash=flash)
+                     here=request.path_qs, flash=flash, theme=request.cookies.get(THEME, "auto"))
 
 
 def _html(text: str, status: int = 200) -> web.Response:
@@ -100,6 +99,7 @@ def _page(request: web.Request, ctx: views.Ctx, html: str) -> web.Response:
 
 OPEN_PATHS = ("/login", "/healthz", "/static/app.js")
 APP_JS = (Path(__file__).parent / "static" / "app.js").read_bytes()
+views.ASSET_VER = hashlib.sha256(APP_JS).hexdigest()[:10]
 
 
 @web.middleware
@@ -151,6 +151,19 @@ async def feed_index(request: web.Request) -> web.Response:
                                                next_before=next_before))
 
 
+# ── Numeric filters (summa / yutish % / fit) ─────────────────────────────────
+def _num_filters(request: web.Request) -> dict[str, float | None]:
+    out: dict[str, float | None] = {}
+    for key in ("min", "max", "win", "fit"):
+        raw = request.query.get(key, "").strip().replace(" ", "").replace(",", ".")
+        try:
+            val = float(raw) if raw else None
+        except ValueError:
+            val = None
+        out[key] = val if val is not None and 0 <= val < 1e13 else None
+    return out
+
+
 # ── Tenders ─────────────────────────────────────────────────────────────────
 def _sort_params(request: web.Request, cols, default: str, default_dir: str) -> tuple[str, str]:
     sort = request.query.get("sort", default)
@@ -166,6 +179,7 @@ async def _query_lots(request: web.Request) -> tuple[list[Lot], dict]:
     verdict = request.query.get("v", "")
     status = request.query.get("s", "open")
     sort, direction = _sort_params(request, tables.LOT_COLS, "deadline", "asc")
+    nf = _num_filters(request)
     now = now_utc()
     async with d.sessionmaker() as s:
         stmt = select(Lot)
@@ -182,34 +196,19 @@ async def _query_lots(request: web.Request) -> tuple[list[Lot], dict]:
         order = Lot.deadline_at.asc() if status != "all" else Lot.id.desc()
         lots = list((await s.scalars(stmt.order_by(order).limit(MAX_ROWS))).all())
         open_all = (await s.scalars(select(Lot).where(Lot.status.in_(ACTIVE)))).all()
-    kf = d.tenders.filter if d.tenders else None
-    lots = [lot for lot in lots if is_it_lot(lot, kf)]  # only IT lots on the site
-    open_all = [lot for lot in open_all if is_it_lot(lot, kf)]
-    if status != "all":
-        lots = [lot for lot in lots if not lot.deadline_at or as_utc(lot.deadline_at) > now]
-    pledge = request.query.get("z", "")
-    if pledge in PLEDGE_MAX or pledge == "limit":
-        cap = d.tenders.limit_usd if pledge == "limit" and d.tenders else PLEDGE_MAX.get(pledge, 0.0)
-        lots = [lot for lot in lots if (v := tables.pledge_value_usd(lot)) is not None and v <= cap]
-    else:
-        pledge = ""
-    days = request.query.get("d", "")
-    if days in DEADLINE_DAYS:
-        until = now + timedelta(days=int(days))
-        lots = [lot for lot in lots if lot.deadline_at and now < as_utc(lot.deadline_at) <= until]
-    else:
-        days = ""
+    if status != "all":  # "all" = everything, incl. closed and lots the AI said are not IT services
+        lots = [lot for lot in lots if (not lot.deadline_at or as_utc(lot.deadline_at) > now) and is_it_lot(lot)]
+    lots = tables.apply_num_filters(lots, nf, tables._usd_cost, tables._win, lambda lot: tables._a(lot).get("fit_score"))
     lots = tables.sort_rows(lots, tables.LOT_COLS, sort, direction)
-    live = [lot for lot in open_all if not lot.deadline_at or as_utc(lot.deadline_at) > now]
+    live = [lot for lot in open_all if (not lot.deadline_at or as_utc(lot.deadline_at) > now) and is_it_lot(lot)]
     counts = {
         "open": len(live),
         "good": sum(lot.verdict == "QATNASHAMIZ" for lot in live),
         "maybe": sum(lot.verdict == "SHARTLI" for lot in live),
         "bidding": sum(lot.status == LotStatus.BIDDING for lot in live),
     }
-    return lots, {"q": q, "verdict": verdict, "status": status, "pledge": pledge, "days": days, "counts": counts,
-                  "sort": sort,
-                  "direction": direction}
+    return lots, {"q": q, "verdict": verdict, "status": status, "counts": counts, "sort": sort,
+                  "direction": direction, "nf": nf}
 
 
 async def tenders_index(request: web.Request) -> web.Response:
@@ -217,8 +216,7 @@ async def tenders_index(request: web.Request) -> web.Response:
     lots, p = await _query_lots(request)
     health = await d.tenders.health() if d.tenders else {}
     ctx = _ctx(request)
-    limit = d.tenders.limit_usd if d.tenders else 0.0
-    return _page(request, ctx, views.tenders_page(ctx, lots, health=health, limit_usd=limit, **p))
+    return _page(request, ctx, views.tenders_page(ctx, lots, health=health, **p))
 
 
 def _xlsx_response(name: str, sheet: str, rows: list, cols) -> web.Response:
@@ -259,6 +257,7 @@ async def _query_jobs(request: web.Request) -> tuple[list[Job], dict]:
     platform = request.query.get("p", "")
     show = request.query.get("show", "good")
     sort, direction = _sort_params(request, tables.JOB_COLS, "posted", "desc")
+    nf = _num_filters(request)
     async with d.sessionmaker() as s:
         stmt = select(Job)
         if show != "all":
@@ -277,9 +276,10 @@ async def _query_jobs(request: web.Request) -> tuple[list[Job], dict]:
         "submitted": sum(by_status.get(x, 0) for x in (S.SUBMITTED, S.CLIENT_REPLIED, S.INTERVIEW)),
         "hired": sum(by_status.get(x, 0) for x in (S.HIRED, S.IN_PROGRESS, S.REVIEW_READY, S.DELIVERED, S.PAID)),
     }
+    jobs = tables.apply_num_filters(jobs, nf, tables._job_usd, lambda j: j.win_probability, lambda j: j.fit)
     jobs = tables.sort_rows(jobs, tables.JOB_COLS, sort, direction)
     return jobs, {"q": q, "platform": platform, "show": show, "platforms": platforms, "counts": counts,
-                  "sort": sort, "direction": direction}
+                  "sort": sort, "direction": direction, "nf": nf}
 
 
 async def jobs_index(request: web.Request) -> web.Response:
@@ -307,6 +307,53 @@ async def job_detail(request: web.Request) -> web.Response:
         return _not_found(request, "Ish")
     ctx = _ctx(request)
     return _page(request, ctx, views.job_page(ctx, job, proposal))
+
+
+# ── Orders: open tenders + recommended freelance jobs in one table ──────────
+async def _query_orders(request: web.Request, ctx: views.Ctx) -> tuple[list, dict]:
+    d = request.app[DEPS]
+    t = request.query.get("t", "")
+    t = t if t in ("tender", "freelance") else ""
+    q = request.query.get("q", "").strip()[:100]
+    verdict = request.query.get("v", "")
+    verdict = verdict if verdict in ("good", "maybe", "bad") else ""
+    sort, direction = _sort_params(request, tables.ORDER_COLS, "win", "desc")
+    nf = _num_filters(request)
+    now = now_utc()
+    rows: list[tables.Order] = []
+    async with d.sessionmaker() as s:
+        if t != "freelance":
+            stmt = select(Lot).where(Lot.status.in_(ACTIVE))
+            if q:
+                like = f"%{q}%"
+                stmt = stmt.where(or_(Lot.title.ilike(like), Lot.customer_name.ilike(like),
+                                      Lot.external_id.ilike(like), Lot.description.ilike(like)))
+            for lot in (await s.scalars(stmt.order_by(Lot.deadline_at.asc()).limit(MAX_ROWS))).all():
+                if (not lot.deadline_at or as_utc(lot.deadline_at) > now) and is_it_lot(lot):
+                    rows.append(tables.order_from_lot(ctx, lot, now))
+        if t != "tender":
+            stmt = select(Job).where(Job.status.not_in(HIDDEN_JOB))
+            if q:
+                like = f"%{q}%"
+                stmt = stmt.where(or_(Job.title.ilike(like), Job.description.ilike(like), Job.platform.ilike(like)))
+            rows += [tables.order_from_job(ctx, j, now)
+                     for j in (await s.scalars(stmt.order_by(Job.id.desc()).limit(MAX_ROWS))).all()]
+    if verdict:
+        rows = [r for r in rows if r.verdict == verdict]
+    rows = tables.apply_num_filters(rows, nf, lambda r: r.usd, lambda r: r.win, lambda r: r.fit)
+    rows = tables.sort_rows(rows, tables.ORDER_COLS, sort, direction)
+    return rows, {"t": t, "q": q, "verdict": verdict, "nf": nf, "sort": sort, "direction": direction}
+
+
+async def orders_index(request: web.Request) -> web.Response:
+    ctx = _ctx(request)
+    rows, p = await _query_orders(request, ctx)
+    return _page(request, ctx, views.orders_page(ctx, rows, **p))
+
+
+async def orders_xlsx(request: web.Request) -> web.Response:
+    rows, _ = await _query_orders(request, _ctx(request))
+    return _xlsx_response("zakazlar", "Zakazlar", rows, tables.ORDER_COLS)
 
 
 # ── Owner auth + actions ────────────────────────────────────────────────────
@@ -359,6 +406,34 @@ async def logout(request: web.Request) -> web.Response:
     resp = web.HTTPSeeOther(f"{d.base}/login")
     resp.del_cookie(COOKIE, path=f"{d.base}/" if d.base else "/")
     raise resp
+
+
+async def set_theme(request: web.Request) -> web.Response:
+    d, back = await _require_owner(request)
+    form = await request.post()
+    theme = str(form.get("theme") or "")
+    if theme == "toggle":
+        theme = "light" if str(form.get("cur") or "") == "dark" else "dark"
+    if theme not in views.THEMES:
+        raise web.HTTPBadRequest(text="Noma'lum rejim")
+    resp = web.HTTPSeeOther(back)
+    resp.set_cookie(THEME, theme, max_age=365 * 24 * 3600, path=f"{d.base}/" if d.base else "/",
+                    httponly=True, samesite="Lax", secure=request.headers.get("X-Forwarded-Proto") == "https")
+    raise resp
+
+
+async def profile(request: web.Request) -> web.Response:
+    d = request.app[DEPS]
+    ctx = _ctx(request)
+    exp = d.auth.session_exp(request.cookies.get(COOKIE)) or 0
+    from datetime import datetime as _dt
+    until = _dt.fromtimestamp(exp, TASHKENT).strftime("%d.%m.%Y %H:%M")
+    async with d.sessionmaker() as s:
+        lots = await s.scalar(select(func.count(Lot.id))) or 0
+        active = await s.scalar(select(func.count(Lot.id)).where(Lot.status.in_(ACTIVE))) or 0
+        jobs = await s.scalar(select(func.count(Job.id))) or 0
+    stats = [("Jami tenderlar", lots), ("Faol tenderlar", active), ("Frilans ishlar", jobs)]
+    return _page(request, ctx, views.profile_page(ctx, user=d.auth.user, session_until=until, stats=stats))
 
 
 async def _notify(d: Deps, text: str) -> None:
@@ -450,7 +525,7 @@ async def jobs_bulk(request: web.Request) -> web.Response:
 
 async def app_js(_: web.Request) -> web.Response:
     return web.Response(body=APP_JS, content_type="application/javascript", charset="utf-8",
-                        headers={"Cache-Control": "public, max-age=300"})
+                        headers={"Cache-Control": "public, max-age=31536000, immutable"})
 
 
 async def healthz(_: web.Request) -> web.Response:
@@ -471,7 +546,9 @@ def build_app(settings: Settings, sessionmaker: async_sessionmaker, *, tenders: 
             raise web.HTTPMovedPermanently(f"{b}/")
 
         app.router.add_get(b, add_slash)
-    app.router.add_get(f"{b}/", feed_index)
+    app.router.add_get(f"{b}/", orders_index)
+    app.router.add_get(f"{b}/orders.xlsx", orders_xlsx)
+    app.router.add_get(f"{b}/feed", feed_index)
     app.router.add_get(f"{b}/lots", tenders_index)
     app.router.add_get(f"{b}/lots.xlsx", tenders_xlsx)
     app.router.add_post(f"{b}/lots/bulk", lots_bulk)
@@ -486,6 +563,8 @@ def build_app(settings: Settings, sessionmaker: async_sessionmaker, *, tenders: 
     app.router.add_get(f"{b}/login", login_form)
     app.router.add_post(f"{b}/login", login_submit)
     app.router.add_post(f"{b}/logout", logout)
+    app.router.add_post(f"{b}/theme", set_theme)
+    app.router.add_get(f"{b}/profile", profile)
     app.router.add_get(f"{b}/healthz", healthz)
     return app
 

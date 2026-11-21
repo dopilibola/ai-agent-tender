@@ -72,25 +72,17 @@ def _usd_cost(lot: Lot) -> float | None:
     return tc.usd(lot.start_cost, lot.currency, lot.usd_rate)
 
 
-def pledge_value_usd(lot: Lot) -> float | None:
-    """Zakalat in USD: 0 when the lot has no deposit, None when it exists but can't be converted."""
-    if not lot.pledge_percent:
-        return 0.0
-    return tc.pledge_usd(lot)
-
-
-def _pledge_cell(lot: Lot) -> str:
-    if not lot.pledge_percent:
-        return '<span class="muted">yo\'q</span>'
-    usd = tc.pledge_usd(lot)
-    return (f'<span title="{h(f"{lot.pledge_percent:g}% = " + tc.money_uzs(lot.pledge_amount, lot.currency))}">'
-            f'{h(f"${usd:,.0f}".replace(",", " ") if usd is not None else tc.money_uzs(lot.pledge_amount, lot.currency))}'
-            "</span>")
-
-
 def _win(lot: Lot) -> int | None:
     w = _a(lot).get("win_chance_percent") or []
     return w[0] if len(w) == 2 else None
+
+
+def win_bar(value: int | None, text: str = "") -> str:
+    """'40–60%' with a thin progress bar (value = the number the column sorts/filters by)."""
+    if value is None:
+        return '<span class="muted">—</span>'
+    pct = max(0, min(100, int(value)))
+    return f'<span class="bar">{h(text or value)}%<i><b style="width:{pct}%"></b></i></span>'
 
 
 def _expired(lot: Lot, now: datetime) -> bool:
@@ -171,14 +163,13 @@ LOT_COLS: list[Col] = [
         lambda c, lot, n: _t(lot.customer_name, 34), lambda lot: lot.customer_name or "", "asc", 35, "mid"),
     Col("price", "Narx", lambda lot: _usd_cost(lot) if _usd_cost(lot) is not None else lot.start_cost,
         lambda c, lot, n: _lot_price(lot), lambda lot: lot.start_cost, "desc", 16, "num"),
-    Col("pledge", "Zakalat", pledge_value_usd, lambda c, lot, n: _pledge_cell(lot), pledge_value_usd, "asc", 12, "num"),
     Col("verdict", "AI xulosa", lambda lot: VERDICT_RANK.get(lot.verdict or ""),
         lambda c, lot, n: _verdict_pill(lot), lambda lot: lot.verdict or "", "desc", 14),
     Col("fit", "Fit", lambda lot: _a(lot).get("fit_score"),
         lambda c, lot, n: h(_a(lot).get("fit_score")) if _a(lot).get("fit_score") is not None else "—",
         lambda lot: _a(lot).get("fit_score"), "desc", 6, "num"),
     Col("win", "Yutish %", _win,
-        lambda c, lot, n: h("–".join(map(str, _a(lot).get("win_chance_percent") or []))) or "—",
+        lambda c, lot, n: win_bar(_win(lot), "–".join(map(str, _a(lot).get("win_chance_percent") or []))),
         lambda lot: "–".join(map(str, _a(lot).get("win_chance_percent") or [])), "desc", 9, "num"),
     Col("reason", "AI izohi", None, lambda c, lot, n: _lot_reason_cell(lot), _lot_reason_text, width=70,
         cls="wide"),
@@ -239,7 +230,7 @@ JOB_COLS: list[Col] = [
         "desc", 18, "num"),
     Col("fit", "AI fit", lambda j: j.fit, lambda c, j, n: _fit_pill(j), lambda j: j.fit, "desc", 6),
     Col("win", "Yutish %", lambda j: j.win_probability,
-        lambda c, j, n: h(j.win_probability) if j.win_probability is not None else "—",
+        lambda c, j, n: win_bar(j.win_probability),
         lambda j: j.win_probability, "desc", 9, "num"),
     Col("ai", "AI xulosa", None, lambda c, j, n: _t(_job_ai_text(j), 60), _job_ai_text, width=70, cls="wide"),
     Col("proposals", "Takliflar", lambda j: j.proposals_count,
@@ -255,12 +246,113 @@ JOB_COLS: list[Col] = [
 ]
 
 
+# ── Orders (tenders + freelance in one list) ────────────────────────────────
+@dataclass
+class Order:
+    kind: str  # tender | freelance
+    id: int
+    title: str
+    source: str
+    who: str
+    usd: float | None
+    price: str
+    win: int | None
+    win_text: str
+    fit: int | None
+    verdict: str  # good | maybe | bad | ""
+    when: datetime | None
+    status_html: str
+    status_text: str
+    url: str | None
+    detail: str
+    ai: str
+
+
+def order_from_lot(ctx: Ctx, lot: Lot, now: datetime) -> Order:
+    a = _a(lot)
+    return Order(
+        "tender", lot.id, a.get("summary_uz") or lot.title, f"{tc.SOURCE_NAME.get(lot.source, lot.source)} № "
+        f"{lot.external_id}", lot.customer_name or "", _usd_cost(lot), tc.money_uzs(lot.start_cost, lot.currency),
+        _win(lot), "–".join(map(str, a.get("win_chance_percent") or [])), a.get("fit_score"),
+        {"QATNASHAMIZ": "good", "SHARTLI": "maybe", "YO'Q": "bad"}.get(lot.verdict or "", ""),
+        as_utc(lot.deadline_at) if lot.deadline_at else None, lot_status_pill(lot, now),
+        str(tc.STATUS_UZ.get(lot.status, lot.status)).split(" ", 1)[-1], lot.url, ctx.url(f"/lot/{lot.id}"), _lot_reason_text(lot))
+
+
+def order_from_job(ctx: Ctx, job: Job, now: datetime) -> Order:
+    fit = job.fit
+    return Order(
+        "freelance", job.id, job.title, views.PLATFORM_NAME.get(job.platform, job.platform),
+        job.client_country or "", _job_usd(job), views._budget(job), job.win_probability, "", fit,
+        "" if fit is None else "good" if fit >= 80 else "maybe" if fit >= 60 else "bad",
+        as_utc(job.posted_at or job.created_at), job_status_pill(job), STATUS_LABEL_UZ.get(job.status, str(job.status)),
+        job.url, ctx.url(f"/job/{job.id}"), _job_ai_text(job))
+
+
+def _kind_cell(o: Order) -> str:
+    return '<span class="tag">Tender</span>' if o.kind == "tender" else '<span class="tag">Frilans</span>'
+
+
+def _when_cell(o: Order, now: datetime) -> str:
+    if o.when is None:
+        return '<span class="muted">—</span>'
+    if o.kind == "freelance":
+        return f'<span class="muted" title="{h(fmt_local(o.when))}">{h(ago_uz(o.when, now))}</span>'
+    left = (o.when - now).total_seconds()
+    cls = "urgent" if left < 86400 else "soon" if left < 3 * 86400 else ""
+    return f'<span class="{cls}" title="{h(remaining_uz(o.when, now))}">{h(fmt_local(o.when))}</span>'
+
+
+def _verdict_cell(o: Order) -> str:
+    label = {"good": "Tavsiya", "maybe": "Shartli", "bad": "Yo'q"}.get(o.verdict)
+    return f'<span class="pill {o.verdict}">{label}</span>' if label else '<span class="muted">—</span>'
+
+
+ORDER_COLS: list[Col] = [
+    Col("kind", "Turi", lambda o: o.kind, lambda c, o, n: _kind_cell(o),
+        lambda o: "Tender" if o.kind == "tender" else "Frilans", "asc", 9),
+    Col("title", "Zakaz", lambda o: o.title.lower(), lambda c, o, n: _t(o.title, 50), lambda o: o.title,
+        "asc", 60, "wide"),
+    Col("source", "Manba", lambda o: o.source.lower(), lambda c, o, n: ext_link(o.url, o.source),
+        lambda o: o.source, "asc", 18),
+    Col("who", "Buyurtmachi", lambda o: o.who.lower() or None, lambda c, o, n: _t(o.who, 26), lambda o: o.who,
+        "asc", 32, "mid"),
+    Col("price", "Summa", lambda o: o.usd,
+        lambda c, o, n: f'<span title="{h(o.price)}">{h(f"${o.usd:,.0f}" if o.usd is not None else o.price)}</span>',
+        lambda o: round(o.usd) if o.usd is not None else o.price, "desc", 14, "num"),
+    Col("win", "Yutish %", lambda o: o.win, lambda c, o, n: win_bar(o.win, o.win_text), lambda o: o.win,
+        "desc", 9, "num"),
+    Col("fit", "Fit", lambda o: o.fit, lambda c, o, n: h(o.fit) if o.fit is not None else "—", lambda o: o.fit,
+        "desc", 6, "num"),
+    Col("verdict", "AI xulosa", lambda o: {"good": 3, "maybe": 2, "bad": 1}.get(o.verdict),
+        lambda c, o, n: _verdict_cell(o), lambda o: o.verdict, "desc", 10),
+    Col("when", "Muddat / e'lon", lambda o: o.when, lambda c, o, n: _when_cell(o, n),
+        lambda o: fmt_local(o.when) if o.when else "", "asc", 18),
+    Col("status", "Holat", lambda o: o.status_text, lambda c, o, n: o.status_html, lambda o: o.status_text, "asc", 16),
+    Col("ai", "AI izohi", None, lambda c, o, n: _t(o.ai, 50), lambda o: o.ai, width=70, cls="wide"),
+    Col("url", "Havola", None, lambda c, o, n: "", lambda o: o.url, width=40, cls="hidden"),
+]
+
+
+def apply_num_filters(rows: list, nf: dict, usd: Callable[[Any], Any], win: Callable[[Any], Any],
+                      fit: Callable[[Any], Any]) -> list:
+    """Summa ($ dan/gacha), yutish % ≥, fit ≥. A row without the value is dropped only if that filter is set."""
+    def ok(v, lo=None, hi=None) -> bool:
+        if lo is None and hi is None:
+            return True
+        if v is None:
+            return False
+        return (lo is None or v >= lo) and (hi is None or v <= hi)
+    return [r for r in rows if ok(usd(r), nf.get("min"), nf.get("max")) and ok(win(r), nf.get("win"))
+            and ok(fit(r), nf.get("fit"))]
+
+
 # ── Rendering ───────────────────────────────────────────────────────────────
 def table_html(ctx: Ctx, path: str, rows: list, cols: list[Col], *, sort: str, direction: str, query: dict,
                detail: Callable[[Any], str], bulk: list[tuple[str, str, str]], noun: str) -> str:
-    """CRM table: checkbox column + bulk action bar, sortable headers (⇕), one-line rows that open `detail`."""
+    """CRM table: optional checkbox column + bulk bar, sortable headers, one-line rows that open `detail`."""
     now = now_utc()
-    head = ['<th class="cb"><input type="checkbox" data-all title="Hammasini belgilash"></th>']
+    head = ['<th class="cb"><input type="checkbox" data-all title="Hammasini belgilash"></th>'] if bulk else []
     for c in cols:
         if c.cls == "hidden":
             continue
@@ -276,16 +368,18 @@ def table_html(ctx: Ctx, path: str, rows: list, cols: list[Col], *, sort: str, d
     body = []
     for r in rows:
         tds = "".join(f'<td class="{c.cls}">{c.cell(ctx, r, now)}</td>' for c in cols if c.cls != "hidden")
-        body.append(f'<tr data-href="{h(detail(r))}"><td class="cb">'
-                    f'<input type="checkbox" name="ids" value="{r.id}" form="bulk"></td>{tds}</tr>')
+        cb = (f'<td class="cb"><input type="checkbox" name="ids" value="{r.id}" form="bulk"></td>' if bulk else "")
+        body.append(f'<tr data-href="{h(detail(r))}">{cb}{tds}</tr>')
     count = f'<p class="count">{len(rows)} ta {h(noun)}</p>'
     if not body:
-        return count + '<div class="empty">Hech narsa topilmadi.</div>'
-    buttons = "".join(f'<button class="{cls}" type="submit" name="action" value="{h(value)}">{h(label)}</button>'
-                      for value, label, cls in bulk)
-    bar = (f'<form id="bulk" class="bulk" method="post" action="{h(ctx.url(path + "/bulk"))}">'
-           f'<input type="hidden" name="csrf" value="{h(ctx.csrf)}"><input type="hidden" name="back" '
-           f'value="{h(ctx.here)}"><b data-count>0</b><span class="muted">ta tanlandi</span>{buttons}</form>')
+        return count + '<div class="empty">Hech narsa topilmadi. Filtrlarni yumshatib ko\'ring.</div>'
+    bar = ""
+    if bulk:
+        buttons = "".join(f'<button class="{cls}" type="submit" name="action" value="{h(value)}">{h(label)}</button>'
+                          for value, label, cls in bulk)
+        bar = (f'<form id="bulk" class="bulk" method="post" action="{h(ctx.url(path.rstrip("/") + "/bulk"))}">'
+               f'<input type="hidden" name="csrf" value="{h(ctx.csrf)}"><input type="hidden" name="back" '
+               f'value="{h(ctx.here)}"><b data-count>0</b><span class="muted">ta tanlandi</span>{buttons}</form>')
     return (f'{count}{bar}<div class="tablewrap"><table class="grid"><thead><tr>{"".join(head)}</tr></thead>'
             f'<tbody>{"".join(body)}</tbody></table></div>')
 

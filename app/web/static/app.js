@@ -1,3 +1,10 @@
+// Theme lives in a server cookie (works without JS). JS only tells the 🌙/☀️ toggle what "auto" looks like now.
+document.addEventListener('DOMContentLoaded', function () {
+  var dark = window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches;
+  document.querySelectorAll('input[name="cur"]').forEach(function (i) {
+    if (i.value === 'auto') i.value = dark ? 'dark' : 'light';
+  });
+});
 // CRM table behaviour: select rows (bulk bar), select all, click a row to open it.
 (function () {
   function update() {
