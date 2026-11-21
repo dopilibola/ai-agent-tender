@@ -237,6 +237,18 @@ class LLMCall(Base):
     created_at: Mapped[datetime] = mapped_column(default=utcnow)
 
 
+class SentMessage(Base):
+    """Copy of every notification the bot sent to Telegram — the website shows the same feed."""
+
+    __tablename__ = "sent_messages"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    kind: Mapped[str] = mapped_column(String(16), index=True)  # tender | freelance | email | status
+    text: Mapped[str] = mapped_column(Text)  # Telegram HTML
+    buttons: Mapped[list[list[dict[str, Any]]]] = mapped_column(JSON, default=list)
+    created_at: Mapped[datetime] = mapped_column(default=utcnow, index=True)
+
+
 class KV(Base):
     """Small runtime flags (paused, last summary sent, ...)."""
 

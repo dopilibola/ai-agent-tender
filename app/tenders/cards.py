@@ -28,6 +28,15 @@ def esc(value) -> str:
     return _escape(str(value), quote=False) if value is not None else ""
 
 
+def lot_link(lot: Lot, text: str | None = None) -> str:
+    """Clickable lot number (HTML). Falls back to plain text when the lot has no http(s) URL."""
+    label = esc(text if text is not None else lot.external_id)
+    url = lot.url or ""
+    if not url.startswith(("http://", "https://")):
+        return label
+    return f'<a href="{_escape(url, quote=True)}">{label}</a>'
+
+
 def short(text: str | None, limit: int) -> str:
     text = " ".join((text or "").split())
     return text if len(text) <= limit else text[: limit - 1].rstrip() + "…"
@@ -123,7 +132,7 @@ def lot_card(lot: Lot, *, used_usd: float = 0.0, limit_usd: float = 0.0, now: da
         lines.append("⚠️ Risklar: " + esc(short("; ".join(risks[:2]), 300)))
     elif lot.matched_keywords:
         lines.append("🏷 " + esc(", ".join(lot.matched_keywords[:6])))
-    lines.append(f"🔗 {esc(lot.url)}")
+    lines.append(f"🔗 {lot_link(lot, 'Saytda ochish')}: {esc(lot.url)}")
     return "\n".join(lines)
 
 
@@ -205,7 +214,7 @@ def one_line(lot: Lot, now: datetime | None = None) -> str:
     dot = VERDICT_DOT.get(lot.verdict or "", "⚠️" if a.get("error") else "•")
     fit = f" ({a['fit_score']})" if a.get("fit_score") is not None else ""
     return (
-        f"{dot}{fit} <b>{esc(lot.external_id)}</b> {esc(short(lot.title, 70))} — "
+        f"{dot}{fit} <b>{lot_link(lot)}</b> {esc(short(lot.title, 70))} — "
         f"{esc(money_uzs(lot.start_cost, lot.currency))}, {remaining_uz(lot.deadline_at, now)}"
     )
 

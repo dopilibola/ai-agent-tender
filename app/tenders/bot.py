@@ -9,7 +9,7 @@ import logging
 from aiogram import F, Router
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Command, CommandObject
-from aiogram.types import CallbackQuery, Message
+from aiogram.types import CallbackQuery, LinkPreviewOptions, Message
 
 from app.bot.menu import TENDERS_BTN
 from app.bot.notifier import split_text
@@ -36,8 +36,9 @@ TENDERS_HELP = (
 
 async def _reply_long(message: Message, text: str, **kw) -> None:
     parts = split_text(text)
+    no_preview = LinkPreviewOptions(is_disabled=True)  # lists hold many lot links; previews would be noise
     for i, part in enumerate(parts):
-        await message.answer(part, **(kw if i == len(parts) - 1 else {}))
+        await message.answer(part, link_preview_options=no_preview, **(kw if i == len(parts) - 1 else {}))
 
 
 async def _send_list(message: Message, svc: TenderService, *, bidding_only: bool) -> None:

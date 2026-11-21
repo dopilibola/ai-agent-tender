@@ -225,3 +225,11 @@ tenders:
       - внедрен
       - tz yozish
       - техник топшириқ
+
+# ── 🌐 Veb-sayt (ochiq, faqat ko'rish; boshqarish .env dagi WEB_ADMIN_PASSWORD bilan kirgandan keyin) ──
+web:
+  enabled: true
+  host: 127.0.0.1                 # nginx /tender/ → shu port
+  port: 8090
+  base_path: /tender
+  title: IT tenderlar va frilans ishlar

@@ -571,7 +571,7 @@ class TenderService:
         if len(good) > 15:
             out.append(f"… va yana {len(good) - 15} ta (/list)")
         if bad:
-            out.append("❌ Mos emas: " + ", ".join(cards.esc(lot.external_id) for lot in bad))
+            out.append("❌ Mos emas: " + ", ".join(cards.lot_link(lot) for lot in bad))
         out.append("")
         out.append(f"⏰ <b>3 kun ichida muddati tugaydi: {len(approaching)}</b>")
         out.extend(cards.one_line(lot, now) for lot in approaching[:10])

@@ -12,6 +12,7 @@ from aiogram.enums import ParseMode
 from aiogram.types import BotCommand
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
+from app.bot.feed import FeedSender, backfill
 from app.bot.freelance import router as freelance_router
 from app.bot.handlers import router
 from app.bot.menu import main_menu
@@ -78,21 +79,23 @@ async def main() -> None:
         default=DefaultBotProperties(parse_mode=ParseMode.HTML),
     )
     notifier = Notifier(bot, settings.owner_chat_id)
+    # Every notification also goes to `sent_messages` → the website shows the same feed as Telegram.
+    feeds = {k: FeedSender(notifier, sessionmaker, k) for k in ("tender", "freelance", "email", "status")}
 
     tcfg = settings.config.tenders
     tender_service = TenderService(
         settings,
         sessionmaker,
         build_sources(tcfg) if tcfg.enabled else {},
-        notifier,
+        feeds["tender"],
         fx=UsdRate(sessionmaker),
         analyzer=TenderAnalyzer(gemini, settings, sessionmaker) if tcfg.analysis.enabled else None,
     )
 
     freelance_service = FreelanceService(
         settings, sessionmaker,
-        build_connectors(settings, gemini=gemini, sessionmaker=sessionmaker, notify=notifier.send_text),
-        gemini, notifier, fx=UsdRate(sessionmaker)
+        build_connectors(settings, gemini=gemini, sessionmaker=sessionmaker, notify=feeds["email"].send_text),
+        gemini, feeds["freelance"], fx=UsdRate(sessionmaker)
     )
 
     dp = Dispatcher(
@@ -113,7 +116,7 @@ async def main() -> None:
         flush_notifications,
         "interval",
         minutes=1,
-        args=[sessionmaker, notifier.send_text],
+        args=[sessionmaker, feeds["status"].send_text],
         id="status_notifications",
         max_instances=1,
         coalesce=True,
@@ -150,6 +153,21 @@ async def main() -> None:
                           id="tenders_daily_report", max_instances=1, coalesce=True)
     scheduler.start()
 
+    web_runner = None
+    wcfg = settings.config.web
+    if wcfg.enabled:
+        await backfill(sessionmaker, tender_service.limit_usd)
+        from app.web import server as web_server
+
+        try:
+            web_runner = await web_server.start(
+                web_server.build_app(settings, sessionmaker, tenders=tender_service if tcfg.enabled else None,
+                                     freelance=freelance_service, notify=notifier.send_text),
+                wcfg.host, wcfg.port,
+            )
+        except OSError:
+            log.exception("web.start_failed")  # the bot keeps working without the site
+
     try:
         await bot.set_my_commands(COMMANDS)
         await notifier.send(
@@ -161,6 +179,8 @@ async def main() -> None:
         await dp.start_polling(bot, allowed_updates=dp.resolve_used_update_types())
     finally:
         scheduler.shutdown(wait=False)
+        if web_runner is not None:
+            await web_runner.cleanup()
         await tender_service.aclose()
         await freelance_service.aclose()
         await bot.session.close()

@@ -51,6 +51,10 @@ class Secrets(BaseSettings):
 
     google_sheets_credentials_file: Path | None = None
 
+    # Web dashboard login. Without a password the whole site stays locked.
+    web_admin_user: str = "admin"
+    web_admin_password: SecretStr | None = None
+
 
 # ── config.yaml ─────────────────────────────────────────────────────────────
 class ModelPrice(BaseModel):
@@ -163,6 +167,22 @@ class TendersConfig(BaseModel):
         return v
 
 
+class WebConfig(BaseModel):
+    """Public read-only dashboard (+ owner actions after login). Served by the bot process itself."""
+
+    enabled: bool = False
+    host: str = "127.0.0.1"
+    port: int = Field(8090, ge=1, le=65535)
+    base_path: str = "/tender"  # nginx proxies this prefix unchanged
+    title: str = "IT tenderlar va frilans ishlar"
+
+    @field_validator("base_path")
+    @classmethod
+    def _path(cls, v: str) -> str:
+        v = "/" + v.strip("/")
+        return "" if v == "/" else v
+
+
 class AppConfig(BaseModel):
     timezone: str = "Asia/Tashkent"
     keywords: list[str] = []
@@ -179,6 +199,7 @@ class AppConfig(BaseModel):
     worker: WorkerConfig = WorkerConfig()
     email_watch: EmailWatchConfig = EmailWatchConfig()
     tenders: TendersConfig = TendersConfig()
+    web: WebConfig = WebConfig()
     google_sheets_id: str | None = None
 
     @field_validator("timezone")
