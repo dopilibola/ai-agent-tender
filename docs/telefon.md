@@ -110,3 +110,16 @@ Natija:
 - **Tunnel**: `cloudflared` ochiq https link beradi → `grep trycloudflare ~/ai-agent-tender/data/tunnel.log`.
   Link har qayta ishga tushishda o'zgaradi.
 - Telefon qayta yoqilsa Termux:Boot hammasini (sshd → bot → tunnel) o'zi ko'taradi.
+
+## 🌍 O'z domeningiz (masalan shindo.uz) → telefon
+
+VPS'da nginx domenni `127.0.0.1:3050` ga proxy qiladi; telefon VPS'ga teskari SSH tunnel ochadi.
+VPS'da kod ham, data ham yo'q — hammasi telefonda.
+
+```bash
+bash ~/ai-agent-tender/scripts/termux-domain-tunnel.sh user@server_ip 3050
+```
+
+Birinchi marta skript `restrict,port-forwarding,...` bilan boshlanadigan qator chiqaradi — uni VPS'dagi
+`~/.ssh/authorized_keys` ga qo'shing (bu kalit faqat 3050 portni ochishga ruxsat beradi, shell yo'q),
+keyin skriptni argumentlarsiz qayta ishga tushiring. Telefon qayta yoqilsa tunnel o'zi ulanadi.
