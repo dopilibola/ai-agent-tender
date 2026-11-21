@@ -284,6 +284,9 @@ class FreelanceService:
             await s.commit()
             conn = self.connectors.get(job.platform)
             pcfg = self.cfg.platforms.get(job.platform)
+            by_phone = self.cfg.phone.enabled and job.platform in self.cfg.phone.platforms
+        if by_phone:
+            return "queued"  # 📱 app.phone.submitter places it from the phone's Chrome
         if conn is None or not conn.can_submit or (pcfg and pcfg.dry_run):
             return "manual"
         return "queued"  # submitter (next step) will pick it up

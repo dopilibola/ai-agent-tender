@@ -151,6 +151,13 @@ async def main() -> None:
                           max_instances=1, coalesce=True)
         scheduler.add_job(tender_service.send_daily_report, "cron", hour=hh, minute=mm,
                           id="tenders_daily_report", max_instances=1, coalesce=True)
+    if settings.config.phone.enabled:
+        from app.phone.submitter import PhoneSubmitter
+
+        phone_submitter = PhoneSubmitter(settings, sessionmaker, gemini, notifier)
+        scheduler.add_job(phone_submitter.run_queue, "interval", minutes=1,
+                          next_run_time=datetime.now(UTC) + timedelta(seconds=60),
+                          id="phone_submit", max_instances=1, coalesce=True)
     scheduler.start()
 
     web_runner = None

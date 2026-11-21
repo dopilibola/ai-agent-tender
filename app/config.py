@@ -95,6 +95,19 @@ class PlatformConfig(BaseModel):
         return self
 
 
+class PhoneConfig(BaseModel):
+    """📱 The phone drives its own Chrome (adb + DevTools) to place approved bids. See app/phone/."""
+
+    enabled: bool = False
+    dry_run: bool = True               # fill the form, stop before the final "Place bid" click
+    platforms: list[str] = ["freelancer_com"]
+    adb_path: str = "/data/data/com.termux/files/usr/bin/adb"
+    mdns_cmd: list[str] = ["/root/adbtools/bin/python", "/data/data/com.termux/files/home/mdns.py", "6"]
+    cdp_port: int = 9222
+    max_steps: int = Field(25, ge=3, le=60)
+    step_delay_s: float = Field(1.5, ge=0)
+
+
 class EmailWatchConfig(BaseModel):
     enabled: bool = True  # only active when IMAP_USER and IMAP_APP_PASSWORD are set in .env
     senders: list[str] = ["upwork.com", "fiverr.com"]
@@ -200,6 +213,7 @@ class AppConfig(BaseModel):
     email_watch: EmailWatchConfig = EmailWatchConfig()
     tenders: TendersConfig = TendersConfig()
     web: WebConfig = WebConfig()
+    phone: PhoneConfig = PhoneConfig()
     google_sheets_id: str | None = None
 
     @field_validator("timezone")

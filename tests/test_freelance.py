@@ -132,6 +132,7 @@ async def test_scoring_failure_retries_next_cycle(settings, sessionmaker):
 
 
 async def test_approve_requires_owner_and_is_single_use(settings, sessionmaker):
+    settings.config.phone.enabled = False  # no phone, no token → paste manually
     svc, _, _ = make(settings, sessionmaker, [listing(9)])
     await svc.run_cycle(NOW)
     job = (await jobs_by_ext(sessionmaker))["9"]
@@ -147,6 +148,7 @@ async def test_approve_requires_owner_and_is_single_use(settings, sessionmaker):
 
 
 async def test_edit_and_rewrite_create_new_versions(settings, sessionmaker):
+    settings.config.phone.enabled = False
     svc, _, calls = make(settings, sessionmaker, [listing(10)])
     await svc.run_cycle(NOW)
     job_id = (await jobs_by_ext(sessionmaker))["10"].id
@@ -202,3 +204,13 @@ def test_parse_freelancer_project():
     assert job.title == "Sports Betting" and job.currency == "INR"
     assert job.budget_usd == pytest.approx(399.41, abs=0.01)
     assert job.proposals_count == 49 and job.skills == ["Python", "Django"]
+
+
+async def test_approve_goes_to_phone_queue_when_enabled(settings, sessionmaker):
+    svc, _, _ = make(settings, sessionmaker, [listing(19)])
+    await svc.run_cycle(NOW)
+    job = (await jobs_by_ext(sessionmaker))["19"]
+    settings.config.phone.enabled = True
+    settings.config.phone.platforms = [job.platform]
+    assert await svc.approve(job.id, user_id=settings.owner_chat_id) == "queued"
+    assert (await jobs_by_ext(sessionmaker))["19"].status == S.APPROVED

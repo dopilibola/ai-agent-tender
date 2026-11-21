@@ -154,7 +154,8 @@ async def job_click(cb: CallbackQuery, callback_data: JobAction, state: FSMConte
             )
             await cb.message.answer(f"<code>{html.escape(proposal.text)}</code>")
         else:
-            await cb.message.answer(f"✅ #{job_id} tasdiqlandi — yuborish navbatiga qo'yildi.")
+            await cb.message.answer(f"✅ #{job_id} tasdiqlandi — 📱 telefon ~1 daqiqada o'zi topshiradi va "
+                                    "natijani skrinshot bilan yuboradi.")
     elif action == "skip":
         await freelance_service.skip(job_id, cb.from_user.id)
         await cb.answer("⏭ O'tkazib yuborildi")

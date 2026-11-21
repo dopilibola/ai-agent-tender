@@ -66,6 +66,11 @@ class Notifier:
         assert msg is not None
         return msg
 
+    async def send_photo(self, photo: bytes, caption: str = "") -> None:
+        from aiogram.types import BufferedInputFile
+
+        await self.bot.send_photo(self.chat_id, BufferedInputFile(photo, "screen.png"), caption=caption[:1024])
+
     async def send_text(self, text: str) -> None:
         """Signature-compatible with app.core.status.SendFn."""
         await self.send(text)

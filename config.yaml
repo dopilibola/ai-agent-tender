@@ -51,7 +51,7 @@ platforms:
     dry_run: true
     poll_interval_min: 15
   kwork:
-    enabled: true                # ochiq "Биржа" sahifasi (Разработка и IT), faqat 1-sahifa
+    enabled: false                # ochiq "Биржа" sahifasi (Разработка и IT), faqat 1-sahifa
     dry_run: true
     poll_interval_min: 15
   upwork:                        # ochiq API/RSS yo'q (2024 dan yopilgan) — faqat email kuzatuvi orqali
@@ -223,3 +223,9 @@ web:
   port: 8090
   base_path: /tender
   title: IT tenderlar va frilans ishlar
+
+phone:                           # 📱 ✅ bosilganda telefon o'zi Chrome'da taklifni topshiradi (app/phone/)
+  enabled: true
+  dry_run: true                  # true = formani to'ldiradi, oxirgi "Place bid"ni BOSMAYDI (sinov)
+  platforms: [freelancer_com, fl_ru]  # telefondagi Chrome'da login qilingan saytlar
+  max_steps: 25
