@@ -152,6 +152,10 @@ async def main() -> None:
             from app.tenders.prices import PriceWatch
 
             price_watch = PriceWatch(settings, sessionmaker, tender_service)
+            if tcfg.prices.ai_enabled:
+                from app.tenders.goods_ai import GoodsAnalyzer
+
+                price_watch.analyzer = GoodsAnalyzer(gemini, sessionmaker, max_per_day=tcfg.prices.ai_max_per_day)
             price_job = scheduler.add_job(price_watch.run, "interval", minutes=tcfg.prices.interval_min,
                               next_run_time=datetime.now(UTC) + timedelta(minutes=4),
                               id="tenders_prices", max_instances=1, coalesce=True)

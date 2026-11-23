@@ -117,6 +117,8 @@ font-weight:500;font-size:13px;cursor:pointer;display:inline-flex;align-items:ce
 button:hover,.btn:hover{background:var(--btn-hover);text-decoration:none}
 .btn.ghost,button.ghost{background:var(--field);color:var(--ink);border-color:var(--line)}
 .btn.ghost:hover,button.ghost:hover{background:var(--soft)}
+.panel.item:target{border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-bg)}
+summary{cursor:pointer}
 .btn.xs{height:26px;padding:0 8px;font-size:12px;border-radius:6px;gap:4px}
 .btn.link{background:none;border-color:transparent;color:var(--muted)}.btn.link:hover{color:var(--ink);background:none}
 .seg{display:inline-flex;background:var(--chip);border-radius:9px;padding:3px;gap:2px}
@@ -731,8 +733,135 @@ def prices_page(ctx: Ctx, rows: list, *, f: str, q: str, yon: str, dir_counts: d
         "<title>", '<meta http-equiv="refresh" content="900"><title>', 1)
 
 
-def price_lot_page(ctx: Ctx, lp, *, big: float) -> str:
-    """Every item of one lot with its Uzum check."""
+AI_PRICE_CLS = {"QIMMAT": "bad", "ME'YORIDA": "good", "ARZON": "good", "NOANIQ": "maybe"}
+AI_SUPPLY_CLS = {"QATNASHISH MUMKIN": "good", "SHARTLI": "maybe", "TAVSIYA ETILMAYDI": "bad"}
+
+
+def _lot_info(lot, d: dict) -> str:
+    def dt(v):
+        return fmt_local(datetime.fromisoformat(v)) if v else None
+
+    cur = d.get("cur") or lot.currency
+    cost = d.get("cost") or lot.start_cost
+    deadline = lot.deadline_at
+    rows = [
+        ("Lot raqami", f'<span class="lotno">{ext_link(lot.url, lot.external_id)}</span> · '
+                       f'{h(tc.SOURCE_NAME.get(lot.source, lot.source))}' + (f' · {h(d["type"])}' if d.get("type") else "")),
+        ("Buyurtmachi", h(d.get("customer") or lot.customer_name or "noma'lum")),
+        ("INN / viloyat", h(f"{d.get('tin') or '?'} · {d.get('region') or getattr(lot, 'customer_region', None) or '?'}")),
+        ("Boshlang'ich narx", f"<b>{h(tc.money_uzs(cost, cur))}</b>" if cost else "noma'lum"),
+        ("E'lon qilingan", h(dt(d.get("published")) or "noma'lum")),
+        ("Topshirish muddati", h(f"{fmt_local(deadline)} · {remaining_uz(deadline)}") if deadline else "noma'lum"),
+        ("Zakalat", h(f"{d['pledge_pct']:g}%" + (f" = {tc.money_uzs(d['pledge'], cur)}" if d.get("pledge") else ""))
+         if d.get("pledge_pct") else "talab qilinmaydi / noma'lum"),
+    ]
+    terms = [f"avans {d['advance_pct']:g}%" if d.get("advance_pct") is not None else None,
+             f"to'lov {d['pay_days']} kun" if d.get("pay_days") else None,
+             f"yetkazish {d['exec_days']} kun" if d.get("exec_days") else None,
+             f"kafolat {d['warranty']}" if d.get("warranty") else None]
+    rows.append(("Shartlar", h(", ".join(t for t in terms if t) or "noma'lum")))
+    if d.get("valuation"):
+        rows.append(("Baholash usuli", h(d["valuation"])))
+    if d.get("financing") or d.get("languages"):
+        rows.append(("Moliya / til", h(f"{d.get('financing') or '?'} · {', '.join(d.get('languages') or []) or '?'}")))
+    if d.get("status"):
+        rows.append(("Saytdagi holat", h(d["status"])))
+    kv = "".join(f"<dt>{h(k)}</dt><dd>{v}</dd>" for k, v in rows)
+    out = f'<h2>Lot ma\'lumotlari</h2><div class="panel"><dl class="kv">{kv}</dl></div>'
+    if not d:
+        out += ('<p class="sub muted">Lot kartasini saytdan o\'qib bo\'lmadi — faqat ro\'yxatdagi ma\'lumotlar '
+                "ko'rsatilgan.</p>")
+    if d.get("description"):
+        out += (f'<details class="panel"><summary><b>Tavsif</b></summary>'
+                f'<p style="white-space:pre-wrap;margin:10px 0 0">{h(d["description"])}</p></details>')
+    if d.get("qualification"):
+        out += ("<details class=\"panel\"><summary><b>Malaka talablari</b> "
+                f"<span class=\"muted\">({len(d['qualification'])})</span></summary><ul>"
+                + "".join(f"<li>{h(x)}</li>" for x in d["qualification"]) + "</ul></details>")
+    if d.get("files"):
+        out += ("<details class=\"panel\"><summary><b>Fayllar</b> <span class=\"muted\">(asl saytda, "
+                f"{len(d['files'])})</span></summary><ul>"
+                + "".join(f"<li>{h(f.get('label') or '')}{(' — ' + h(f['name'])) if f.get('name') else ''}</li>"
+                          for f in d["files"]) + "</ul></details>")
+    return out
+
+
+def _ai_block(ctx: Ctx, lp, ai: dict | None, busy: bool) -> str:
+    form = (f'<form method="post" action="{h(ctx.url(f"/all/uzum/lot/{lp.id}/ai"))}" style="display:inline">'
+            f'<input type="hidden" name="csrf" value="{h(ctx.csrf or "")}">'
+            f'<input type="hidden" name="back" value="{h(ctx.url(f"/all/uzum/lot/{lp.id}"))}">'
+            f'<button class="ghost" type="submit">🔄 Qayta tahlil qilish</button></form>')
+    head = '<h2 id="ai">🤖 AI xulosasi'
+    if ai is None and busy:
+        return (f'{head}</h2><div class="panel"><b>AI lotni tahlil qilmoqda…</b> '
+                '<span class="muted">10–30 soniya; sahifa o\'zi yangilanadi.</span></div>')
+    if ai is None:
+        return f'{head}</h2><div class="panel muted">AI o\'chirilgan (config: tenders.prices.ai_enabled).</div>'
+    note = ('<p class="muted" style="margin:8px 0 0">Yangi ma\'lumotlar bilan qayta tahlil qilinmoqda — sahifa o\'zi '
+            "yangilanadi.</p>") if busy else ""
+    if ai.get("error"):
+        return (f'{head}</h2><div class="panel"><p style="margin-top:0">AI xulosa tayyorlay olmadi: '
+                f'<span class="muted">{h(ai["error"])}</span></p>{"" if busy else form}{note}</div>')
+    pv, sv = ai.get("price_verdict", "NOANIQ"), ai.get("supplier_verdict", "SHARTLI")
+    badges = (f' <span class="pill {AI_PRICE_CLS.get(pv, "")}">Narx: {h(pv)}</span>'
+              f' <span class="pill {AI_SUPPLY_CLS.get(sv, "")}">{h(sv)}</span>')
+    m = ai.get("est_margin_percent") or []
+    margin = (f"<p><b>Taxminiy ustama:</b> {m[0]}–{m[1]}% <span class=\"muted\">(Uzum narxida olib, tender narxida "
+              "yetkazilsa; QQS va yetkazishdan oldin)</span></p>") if len(m) == 2 else ""
+
+    def bullets(title: str, items) -> str:
+        items = [x for x in (items or []) if x]
+        return (f"<p style=\"margin:12px 0 4px\"><b>{h(title)}</b></p><ul style=\"margin:0\">"
+                + "".join(f"<li>{h(x)}</li>" for x in items) + "</ul>") if items else ""
+
+    notes = [f"{n['name']} — {n['note']}" for n in ai.get("item_notes") or []]
+    at = ai.get("_at")
+    foot = (f'<p class="muted" style="margin:12px 0 0;font-size:12px">{h(ai.get("_model") or "")} · '
+            f'{h(fmt_local(datetime.fromisoformat(at)) if at else "")} · AI xulosa taxminiy — Uzum havolalari '
+            f'bilan tekshiring. {"" if busy else form}</p>')
+    return (f'{head}{badges}</h2><div class="panel">'
+            f'<p style="margin-top:0">{h(ai.get("summary_uz") or "")}</p>'
+            f'<p><b>Narxlar:</b> {h(ai.get("price_comment_uz") or "")}</p>'
+            f'<p><b>Yetkazib beruvchi uchun:</b> {h(ai.get("supplier_reason_uz") or "")}</p>{margin}'
+            + bullets("Muhim shartlar", ai.get("key_conditions"))
+            + bullets("⚠️ Shubhali joylar", ai.get("red_flags"))
+            + bullets("Risklar", ai.get("risks"))
+            + bullets("Mahsulotlar bo'yicha", notes)
+            + bullets("Buyurtmachiga savollar", ai.get("questions_for_customer_uz"))
+            + f"{note}{foot}</div>")
+
+
+def _item_cards(rows) -> str:
+    out = []
+    for r in rows:
+        it = r.item
+        lines = [("Miqdori", f"{it.qty:g} {it.unit or ''}".strip() if it.qty else "noma'lum"),
+                 ("Tender narxi", f"{tc.money_uzs(r.price_uzs)} × {it.qty or 1:g} = "
+                                  f"{tc.money_uzs(r.price_uzs * (it.qty or 1))}")]
+        if it.code:
+            lines.append(("Mahsulot kodi", it.code))
+        lines.append(("Holat", r.status_text))
+        if r.uzum_med:
+            lines.append(("Uzum narxi", f"o'rtacha {tc.money_uzs(r.uzum_med)} · eng arzoni {tc.money_uzs(r.uzum_min)} "
+                                        f"· {r.n} ta mos mahsulot"))
+        if r.ratio:
+            lines.append(("Farq", f"tender ×{r.ratio:.1f} qimmat" if r.ratio >= 1
+                          else f"tender ×{1 / r.ratio:.1f} arzon"))
+            lines.append(("Farq summasi", tc.money_uzs(r.overpay) if r.overpay >= 0
+                          else f"−{tc.money_uzs(-r.overpay)}"))
+        lines.append(("Uzum'da qidirildi", f"«{r.query}»" + (f" · {fmt_local(r.checked_at)}" if r.checked_at else "")))
+        kv = "".join(f"<dt>{h(k)}</dt><dd>{h(v)}</dd>" for k, v in lines)
+        if r.best:
+            kv += f"<dt>Uzum'dagi misol</dt><dd>{ext_link(r.best.url, r.best.title)}</dd>"
+        btn = ext_link(r.lot.url, "📄 Tender", "btn ghost xs") + (
+            " " + ext_link(r.uzum_url, "🛒 Uzum", "btn ghost xs") if r.status != "unit" else "")
+        out.append(f'<div class="panel item" id="i-{r.idx}"><p style="margin:0 0 10px"><b>{h(it.name)}</b> '
+                   f'{btn}</p><dl class="kv">{kv}</dl></div>')
+    return "".join(out)
+
+
+def price_lot_page(ctx: Ctx, lp, *, big: float, detail: dict, ai: dict | None, ai_busy: bool) -> str:
+    """One goods lot: card details, AI summary, every item with its Uzum check."""
     from app.web.tables import price_cols, table_html
 
     lot = lp.lot
@@ -740,7 +869,7 @@ def price_lot_page(ctx: Ctx, lp, *, big: float) -> str:
     order = {"ok": 0, "far": 1, "nomatch": 2, "pending": 3}
     rows = sorted(lp.rows, key=lambda r: (order.get(r.status, 4), -r.ratio, r.idx))
     table = table_html(ctx, f"/all/uzum/lot/{lot.id}", rows, cols, sort="", direction="desc", query={},
-                       detail=lambda r: lot.url, bulk=[], noun="mahsulot", external=True)
+                       detail=lambda r: f"#i-{r.idx}", bulk=[], noun="mahsulot")
     ok = lp.compared
     tender_sum = sum(r.price_uzs * (r.item.qty or 1) for r in ok)
     uzum_sum = sum(r.uzum_med * (r.item.qty or 1) for r in ok)
@@ -748,14 +877,22 @@ def price_lot_page(ctx: Ctx, lp, *, big: float) -> str:
              + stat("Uzum bilan solishtirildi", len(ok), f"Uzum arzon: {len(lp.dearer(big))} tasi")
              + stat("Solishtirilganlar: tenderda", tc.money_uzs(tender_sum), f"Uzum bo'yicha {tc.money_uzs(uzum_sum)}")
              + stat("Ortiqcha summa", tc.money_uzs(max(lp.overpay(big), 0)), f"Uzum ≥{big:g}× arzon bo'lganlar"))
-    head = (f'<div class="panel"><b>{h(lot.title)}</b><p class="muted" style="margin:6px 0 0">'
-            f'{h(lot.customer_name or "")} · muddat {h(fmt_local(lot.deadline_at) if lot.deadline_at else "—")} · '
-            f'{ext_link(lot.url, "Lotni saytda ochish")} · <a href="{h(ctx.url("/all/uzum", f="lots"))}">← Lotlar</a></p></div>')
-    note = ('<p class="sub">«📄 Tender» — lot asl saytda (etender/xarid) ochiladi, «🛒 Uzum» — shu mahsulot '
-            "Uzum'da qidiriladi (qatorning o'zini bossangiz — lot saytda ochiladi). «Holat» ustunida nima uchun "
-            "ba'zi mahsulotlar solishtirilmagani yozilgan; «Navbatda» bo'lganlarini telefon keyingi tekshiruvlarda qidiradi.</p>")
-    return layout(ctx, "goods", f"{head}<div class=\"stats\">{stats}</div>{note}{table}",
-                  title=f"Lot {lot.external_id}: Uzum bilan solishtirish", sub="Lotdagi hamma mahsulotlar")
+    head = (f'<div class="panel"><b style="font-size:15px">{h(detail.get("title") or lot.title)}</b>'
+            f'<p style="margin:10px 0 0">{ext_link(lot.url, "📄 Lotni tender saytida ochish", "btn ghost xs")} '
+            f'<a class="btn ghost xs" href="#ai">🤖 AI xulosasi</a> '
+            f'<a class="btn ghost xs" href="#items">🛒 Mahsulotlar</a> '
+            f'<a class="btn link xs" href="{h(ctx.url("/all/uzum", f="lots"))}">← Lotlar</a></p></div>')
+    note = ('<p class="sub">«📄 Tender» — lot asl saytda ochiladi, «🛒 Uzum» — mahsulot Uzum\'da qidiriladi. '
+            "Qatorning boshqa joyini bossangiz — shu mahsulot haqida batafsil ma'lumot (pastda) ochiladi. "
+            "«Navbatda» bo'lganlarini telefon keyingi tekshiruvlarda qidiradi.</p>")
+    body = (f'{head}<div class="stats">{stats}</div>{_ai_block(ctx, lp, ai, ai_busy)}{_lot_info(lot, detail)}'
+            f'<h2 id="items">Mahsulotlar va Uzum narxlari</h2>{note}{table}'
+            f'<h2>Mahsulotlar batafsil</h2>{_item_cards(rows)}')
+    page = layout(ctx, "goods", body, title=f"Lot {lot.external_id}", sub="Lot haqida batafsil · AI xulosasi · "
+                  "Uzum narxlari")
+    if ai_busy:
+        page = page.replace("<title>", '<meta http-equiv="refresh" content="8"><title>', 1)
+    return page
 
 
 def login_page(ctx: Ctx, *, error: str = "", next_url: str = "", user: str = "") -> str:

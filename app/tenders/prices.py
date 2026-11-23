@@ -40,6 +40,7 @@ log = logging.getLogger(__name__)
 KV_ITEMS = "pitems:"
 KV_UZUM = "uzum:"
 KV_STATE = "uzum_state"
+KV_AI = "pai:"  # Gemini summary of one goods lot (app/tenders/goods_ai.py)
 MIN_HITS = 3  # fewer matching Uzum products → no comparison
 MAX_RATIO = 20  # 20× apart = a different product (industrial transformer vs a retail one), not a price gap
 MAX_UNIT_UZS = 200e6  # one item dearer than this is not sold on Uzum
@@ -112,6 +113,25 @@ def items_from_record(rec: LotRecord) -> list[Item]:
             out.append(Item(_clean(x.get("productName") or x.get("description")), _num(x.get("quantity")), unit,
                             _num(x.get("price")) or 0, _clean(x.get("productCode"))))
     return [i for i in out if i.name]
+
+
+def _iso(v: datetime | None) -> str | None:
+    return v.isoformat() if v else None
+
+
+def details_from_record(rec: LotRecord) -> dict[str, Any]:
+    """The lot card fields shown on the lot page and given to the AI summary."""
+    return {
+        "title": rec.title, "description": (rec.description or "")[:4000], "type": rec.lot_type,
+        "customer": rec.customer_name, "tin": rec.customer_tin, "region": rec.customer_region,
+        "cost": rec.start_cost, "cur": rec.currency, "published": _iso(rec.published_at),
+        "deadline": _iso(rec.deadline_at), "pledge_pct": rec.pledge_percent, "pledge": rec.pledge_amount,
+        "advance_pct": rec.advance_percent, "pay_days": rec.payment_days, "exec_days": rec.execution_days,
+        "warranty": rec.warranty, "valuation": rec.valuation_method, "financing": rec.financing_source,
+        "qualification": [q for q in rec.qualification if q][:20], "languages": rec.languages,
+        "status": rec.platform_status, "files": [{"label": f.label, "name": f.name or "", "ext": f.ext or ""}
+                                                for f in rec.files][:30],
+    }
 
 
 def is_piece(unit: str) -> bool:
@@ -365,6 +385,8 @@ class PriceWatch:
             uzum = UzumPhone(Phone(p.adb_path, p.cdp_port, p.mdns_cmd))
         self.uzum = uzum
         self._lock = asyncio.Lock()
+        self.analyzer = None  # GoodsAnalyzer, set in main when Gemini is configured
+        self._ai_tasks: dict[str, asyncio.Task] = {}
         self.next_run_at: Callable[[], datetime | None] = lambda: None
 
     async def run(self) -> None:
@@ -426,7 +448,8 @@ class PriceWatch:
                 continue
             fails = 0
             await self._kv_set(KV_ITEMS + r.id, {"at": now_utc().isoformat(), "cur": rec.currency or r.currency,
-                                                 "items": [i.to_json() for i in items_from_record(rec)]})
+                                                 "items": [i.to_json() for i in items_from_record(rec)],
+                                                 "d": details_from_record(rec)})
             done += 1
         return done
 
@@ -434,6 +457,8 @@ class PriceWatch:
         async with self.sessionmaker() as s:
             keys = set(await s.scalars(select(KV.key).where(KV.key.like(KV_ITEMS + "%"))))
             stale = [k for k in keys if k[len(KV_ITEMS):] not in open_ids]
+            ai = set(await s.scalars(select(KV.key).where(KV.key.like(KV_AI + "%"))))
+            stale += [k for k in ai if k[len(KV_AI):] not in open_ids]
             if stale:
                 await s.execute(delete(KV).where(KV.key.in_(stale)))
             old = (now_utc() - timedelta(days=self.cfg.cache_days * 4)).isoformat()
@@ -499,6 +524,57 @@ class PriceWatch:
             log.warning("prices.phone_unavailable", extra={"err": str(e)[:200]})
             return done, f"telefon: {e}"[:200]
         return done, "ok"
+
+    async def lot_detail(self, lot: CatalogRow) -> dict[str, Any]:
+        """Lot card fields; lots fetched before details were kept are opened once more and cached."""
+        async with self.sessionmaker() as s:
+            kv = await s.get(KV, KV_ITEMS + lot.id)
+        value = dict(kv.value or {}) if kv else {}
+        if value.get("d"):
+            return value["d"]
+        src = self.tenders.sources.get(lot.source)
+        if src is None:
+            return {}
+        try:
+            rec = await asyncio.wait_for(src.get_lot(lot.external_id), 40)
+        except Exception as e:
+            log.warning("prices.detail_failed", extra={"lot": lot.id, "err": str(e)[:200]})
+            return {}
+        value["d"] = details_from_record(rec)
+        value.setdefault("items", [i.to_json() for i in items_from_record(rec)])
+        value.setdefault("cur", rec.currency or lot.currency)
+        value.setdefault("at", now_utc().isoformat())
+        await self._kv_set(KV_ITEMS + lot.id, value)
+        return value["d"]
+
+    @staticmethod
+    def ai_sig(lp: LotPrices) -> str:
+        """The summary is redone when more items of the lot got an Uzum price."""
+        return f"{len(lp.rows)}:{len(lp.compared)}"
+
+    async def ai_summary(self, lp: LotPrices, detail: dict[str, Any], *, fresh: bool = False
+                         ) -> tuple[dict | None, bool]:
+        """(cached summary or None, is one being prepared now). Starts preparing in the background."""
+        async with self.sessionmaker() as s:
+            kv = await s.get(KV, KV_AI + lp.id)
+        cached = dict(kv.value or {}) if kv else None
+        task = self._ai_tasks.get(lp.id)
+        busy = task is not None and not task.done()
+        stale = fresh or not cached or (cached.get("_sig") != self.ai_sig(lp) and not cached.get("error"))
+        if self.analyzer is not None and stale and not busy:
+            self._ai_tasks[lp.id] = asyncio.create_task(self._make_ai(lp, detail))
+            busy = True
+        return cached, busy
+
+    async def _make_ai(self, lp: LotPrices, detail: dict[str, Any]) -> None:
+        try:
+            data = await self.analyzer(lp, detail, big=self.cfg.big_ratio)
+        except Exception as e:  # never leave the page spinning
+            log.exception("prices.ai_failed", extra={"lot": lp.id})
+            data = {"error": f"{type(e).__name__}: {e}"[:300]}
+        data["_sig"] = self.ai_sig(lp)
+        data["_at"] = now_utc().isoformat()
+        await self._kv_set(KV_AI + lp.id, data)
 
     async def _kv_set(self, key: str, value: dict) -> None:
         async with self.sessionmaker() as s:

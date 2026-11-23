@@ -1,3 +1,4 @@
+import asyncio
 from datetime import UTC, datetime, timedelta
 
 import pytest
@@ -98,12 +99,25 @@ class FakeUzum:
         return []
 
 
+class FakeAnalyzer:
+    calls = 0
+
+    async def __call__(self, lp, detail, *, big):
+        self.calls += 1
+        assert detail["description"] == "Maktabga kompyuter jihozlari" and len(lp.rows) == 3
+        return {"summary_uz": "Printer va stullar.", "price_verdict": "QIMMAT", "price_comment_uz":
+                "Printer 4 baravar qimmat.", "supplier_verdict": "SHARTLI", "supplier_reason_uz": "Foyda bor.",
+                "est_margin_percent": [30, 60], "key_conditions": [], "risks": ["Kafolat"], "red_flags": [],
+                "item_notes": [], "questions_for_customer_uz": []}
+
+
 @pytest.fixture
 async def watch(settings, sessionmaker):
     settings.secrets.web_admin_password = SecretStr(PASSWORD)
     settings.config.web.base_path = "/tender"
     future = datetime.now(UTC) + timedelta(days=3)
     cards = {"10": LotRecord(source="etender", external_id="10", url="https://etender.uzex.uz/lot/10", title="t",
+                             description="Maktabga kompyuter jihozlari",
                              raw={"budget_products": [
                                  {"Product_Name": "Printer Canon", "Quantity": 4, "Price": 5_000_000,
                                   "Js_Properties": [{"Property_Name": "Ўлчов бирлиги", "User_Value": "дона"}]},
@@ -122,6 +136,7 @@ async def watch(settings, sessionmaker):
     ], now)
     uzum = FakeUzum()
     pw = PriceWatch(settings, sessionmaker, tenders, uzum=uzum)
+    pw.analyzer = FakeAnalyzer()
     tenders.prices = pw
     return pw, src, uzum
 
@@ -162,6 +177,15 @@ async def test_prices_page(watch, settings, sessionmaker):
         lots = await (await c.get("/tender/all/uzum", params={"f": "lots"})).text()
         assert "2 / 3" in lots and "1 ta" in lots and 'data-href="/tender/all/uzum/lot/etender-10"' in lots
         one = await (await c.get("/tender/all/uzum/lot/etender-10")).text()
+        assert "Lot ma'lumotlari" in one and "Maktabga kompyuter jihozlari" in one  # lot card details
+        assert "AI lotni tahlil qilmoqda" in one and 'http-equiv="refresh"' in one
+        await asyncio.gather(*pw._ai_tasks.values())
+        one = await (await c.get("/tender/all/uzum/lot/etender-10")).text()
+        assert "Narx: QIMMAT" in one and "Printer 4 baravar qimmat" in one and "Qayta tahlil" in one
+        assert 'data-href="#i-0"' in one and 'id="i-0"' in one  # row → the item's own details
+        assert pw.analyzer.calls == 1
+        r = await c.post("/tender/all/uzum/lot/etender-10/ai", data={"csrf": "bad"}, allow_redirects=False)
+        assert r.status == 403
         assert "Printer Canon" in one and "Stul ofis" in one and "Benzin" in one  # every item of the lot
         assert "O&#x27;lchov birligi" in one and "Solishtirildi" in one
         assert "📄 Tender" in one and "🛒 Uzum" in one and 'href="https://etender.uzex.uz/lot/10"' in one
@@ -171,3 +195,30 @@ async def test_prices_page(watch, settings, sessionmaker):
         assert r.status == 200 and "uzum_lotlar" in r.headers["Content-Disposition"]
         r = await c.get("/tender/all/uzum.xlsx", params={"f": "all"})
         assert r.status == 200 and "uzum_narxlari" in r.headers["Content-Disposition"]
+
+
+async def test_goods_analyzer(watch, sessionmaker):
+    from app.tenders.goods_ai import GoodsAnalysis, GoodsAnalyzer
+    from app.tenders.prices import group_by_lot
+
+    pw, _, _ = watch
+    await pw.run()
+    rows, _ = await pw.comparison()
+    lp = group_by_lot(rows)[0]
+    seen = {}
+
+    class FakeGemini:
+        def model_for(self, role):
+            return "gemini-test"
+
+        async def generate_json(self, prompt, schema, **kw):
+            seen["prompt"], seen["purpose"] = prompt, kw["purpose"]
+            return GoodsAnalysis(summary_uz="s", price_verdict="QIMMAT", price_comment_uz="p",
+                                 supplier_verdict="SHARTLI", supplier_reason_uz="r", est_margin_percent=[60, 20],
+                                 key_conditions=[" ", "to'lov 30 kun"], risks=[], red_flags=[],
+                                 item_notes=[{"name": "Printer Canon", "note": "qimmat"}], questions_for_customer_uz=[])
+
+    data = await GoodsAnalyzer(FakeGemini(), sessionmaker)(lp, await pw.lot_detail(lp.lot), big=2.0)
+    assert data["est_margin_percent"] == [20, 60] and data["key_conditions"] == ["to'lov 30 kun"]
+    assert seen["purpose"] == "goods_analysis" and "Printer Canon" in seen["prompt"] and "uzum_orta" in seen["prompt"]
+    assert "Maktabga kompyuter jihozlari" in seen["prompt"] and data["_model"] == "gemini-test"

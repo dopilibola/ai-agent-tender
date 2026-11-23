@@ -491,7 +491,24 @@ async def prices_lot(request: web.Request) -> web.Response:
     if not mine:
         raise web.HTTPNotFound(text="Bu lot uchun mahsulotlar hali yig'ilmagan (yoki lot yopilgan).")
     lp = group_by_lot(mine)[0]
-    return _page(request, ctx, views.price_lot_page(ctx, lp, big=d.settings.config.tenders.prices.big_ratio))
+    detail = await pw.lot_detail(lp.lot)
+    ai, busy = await pw.ai_summary(lp, detail)
+    return _page(request, ctx, views.price_lot_page(ctx, lp, big=d.settings.config.tenders.prices.big_ratio,
+                                                    detail=detail, ai=ai, ai_busy=busy))
+
+
+async def prices_lot_ai(request: web.Request) -> web.Response:
+    """«Qayta tahlil qilish»: prepare the AI summary of one goods lot again."""
+    d, back = await _require_owner(request)
+    pw = d.tenders.prices if d.tenders else None
+    lot_id = request.match_info["id"]
+    rows, _ = await pw.comparison() if pw else ([], {})
+    mine = [r for r in rows if r.lot.id == lot_id]
+    if not mine:
+        raise web.HTTPNotFound()
+    lp = group_by_lot(mine)[0]
+    await pw.ai_summary(lp, await pw.lot_detail(lp.lot), fresh=True)
+    raise web.HTTPSeeOther(f"{d.base}/all/uzum/lot/{lot_id}#ai")
 
 
 # ── Owner auth + actions ────────────────────────────────────────────────────
@@ -692,6 +709,7 @@ def build_app(settings: Settings, sessionmaker: async_sessionmaker, *, tenders: 
     app.router.add_get(f"{b}/all/uzum", prices_index)
     app.router.add_get(f"{b}/all/uzum.xlsx", prices_xlsx)
     app.router.add_get(f"{b}/all/uzum/lot/{{id}}", prices_lot)
+    app.router.add_post(f"{b}/all/uzum/lot/{{id}}/ai", prices_lot_ai)
     app.router.add_get(f"{b}/lots", tenders_index)
     app.router.add_get(f"{b}/lots.xlsx", tenders_xlsx)
     app.router.add_post(f"{b}/lots/bulk", lots_bulk)
