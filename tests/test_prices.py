@@ -174,6 +174,7 @@ async def test_prices_page(watch, settings, sessionmaker):
         html = await (await c.get("/tender/all/uzum")).text()
         assert "Uzum narxlari" in html and "Printer Canon" in html and "×4.5 qimmat" in html
         assert "Stul ofis" not in html  # 1.04× is not a big difference
+        assert "Boshlang&#x27;ich narx" in html and "Shartli" in html and "20–45%" in html  # lot columns
         assert "&lt;b&gt;Maktab" in html and "<b>Maktab</b>" not in html
         assert "https://uzum.uz/uz/search?query=Printer%20Canon" in html
         every = await (await c.get("/tender/all/uzum", params={"f": "all"})).text()
@@ -183,6 +184,8 @@ async def test_prices_page(watch, settings, sessionmaker):
         assert "900 000 so&#x27;m" in goods or "900 ming so&#x27;m" in goods or "0.9 mln so&#x27;m" in goods
         assert "Shartli" in goods and "20–45%" in goods and "Jami: 1 ta lot" in goods
         assert 'href="/tender/all/uzum"' in main and "katta farqlar" in main and "×4.5 qimmat" in main
+        top = main.split("katta farqlar", 1)[1].split("<h2", 1)[0]
+        assert "Kiritiladigan pul (zakalat)" in top and "AI xulosa" in top and "Shartli" in top and "20–45%" in top
         lots = await (await c.get("/tender/all/uzum", params={"f": "lots"})).text()
         assert "3 / 3" in lots and "1 ta" in lots and 'data-href="/tender/all/uzum/lot/etender-10"' in lots
         one = await (await c.get("/tender/all/uzum/lot/etender-10")).text()

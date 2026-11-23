@@ -691,8 +691,10 @@ def catalog_page(ctx: Ctx, rows: list, *, kind: str, q: str, src: str, region: s
             f'<span class="muted">({h(upd("etender"))} · {h(upd("xarid"))})</span></p>')
     uz = ""
     if uzum:
-        from app.web.tables import price_cols
-        cols = [c for c in price_cols(big) if c.key in ("name", "no", "qty", "tender", "uzum", "ratio", "over", "go")]
+        from app.web.tables import gap_lot_cols, price_cols
+        pc = {c.key: c for c in price_cols(big)}
+        cols = ([pc[k] for k in ("name", "no", "qty", "tender", "uzum", "ratio", "over")] + gap_lot_cols()
+                + [pc["go"]])
         top = table_html(ctx, "/all/uzum", uzum, cols, sort="over", direction="desc", query={"f": "big"},
                          detail=lambda r: ctx.url(f"/all/uzum/lot/{r.lot.id}"), bulk=[], noun="mahsulot")
         top = re.sub(r'<p class="count">[^<]*</p>', "", top, count=1)
@@ -918,7 +920,8 @@ def price_lot_page(ctx: Ctx, lp, *, big: float, detail: dict, ai: dict | None, a
     from app.web.tables import price_cols, table_html
 
     lot = lp.lot
-    cols = [c for c in price_cols(big) if c.key not in ("no", "deadline", "customer")]
+    cols = [c for c in price_cols(big) if c.key not in ("no", "deadline", "customer", "lprice", "pledge", "verdict",
+                                                          "win")]
     order = {"ok": 0, "far": 1, "nomatch": 2, "pending": 3}
     rows = sorted(lp.rows, key=lambda r: (order.get(r.status, 4), -r.ratio, r.idx))
     ok = lp.compared

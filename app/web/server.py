@@ -363,6 +363,21 @@ async def orders_xlsx(request: web.Request) -> web.Response:
 CATALOG_SHOWN = 500
 
 
+def _set_lot_infos(infos: dict, rows: list) -> None:
+    """Zakalat / AI verdict / win % of each row's lot (r.lot is a CatalogRow), for the lot columns."""
+    for r in rows:
+        info = infos.get(r.lot.id) or {}
+        r.lot.pledge_pct, r.lot.pledge_uzs = info.get("pledge_pct"), info.get("pledge_uzs")
+        r.lot.ai_verdict, r.lot.win = info.get("ai_verdict") or "", info.get("win")
+
+
+async def _fill_lot_infos(pw, rows: list) -> None:
+    try:
+        _set_lot_infos(await pw.lot_infos(), rows)
+    except Exception:  # the price table must still open if this breaks
+        log.exception("web.lot_infos_failed")
+
+
 async def _query_catalog(request: web.Request) -> tuple[list, dict]:
     d = request.app[DEPS]
     kind = request.query.get("k", "goods")
@@ -413,25 +428,30 @@ async def _query_catalog(request: web.Request) -> tuple[list, dict]:
     next_scan = d.tenders.next_scan_at() if d.tenders else None
     return shown, {"kind": kind, "q": q, "src": src, "region": region, "regions": regions, "counts": counts,
                    "yon": yon, "dir_counts": dir_counts,
-                   "updated": updated, "next_scan": next_scan, "nf": nf, "sort": sort, "direction": direction}
+                   "updated": updated, "next_scan": next_scan, "nf": nf, "sort": sort, "direction": direction,
+                   "infos": infos}
 
 
 async def catalog_index(request: web.Request) -> web.Response:
     ctx = _ctx(request)
     rows, p = await _query_catalog(request)
+    infos = p.pop("infos")
     d = request.app[DEPS]
     pw = d.tenders.prices if d.tenders else None
     big = d.settings.config.tenders.prices.big_ratio
     uzum: list = []
+    uzum_total = 0
     if pw:
         try:
             cmp_rows, _ = await pw.comparison()
             gaps = [r for r in cmp_rows if r.status == "ok" and (r.ratio >= big or 0 < r.ratio <= 1 / big)]
-            uzum = sorted(gaps, key=lambda r: -abs(r.overpay))
+            uzum_total = len(gaps)
+            uzum = sorted(gaps, key=lambda r: -abs(r.overpay))[:10]
+            _set_lot_infos(infos, uzum)
         except Exception:  # the lot list must still open if the price data is broken
             log.exception("web.uzum_top_failed")
     return _page(request, ctx, views.catalog_page(ctx, rows, shown_limit=CATALOG_SHOWN, total=len(rows),
-                                                  uzum=uzum[:10], uzum_total=len(uzum), big=big, **p))
+                                                  uzum=uzum, uzum_total=uzum_total, big=big, **p))
 
 
 async def catalog_xlsx(request: web.Request) -> web.Response:
@@ -455,6 +475,8 @@ async def _query_prices(request: web.Request) -> tuple[list, dict]:
     sort, direction = _sort_params(request, cols, "over" if f != "under" else "ratio",
                                    "desc" if f != "under" else "asc")
     rows, state = await pw.comparison() if pw else ([], {"phone": "o'chirilgan (config: tenders.prices)"})
+    if pw:
+        await _fill_lot_infos(pw, rows)
     if q:
         ql = q.lower()
         rows = [r for r in rows if ql in r.item.name.lower() or ql in (r.lot.customer_name or "").lower()

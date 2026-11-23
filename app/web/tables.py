@@ -567,6 +567,7 @@ def price_cols(big: float) -> list[Col]:
             lambda c, r, n: ('<span class="muted">—</span>' if not r.ratio else h(tc.money_uzs(r.overpay))
                              if r.overpay >= 0 else f'<span class="muted">−{h(tc.money_uzs(-r.overpay))}</span>'),
             lambda r: round(r.overpay) if r.ratio else "", "desc", 18, "num"),
+        *gap_lot_cols(),
         Col("status", "Holat", lambda r: r.status, lambda c, r, n: _status_cell(r), lambda r: r.status_text,
             "asc", 30),
         Col("deadline", "Muddat", lambda r: as_utc(r.lot.deadline_at) if r.lot.deadline_at else None,
@@ -579,6 +580,21 @@ def price_cols(big: float) -> list[Col]:
             lambda r: r.best.title if r.best else "", width=50, cls="hidden"),
         Col("uzum_url", "Uzum havola", None, lambda c, r, n: "", lambda r: r.uzum_url, width=40, cls="hidden"),
         Col("url", "Lot havola", None, lambda c, r, n: "", lambda r: r.lot.url, width=40, cls="hidden"),
+    ]
+
+
+def gap_lot_cols() -> list[Col]:
+    """Lot-level columns for item rows (r.lot is a CatalogRow with pledge / AI fields filled in)."""
+    return [
+        Col("lprice", "Boshlang'ich narx", lambda r: cat_usd(r.lot) if cat_usd(r.lot) is not None else r.lot.start_cost,
+            lambda c, r, n: _cat_price(r.lot), lambda r: r.lot.start_cost, "desc", 16, "num"),
+        Col("pledge", "Kiritiladigan pul (zakalat)", lambda r: getattr(r.lot, "pledge_uzs", None),
+            lambda c, r, n: _cat_pledge_cell(r.lot), None, "desc", 18, "num"),
+        Col("verdict", "AI xulosa", lambda r: GOODS_VERDICT[r.lot.ai_verdict][2]
+            if getattr(r.lot, "ai_verdict", "") in GOODS_VERDICT else None,
+            lambda c, r, n: _cat_verdict_cell(r.lot), None, "asc", 16),
+        Col("win", "Yutish %", lambda r: _cat_win(r.lot),
+            lambda c, r, n: win_bar(_cat_win(r.lot), "–".join(map(str, r.lot.win or []))), None, "desc", 9, "num"),
     ]
 
 
@@ -600,6 +616,7 @@ def lot_price_cols(big: float) -> list[Col]:
         Col("over", "Ortiqcha summa", lambda r: r.overpay(big) or None,
             lambda c, r, n: h(tc.money_uzs(r.overpay(big))) if r.overpay(big) else '<span class="muted">—</span>',
             lambda r: round(r.overpay(big)), "desc", 18, "num"),
+        *gap_lot_cols(),
         Col("deadline", "Muddat", lambda r: as_utc(r.lot.deadline_at) if r.lot.deadline_at else None,
             lambda c, r, n: _cat_deadline(c, r.lot, n),
             lambda r: fmt_local(r.lot.deadline_at) if r.lot.deadline_at else "", "asc", 18),
