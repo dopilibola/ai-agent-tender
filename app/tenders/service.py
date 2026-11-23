@@ -20,6 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.config import Settings
 from app.db.models import KV, Lot, LotStatus, SeenLot
 from app.tenders import cards
+from app.tenders.catalog import KV_PREFIX, CatalogRow, classify
 from app.tenders.filters import KeywordFilter, MatchResult, is_it_lot
 from app.tenders.http import FileTooLarge
 from app.tenders.schemas import LotFile, LotRecord, LotSummary
@@ -168,6 +169,10 @@ class TenderService:
         rows = await source.list_open()
         listed = {r.external_id: r for r in rows}
         stats.listed = len(rows)
+        try:
+            await self._save_catalog(source.name, rows, now)
+        except Exception:  # the «Barcha tenderlar» page must never break the IT pipeline
+            log.exception("tenders.catalog_failed", extra={"source": source.name})
         rate = await self.fx.get() if self.fx else None
 
         async with self.sessionmaker() as s:
@@ -221,6 +226,37 @@ class TenderService:
         changed, closed = await self._watch_changes(source, listed, now, rate)
         stats.changed, stats.closed = changed, closed
         return stats
+
+    # ── «Barcha tenderlar» catalog (every open lot, goods / services / IT) ────
+    async def _save_catalog(self, name: str, rows: list[LotSummary], now: datetime) -> None:
+        data = [CatalogRow.from_summary(r, classify(r, self.filter)).to_json() for r in rows]
+        async with self.sessionmaker() as s:
+            row = await s.get(KV, KV_PREFIX + name)
+            if row is None:
+                row = KV(key=KV_PREFIX + name, value={})
+                s.add(row)
+            row.value = {"at": now.isoformat(), "rows": data}
+            await s.commit()
+        counts: dict[str, int] = {}
+        for d in data:
+            counts[d["k"]] = counts.get(d["k"], 0) + 1
+        log.info("tenders.catalog_saved", extra={"source": name, **counts})
+
+    async def catalog(self) -> tuple[list[CatalogRow], dict[str, datetime]]:
+        """Latest open-lot listing of every source + when each was fetched."""
+        async with self.sessionmaker() as s:
+            kvs = (await s.scalars(select(KV).where(KV.key.like(KV_PREFIX + "%")))).all()
+        out: list[CatalogRow] = []
+        at: dict[str, datetime] = {}
+        for kv in kvs:
+            name = kv.key[len(KV_PREFIX):]
+            if name not in self.sources:
+                continue
+            value = kv.value or {}
+            if value.get("at"):
+                at[name] = datetime.fromisoformat(value["at"])
+            out.extend(CatalogRow.from_json(d) for d in value.get("rows") or [])
+        return out, at
 
     async def _mark_checked(self, seen_id: int) -> None:
         async with self.sessionmaker() as s:

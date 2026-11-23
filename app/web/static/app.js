@@ -26,6 +26,7 @@ document.addEventListener('DOMContentLoaded', function () {
     var tr = e.target.closest('tr[data-href]');
     if (!tr || e.target.closest('a,input,button,label,.cb')) return;
     if (window.getSelection && String(window.getSelection())) return;  // let people copy text
+    if (tr.hasAttribute('data-ext')) { window.open(tr.getAttribute('data-href'), '_blank', 'noopener,noreferrer'); return; }
     window.location.href = tr.getAttribute('data-href');
   });
   document.addEventListener('DOMContentLoaded', update);

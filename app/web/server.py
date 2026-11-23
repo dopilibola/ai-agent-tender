@@ -24,6 +24,7 @@ from app.config import Settings
 from app.core.states import JobStatus
 from app.db.models import Job, Lot, LotStatus, SentMessage
 from app.pipeline.service import FreelanceService
+from app.tenders import cards as tc
 from app.tenders.filters import is_it_lot
 from app.tenders.service import ACTIVE, TenderService
 from app.tenders.timeutil import TASHKENT, as_utc, now_utc
@@ -356,6 +357,57 @@ async def orders_xlsx(request: web.Request) -> web.Response:
     return _xlsx_response("zakazlar", "Zakazlar", rows, tables.ORDER_COLS)
 
 
+# ── «Barcha tenderlar»: every open lot (goods / services / IT) ─────────────
+CATALOG_SHOWN = 500
+
+
+async def _query_catalog(request: web.Request) -> tuple[list, dict]:
+    d = request.app[DEPS]
+    kind = request.query.get("k", "goods")
+    kind = kind if kind in ("goods", "service", "it", "all") else "goods"
+    src = request.query.get("src", "")
+    src = src if src in ("etender", "xarid") else ""
+    region = request.query.get("r", "").strip()[:128]
+    q = request.query.get("q", "").strip()[:100]
+    sort, direction = _sort_params(request, tables.CATALOG_COLS, "deadline", "asc")
+    nf = {k: v for k, v in _num_filters(request).items() if k in ("min", "max")}
+    now = now_utc()
+    rows, updated = await d.tenders.catalog() if d.tenders else ([], {})
+    rate = await d.tenders.fx.get() if d.tenders and d.tenders.fx else None
+    live = [r for r in rows if not r.deadline_at or as_utc(r.deadline_at) > now]
+    for r in live:
+        r.usd = tc.usd(r.start_cost, r.currency, rate)
+    regions = sorted({r.customer_region for r in live if r.customer_region})
+    if src:
+        live = [r for r in live if r.source == src]
+    if region:
+        live = [r for r in live if r.customer_region == region]
+    if q:
+        ql = q.lower()
+        live = [r for r in live if ql in r.title.lower() or ql in (r.customer_name or "").lower()
+                or ql in r.external_id or ql in (r.customer_region or "").lower()]
+    live = tables.apply_num_filters(live, nf, lambda r: r.usd, lambda r: None, lambda r: None)
+    counts = {k: sum(r.kind == k for r in live) for k in ("goods", "service", "it")}
+    shown = live if kind == "all" else [r for r in live if r.kind == kind]
+    shown = tables.sort_rows(shown, tables.CATALOG_COLS, sort, direction)
+    next_scan = d.tenders.next_scan_at() if d.tenders else None
+    return shown, {"kind": kind, "q": q, "src": src, "region": region, "regions": regions, "counts": counts,
+                   "updated": updated, "next_scan": next_scan, "nf": nf, "sort": sort, "direction": direction}
+
+
+async def catalog_index(request: web.Request) -> web.Response:
+    ctx = _ctx(request)
+    rows, p = await _query_catalog(request)
+    return _page(request, ctx, views.catalog_page(ctx, rows, shown_limit=CATALOG_SHOWN, total=len(rows), **p))
+
+
+async def catalog_xlsx(request: web.Request) -> web.Response:
+    rows, p = await _query_catalog(request)
+    names = {"goods": "tovar_tenderlar", "service": "xizmat_tenderlar", "it": "it_tenderlar"}
+    name = names.get(p["kind"], "barcha_tenderlar")
+    return _xlsx_response(name, "Tenderlar", rows, tables.CATALOG_COLS)
+
+
 # ── Owner auth + actions ────────────────────────────────────────────────────
 def _safe_next(d: Deps, value: str | None) -> str:
     home = f"{d.base}/"
@@ -549,6 +601,8 @@ def build_app(settings: Settings, sessionmaker: async_sessionmaker, *, tenders: 
     app.router.add_get(f"{b}/", orders_index)
     app.router.add_get(f"{b}/orders.xlsx", orders_xlsx)
     app.router.add_get(f"{b}/feed", feed_index)
+    app.router.add_get(f"{b}/all", catalog_index)
+    app.router.add_get(f"{b}/all.xlsx", catalog_xlsx)
     app.router.add_get(f"{b}/lots", tenders_index)
     app.router.add_get(f"{b}/lots.xlsx", tenders_xlsx)
     app.router.add_post(f"{b}/lots/bulk", lots_bulk)

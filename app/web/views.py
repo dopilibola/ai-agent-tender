@@ -201,6 +201,7 @@ ASSET_VER = "1"  # set by server.py from the app.js hash so Cloudflare/browser c
 _ICON = {
     "orders": '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9.5h18M3 15h18M9 9.5V20"/>',
     "tenders": '<path d="M3 21h18M5 21v-9M10 21v-9M14 21v-9M19 21v-9M2.5 9.5 12 4l9.5 5.5z"/>',
+    "goods": '<path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8M7.5 5.5l9 5"/>',
     "jobs": '<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5.5A1.5 1.5 0 0 1 9.5 4h5A1.5 1.5 0 0 1 16 5.5V7M3 12.5h18"/>',
     "feed": '<path d="M21 4 3 11l7 2.5M21 4l-4 16-7-6.5M21 4 10 13.5V19l3-3"/>',
     "logout": '<path d="M9 20H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h3M15 16l4-4-4-4M19 12H9"/>',
@@ -220,6 +221,7 @@ def icon(name: str, cls: str = "") -> str:
 def layout(ctx: Ctx, active: str, body: str, *, title: str = "", flash: str = "", error: bool = False,
            sub: str = "", tools: str = "") -> str:
     tabs = [("orders", ctx.url("/"), "orders", "Zakazlar"), ("tenders", ctx.url("/lots"), "tenders", "Tenderlar"),
+            ("goods", ctx.url("/all"), "goods", "Barcha tenderlar (tovar)"),
             ("jobs", ctx.url("/jobs"), "jobs", "Frilans ishlar"), ("feed", ctx.url("/feed"), "feed", "Telegram")]
     flash = flash or ctx.flash
     flash_html = f'<div class="flash{" err" if error else ""}">{h(flash)}</div>' if flash else ""
@@ -594,6 +596,61 @@ def orders_page(ctx: Ctx, rows: list, *, t: str, q: str, verdict: str, nf: dict,
 {filter_bar(ctx, "/", inner, xlsx=xl)}{table}""", title="Zakazlar",
                   sub="Ochiq tenderlar va AI tavsiya qilgan frilans ishlar — bitta jadvalda",
                   tools=f'<div class="seg">{seg}</div>')
+
+
+CATALOG_KINDS = (("goods", "Tovarlar"), ("service", "Xizmat / ish"), ("it", "IT"), ("all", "Hammasi"))
+
+
+def catalog_page(ctx: Ctx, rows: list, *, kind: str, q: str, src: str, region: str, regions: list[str],
+                 counts: dict[str, int], shown_limit: int, total: int, updated: dict, next_scan, nf: dict,
+                 sort: str, direction: str) -> str:
+    from app.web.tables import CATALOG_COLS, table_html
+
+    def upd(name: str) -> str:
+        at = updated.get(name)
+        return f"{name}: {fmt_local(at)}" if at else f"{name}: hali yo'q"
+
+    stats = (stat("Tovar yetkazib berish", counts.get("goods", 0), "ochiq lotlar, muddati o'tmagan", blue=True)
+             + stat("Xizmat va ishlar", counts.get("service", 0), "qurilish, ta'mir, xizmat ko'rsatish")
+             + stat("IT lotlar", counts.get("it", 0), "batafsil — «Tenderlar» bo'limida")
+             + stat("Oxirgi yangilanish", fmt_local(max(updated.values())).split(" ")[-1] if updated else "—",
+                    "keyingisi: " + (fmt_local(next_scan) if next_scan else "~30 daqiqada")))
+    seg = "".join(
+        f'<a class="{"on" if key == kind else ""}" href="{h(ctx.url("/all", k=key, q=q, src=src, r=region, **_nf_query(nf)))}">'
+        f'{h(label)} <span class="muted">{sum(counts.values()) if key == "all" else counts.get(key, 0)}</span></a>'
+        for key, label in CATALOG_KINDS)
+
+    def money_inp(name: str, ph: str) -> str:
+        val = nf.get(name)
+        v = "" if val is None else f"{val:g}"
+        return (f'<input type="number" min="0" step="any" name="{name}" value="{h(v)}" placeholder="{h(ph)}" '
+                f'title="{h(ph)}">')
+
+    region_opts = _opt("", region, "Barcha hududlar") + "".join(_opt(x, region, x) for x in regions)
+    inner = (f'<input type="hidden" name="k" value="{h(kind)}">'
+             f'<input type="search" name="q" value="{h(q)}" placeholder="Qidirish: nomi, buyurtmachi, lot raqami…">'
+             f'<select name="src">{_opt("", src, "Barcha manbalar")}{_opt("etender", src, "etender.uzex.uz")}'
+             f'{_opt("xarid", src, "xarid.uzex.uz")}</select>'
+             f'<select name="r">{region_opts}</select>'
+             f'<span class="grp">Summa $ {money_inp("min", "dan")}–{money_inp("max", "gacha")}</span>'
+             f'{_sort_inputs(sort, direction)}')
+    xl = ctx.url("/all.xlsx", k=kind, q=q, src=src, r=region, sort=sort, dir=direction, **_nf_query(nf))
+    note = ""
+    if total > shown_limit:
+        note = (f'<p class="count">Jadvalda birinchi {shown_limit} tasi ko\'rsatilgan (jami {total}). '
+                "Qidiruv yoki filtr bilan toraytiring — Excel'da hammasi bor.</p>")
+    table = table_html(ctx, "/all", rows[:shown_limit], CATALOG_COLS, sort=sort, direction=direction,
+                       query={"k": kind, "q": q, "src": src, "r": region, **_nf_query(nf)},
+                       detail=lambda r: r.url, bulk=[], noun="lot", external=True)
+    info = ('<p class="sub">Davlat xaridlari (etender.uzex.uz va xarid.uzex.uz) dagi barcha ochiq lotlar. '
+            "Ro'yxat har 30 daqiqada avtomatik yangilanadi. Qatorni bosing — lot asl saytda ochiladi. "
+            "xarid.uzex.uz ro'yxatida mahsulot nomi yo'q, faqat kategoriya ko'rinadi. "
+            f'<span class="muted">({h(upd("etender"))} · {h(upd("xarid"))})</span></p>')
+    return layout(ctx, "goods", f"""{info}<div class="stats">{stats}</div>
+{filter_bar(ctx, "/all", inner, xlsx=xl)}{note}{table}""", title="Barcha tenderlar",
+                  sub="Tovar yetkazib berish va boshqa davlat xaridlari · har 30 daqiqada yangilanadi",
+                  tools=f'<div class="seg">{seg}</div>').replace(
+        "<title>", '<meta http-equiv="refresh" content="900"><title>', 1)
 
 
 def login_page(ctx: Ctx, *, error: str = "", next_url: str = "", user: str = "") -> str:

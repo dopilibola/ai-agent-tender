@@ -347,9 +347,64 @@ def apply_num_filters(rows: list, nf: dict, usd: Callable[[Any], Any], win: Call
             and ok(fit(r), nf.get("fit"))]
 
 
+# ── «Barcha tenderlar» (catalog: goods / services, every open lot) ─────────
+KIND_PILL = {"goods": ("good", "Tovar"), "service": ("", "Xizmat / ish"), "it": ("blue", "IT")}
+
+
+def cat_usd(r) -> float | None:
+    return r.usd  # filled by server.py from today's CBU rate
+
+
+def _cat_price(r) -> str:
+    u = cat_usd(r)
+    return f'<span title="{h(tc.fmt_usd(u))}">{h(tc.money_uzs(r.start_cost, r.currency))}</span>'
+
+
+def _cat_title(r) -> str:
+    return f"{r.title} (kategoriya)" if r.is_category else r.title
+
+
+def _cat_deadline(_ctx: Ctx, r, now: datetime) -> str:
+    if not r.deadline_at:
+        return '<span class="muted">—</span>'
+    left = (as_utc(r.deadline_at) - now).total_seconds()  # type: ignore[operator]
+    cls = "urgent" if left < 86400 else "soon" if left < 3 * 86400 else ""
+    return (f'<span class="{cls}" title="{h(remaining_uz(r.deadline_at, now))}">'
+            f'{h(fmt_local(r.deadline_at))}</span>')
+
+
+def _cat_kind(r) -> str:
+    cls, label = KIND_PILL.get(r.kind, ("", r.kind))
+    return f'<span class="pill {cls}">{h(label)}</span>'
+
+
+CATALOG_COLS: list[Col] = [
+    Col("title", "Nomi", lambda r: r.title.lower(), lambda c, r, n: _t(_cat_title(r), 70), _cat_title,
+        "asc", 70, "wide"),
+    Col("kind", "Turi", lambda r: r.kind, lambda c, r, n: _cat_kind(r),
+        lambda r: KIND_PILL.get(r.kind, ("", r.kind))[1], "asc", 12),
+    Col("no", "Lot №", lambda r: int(r.external_id) if r.external_id.isdigit() else None,
+        lambda c, r, n: f'<span class="lotno">{ext_link(r.url, r.external_id)}</span>',
+        lambda r: r.external_id, "desc", 14),
+    Col("source", "Manba", lambda r: f"{r.source} {r.lot_type or ''}".lower(),
+        lambda c, r, n: _t(f"{tc.SOURCE_NAME.get(r.source, r.source)} · {r.lot_type or '?'}", 30),
+        lambda r: f"{tc.SOURCE_NAME.get(r.source, r.source)} · {r.lot_type or ''}", "asc", 24, "mid"),
+    Col("deadline", "Muddat", lambda r: as_utc(r.deadline_at) if r.deadline_at else None, _cat_deadline,
+        lambda r: fmt_local(r.deadline_at) if r.deadline_at else "", "asc", 18),
+    Col("price", "Narx", lambda r: cat_usd(r) if cat_usd(r) is not None else r.start_cost,
+        lambda c, r, n: _cat_price(r), lambda r: r.start_cost, "desc", 16, "num"),
+    Col("customer", "Buyurtmachi", lambda r: (r.customer_name or "").lower() or None,
+        lambda c, r, n: _t(r.customer_name, 36), lambda r: r.customer_name or "", "asc", 40, "mid"),
+    Col("region", "Hudud", lambda r: (r.customer_region or "").lower() or None,
+        lambda c, r, n: _t(r.customer_region, 24), lambda r: r.customer_region or "", "asc", 24, "mid"),
+    Col("url", "Havola", None, lambda c, r, n: "", lambda r: r.url, width=40, cls="hidden"),
+]
+
+
 # ── Rendering ───────────────────────────────────────────────────────────────
 def table_html(ctx: Ctx, path: str, rows: list, cols: list[Col], *, sort: str, direction: str, query: dict,
-               detail: Callable[[Any], str], bulk: list[tuple[str, str, str]], noun: str) -> str:
+               detail: Callable[[Any], str], bulk: list[tuple[str, str, str]], noun: str,
+               external: bool = False) -> str:
     """CRM table: optional checkbox column + bulk bar, sortable headers, one-line rows that open `detail`."""
     now = now_utc()
     head = ['<th class="cb"><input type="checkbox" data-all title="Hammasini belgilash"></th>'] if bulk else []
@@ -369,7 +424,8 @@ def table_html(ctx: Ctx, path: str, rows: list, cols: list[Col], *, sort: str, d
     for r in rows:
         tds = "".join(f'<td class="{c.cls}">{c.cell(ctx, r, now)}</td>' for c in cols if c.cls != "hidden")
         cb = (f'<td class="cb"><input type="checkbox" name="ids" value="{r.id}" form="bulk"></td>' if bulk else "")
-        body.append(f'<tr data-href="{h(detail(r))}">{cb}{tds}</tr>')
+        ext = ' data-ext="1"' if external else ""
+        body.append(f'<tr data-href="{h(detail(r))}"{ext}>{cb}{tds}</tr>')
     count = f'<p class="count">{len(rows)} ta {h(noun)}</p>'
     if not body:
         return count + '<div class="empty">Hech narsa topilmadi. Filtrlarni yumshatib ko\'ring.</div>'
