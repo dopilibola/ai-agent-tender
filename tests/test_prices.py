@@ -154,6 +154,7 @@ async def test_prices_page(watch, settings, sessionmaker):
         assert "https://uzum.uz/uz/search?query=Printer%20Canon" in html
         every = await (await c.get("/tender/all/uzum", params={"f": "all"})).text()
         assert "Stul ofis" in every
-        assert 'href="/tender/all/uzum"' in await (await c.get("/tender/all")).text()
+        main = await (await c.get("/tender/all", params={"k": "it"})).text()
+        assert 'href="/tender/all/uzum"' in main and "katta farqlar" in main and "×4.5 qimmat" in main
         r = await c.get("/tender/all/uzum.xlsx", params={"f": "all"})
         assert r.status == 200 and "uzum_narxlari" in r.headers["Content-Disposition"]

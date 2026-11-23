@@ -409,7 +409,19 @@ async def _query_catalog(request: web.Request) -> tuple[list, dict]:
 async def catalog_index(request: web.Request) -> web.Response:
     ctx = _ctx(request)
     rows, p = await _query_catalog(request)
-    return _page(request, ctx, views.catalog_page(ctx, rows, shown_limit=CATALOG_SHOWN, total=len(rows), **p))
+    d = request.app[DEPS]
+    pw = d.tenders.prices if d.tenders else None
+    big = d.settings.config.tenders.prices.big_ratio
+    uzum: list = []
+    if pw:
+        try:
+            cmp_rows, _ = await pw.comparison()
+            gaps = [r for r in cmp_rows if r.ratio >= big or 0 < r.ratio <= 1 / big]
+            uzum = sorted(gaps, key=lambda r: -abs(r.overpay))
+        except Exception:  # the lot list must still open if the price data is broken
+            log.exception("web.uzum_top_failed")
+    return _page(request, ctx, views.catalog_page(ctx, rows, shown_limit=CATALOG_SHOWN, total=len(rows),
+                                                  uzum=uzum[:10], uzum_total=len(uzum), big=big, **p))
 
 
 async def catalog_xlsx(request: web.Request) -> web.Response:

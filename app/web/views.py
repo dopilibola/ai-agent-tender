@@ -603,7 +603,7 @@ CATALOG_KINDS = (("goods", "Tovarlar"), ("service", "Xizmat / ish"), ("it", "IT"
 
 def catalog_page(ctx: Ctx, rows: list, *, kind: str, q: str, src: str, region: str, regions: list[str],
                  yon: str, dir_counts: dict[str, int], counts: dict[str, int], shown_limit: int, total: int, updated: dict, next_scan, nf: dict,
-                 sort: str, direction: str) -> str:
+                 sort: str, direction: str, uzum: list | None = None, uzum_total: int = 0, big: float = 2.0) -> str:
     from app.web.tables import CATALOG_COLS, table_html
 
     def upd(name: str) -> str:
@@ -654,7 +654,18 @@ def catalog_page(ctx: Ctx, rows: list, *, kind: str, q: str, src: str, region: s
             "Ro'yxat har 30 daqiqada avtomatik yangilanadi. Qatorni bosing — lot asl saytda ochiladi. "
             "xarid.uzex.uz ro'yxatida mahsulot nomi yo'q, faqat kategoriya ko'rinadi. "
             f'<span class="muted">({h(upd("etender"))} · {h(upd("xarid"))})</span></p>')
-    return layout(ctx, "goods", f"""{info}<div class="stats">{stats}</div>
+    uz = ""
+    if uzum:
+        from app.web.tables import price_cols
+        cols = [c for c in price_cols(big) if c.key in ("name", "no", "qty", "tender", "uzum", "ratio", "over")]
+        top = table_html(ctx, "/all/uzum", uzum, cols, sort="over", direction="desc", query={"f": "big"},
+                         detail=lambda r: r.lot.url, bulk=[], noun="mahsulot", external=True)
+        top = re.sub(r'<p class="count">[^<]*</p>', "", top, count=1)
+        uz = (f'<h2 style="margin:18px 0 8px">🛒 Uzum narxi bilan katta farqlar '
+              f'<span class="muted">— eng katta {len(uzum)} tasi (jami {uzum_total})</span> '
+              f'<a class="btn ghost" href="{h(ctx.url("/all/uzum"))}">Hammasi →</a></h2>{top}'
+              f'<h2 style="margin:22px 0 8px">Lotlar</h2>')
+    return layout(ctx, "goods", f"""{info}<div class="stats">{stats}</div>{uz}
 {filter_bar(ctx, "/all", inner, xlsx=xl)}{note}{table}""", title="Barcha tenderlar",
                   sub="Tovar yetkazib berish va boshqa davlat xaridlari · har 30 daqiqada yangilanadi",
                   tools=f'<div class="seg">{seg}</div>').replace(
