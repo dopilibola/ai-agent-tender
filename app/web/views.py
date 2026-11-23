@@ -680,7 +680,7 @@ def catalog_page(ctx: Ctx, rows: list, *, kind: str, q: str, src: str, region: s
     money_note = ('<p class="sub">«Kiritiladigan pul» — <b>zakalat</b>: ariza berganda birjadagi hisobingizda '
                   "bloklanadi, yutmasangiz qaytariladi. Filtrdagi hamma lotlarda qatnashish uchun jami "
                   f"<b>{h(tc.money_uzs(pledge_total))}</b> kerak (birja komissiyasi kirmaydi)."
-                  + (f" {pending} ta lotning kartasi hali o'qilmagan («…») — har 30 daqiqada 60 tadan o'qiladi."
+                  + (f" {pending} ta lotning kartasi hali o'qilmagan («…») — har 30 daqiqada navbatdagilari o'qiladi."
                      if pending else "")
                   + " «AI xulosa» va «Yutish %» — tovar lotini AI yetkazib beruvchi ko'zi bilan baholaydi "
                   "(har 30 daqiqada yangi lotlar). xarid.uzex.uz lotlarida zakalat ko'rsatilmaydi.</p>")
