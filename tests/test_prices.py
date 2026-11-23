@@ -164,6 +164,8 @@ async def test_prices_page(watch, settings, sessionmaker):
         one = await (await c.get("/tender/all/uzum/lot/etender-10")).text()
         assert "Printer Canon" in one and "Stul ofis" in one and "Benzin" in one  # every item of the lot
         assert "O&#x27;lchov birligi" in one and "Solishtirildi" in one
+        assert "📄 Tender" in one and "🛒 Uzum" in one and 'href="https://etender.uzex.uz/lot/10"' in one
+        assert "📄 Tender" in html and "🛒 Uzum" in html and "📄 Tender" in main
         assert (await c.get("/tender/all/uzum/lot/etender-999")).status == 404
         r = await c.get("/tender/all/uzum.xlsx", params={"f": "lots"})
         assert r.status == 200 and "uzum_lotlar" in r.headers["Content-Disposition"]

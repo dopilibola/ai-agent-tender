@@ -117,6 +117,7 @@ font-weight:500;font-size:13px;cursor:pointer;display:inline-flex;align-items:ce
 button:hover,.btn:hover{background:var(--btn-hover);text-decoration:none}
 .btn.ghost,button.ghost{background:var(--field);color:var(--ink);border-color:var(--line)}
 .btn.ghost:hover,button.ghost:hover{background:var(--soft)}
+.btn.xs{height:26px;padding:0 8px;font-size:12px;border-radius:6px;gap:4px}
 .btn.link{background:none;border-color:transparent;color:var(--muted)}.btn.link:hover{color:var(--ink);background:none}
 .seg{display:inline-flex;background:var(--chip);border-radius:9px;padding:3px;gap:2px}
 .seg a{padding:5px 11px;border-radius:7px;color:var(--muted);font-size:13px;font-weight:500}
@@ -657,7 +658,7 @@ def catalog_page(ctx: Ctx, rows: list, *, kind: str, q: str, src: str, region: s
     uz = ""
     if uzum:
         from app.web.tables import price_cols
-        cols = [c for c in price_cols(big) if c.key in ("name", "no", "qty", "tender", "uzum", "ratio", "over")]
+        cols = [c for c in price_cols(big) if c.key in ("name", "no", "qty", "tender", "uzum", "ratio", "over", "go")]
         top = table_html(ctx, "/all/uzum", uzum, cols, sort="over", direction="desc", query={"f": "big"},
                          detail=lambda r: ctx.url(f"/all/uzum/lot/{r.lot.id}"), bulk=[], noun="mahsulot")
         top = re.sub(r'<p class="count">[^<]*</p>', "", top, count=1)
@@ -721,7 +722,8 @@ def prices_page(ctx: Ctx, rows: list, *, f: str, q: str, yon: str, dir_counts: d
             "(har 30 daqiqada yangi mahsulotlar). Faqat dona/komplekt/pachka bilan o'lchanadigan mahsulotlar; "
             "nomi Uzum'dagi kamida 3 ta mahsulotga mos kelganlari ko'rsatiladi (20 baravardan ortiq farq — boshqa "
             "mahsulot deb hisoblanadi va chiqarilmaydi). «Uzum narxi» ustiga bosing — "
-            "Uzum'dagi qidiruv ochiladi; qatorni bosing — lotdagi <b>hamma mahsulotlar</b> ro'yxati ochiladi. "
+            "Uzum'dagi qidiruv ochiladi; «📄 Tender» / «🛒 Uzum» tugmalari — lot asl saytda yoki mahsulot Uzum'da ochiladi; "
+            "qatorning boshqa joyini bosing — lotdagi <b>hamma mahsulotlar</b> ro'yxati ochiladi. "
             "<span class=\"muted\">Uzum chakana narxi; tenderda yetkazib berish, kafolat va QQS ham bo'lishi mumkin.</span></p>")
     return layout(ctx, "goods", f"""{info}<div class="stats">{stats}</div><div class="seg" style="margin:0 0 12px">{ftabs}</div>
 {filter_bar(ctx, "/all/uzum", inner, xlsx=xl)}{note}{table}""", title="Uzum narxlari bilan solishtirish",
@@ -738,7 +740,7 @@ def price_lot_page(ctx: Ctx, lp, *, big: float) -> str:
     order = {"ok": 0, "far": 1, "nomatch": 2, "pending": 3}
     rows = sorted(lp.rows, key=lambda r: (order.get(r.status, 4), -r.ratio, r.idx))
     table = table_html(ctx, f"/all/uzum/lot/{lot.id}", rows, cols, sort="", direction="desc", query={},
-                       detail=lambda r: r.uzum_url, bulk=[], noun="mahsulot", external=True)
+                       detail=lambda r: lot.url, bulk=[], noun="mahsulot", external=True)
     ok = lp.compared
     tender_sum = sum(r.price_uzs * (r.item.qty or 1) for r in ok)
     uzum_sum = sum(r.uzum_med * (r.item.qty or 1) for r in ok)
@@ -749,8 +751,9 @@ def price_lot_page(ctx: Ctx, lp, *, big: float) -> str:
     head = (f'<div class="panel"><b>{h(lot.title)}</b><p class="muted" style="margin:6px 0 0">'
             f'{h(lot.customer_name or "")} · muddat {h(fmt_local(lot.deadline_at) if lot.deadline_at else "—")} · '
             f'{ext_link(lot.url, "Lotni saytda ochish")} · <a href="{h(ctx.url("/all/uzum", f="lots"))}">← Lotlar</a></p></div>')
-    note = ('<p class="sub">Qatorni bosing — shu mahsulot Uzum\'da qidiriladi. «Holat» ustunida nima uchun ba\'zi '
-            "mahsulotlar solishtirilmagani yozilgan; «Navbatda» bo'lganlarini telefon keyingi tekshiruvlarda qidiradi.</p>")
+    note = ('<p class="sub">«📄 Tender» — lot asl saytda (etender/xarid) ochiladi, «🛒 Uzum» — shu mahsulot '
+            "Uzum'da qidiriladi (qatorning o'zini bossangiz — lot saytda ochiladi). «Holat» ustunida nima uchun "
+            "ba'zi mahsulotlar solishtirilmagani yozilgan; «Navbatda» bo'lganlarini telefon keyingi tekshiruvlarda qidiradi.</p>")
     return layout(ctx, "goods", f"{head}<div class=\"stats\">{stats}</div>{note}{table}",
                   title=f"Lot {lot.external_id}: Uzum bilan solishtirish", sub="Lotdagi hamma mahsulotlar")
 

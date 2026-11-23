@@ -486,6 +486,12 @@ def _uzum_cell(r) -> str:
     return f'<span title="{h(tip)}">{ext_link(r.uzum_url, tc.money_uzs(r.uzum_med))}</span>'
 
 
+def _go_cell(r) -> str:
+    """Two buttons: the lot on the tender site and the item's search on Uzum."""
+    return (ext_link(r.lot.url, "📄 Tender", "btn ghost xs")
+            + (" " + ext_link(r.uzum_url, "🛒 Uzum", "btn ghost xs") if r.status != "unit" else ""))
+
+
 def price_cols(big: float) -> list[Col]:
     return [
         Col("name", "Mahsulot (tenderda)", lambda r: r.item.name.lower(), lambda c, r, n: _t(r.item.name, 60),
@@ -511,6 +517,7 @@ def price_cols(big: float) -> list[Col]:
             lambda r: fmt_local(r.lot.deadline_at) if r.lot.deadline_at else "", "asc", 18),
         Col("customer", "Buyurtmachi", lambda r: (r.lot.customer_name or "").lower() or None,
             lambda c, r, n: _t(r.lot.customer_name, 30), lambda r: r.lot.customer_name or "", "asc", 36, "mid"),
+        Col("go", "Ochish", None, lambda c, r, n: _go_cell(r), width=20),
         Col("match", "Uzum'dagi o'xshash", None, lambda c, r, n: "",
             lambda r: r.best.title if r.best else "", width=50, cls="hidden"),
         Col("uzum_url", "Uzum havola", None, lambda c, r, n: "", lambda r: r.uzum_url, width=40, cls="hidden"),
@@ -541,5 +548,6 @@ def lot_price_cols(big: float) -> list[Col]:
             lambda r: fmt_local(r.lot.deadline_at) if r.lot.deadline_at else "", "asc", 18),
         Col("customer", "Buyurtmachi", lambda r: (r.lot.customer_name or "").lower() or None,
             lambda c, r, n: _t(r.lot.customer_name, 30), lambda r: r.lot.customer_name or "", "asc", 36, "mid"),
+        Col("go", "Ochish", None, lambda c, r, n: ext_link(r.lot.url, "📄 Tender", "btn ghost xs"), width=20),
         Col("url", "Lot havola", None, lambda c, r, n: "", lambda r: r.lot.url, width=40, cls="hidden"),
     ]
