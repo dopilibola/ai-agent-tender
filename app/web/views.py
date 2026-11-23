@@ -602,7 +602,7 @@ CATALOG_KINDS = (("goods", "Tovarlar"), ("service", "Xizmat / ish"), ("it", "IT"
 
 
 def catalog_page(ctx: Ctx, rows: list, *, kind: str, q: str, src: str, region: str, regions: list[str],
-                 counts: dict[str, int], shown_limit: int, total: int, updated: dict, next_scan, nf: dict,
+                 yon: str, dir_counts: dict[str, int], counts: dict[str, int], shown_limit: int, total: int, updated: dict, next_scan, nf: dict,
                  sort: str, direction: str) -> str:
     from app.web.tables import CATALOG_COLS, table_html
 
@@ -616,7 +616,7 @@ def catalog_page(ctx: Ctx, rows: list, *, kind: str, q: str, src: str, region: s
              + stat("Oxirgi yangilanish", fmt_local(max(updated.values())).split(" ")[-1] if updated else "—",
                     "keyingisi: " + (fmt_local(next_scan) if next_scan else "~30 daqiqada")))
     seg = "".join(
-        f'<a class="{"on" if key == kind else ""}" href="{h(ctx.url("/all", k=key, q=q, src=src, r=region, **_nf_query(nf)))}">'
+        f'<a class="{"on" if key == kind else ""}" href="{h(ctx.url("/all", k=key, q=q, src=src, r=region, y=yon, **_nf_query(nf)))}">'
         f'{h(label)} <span class="muted">{sum(counts.values()) if key == "all" else counts.get(key, 0)}</span></a>'
         for key, label in CATALOG_KINDS)
 
@@ -626,21 +626,29 @@ def catalog_page(ctx: Ctx, rows: list, *, kind: str, q: str, src: str, region: s
         return (f'<input type="number" min="0" step="any" name="{name}" value="{h(v)}" placeholder="{h(ph)}" '
                 f'title="{h(ph)}">')
 
+    from app.tenders.catalog import DIRECTION_LABEL
+
     region_opts = _opt("", region, "Barcha hududlar") + "".join(_opt(x, region, x) for x in regions)
+    ordered = sorted(dir_counts, key=lambda k: (k == "other", -dir_counts[k]))
+    if yon and yon not in dir_counts:
+        ordered.append(yon)
+    dir_opts = _opt("", yon, f"Barcha yo'nalishlar ({sum(dir_counts.values())})") + "".join(
+        _opt(k, yon, f"{DIRECTION_LABEL.get(k, k)} ({dir_counts.get(k, 0)})") for k in ordered)
     inner = (f'<input type="hidden" name="k" value="{h(kind)}">'
              f'<input type="search" name="q" value="{h(q)}" placeholder="Qidirish: nomi, buyurtmachi, lot raqami…">'
              f'<select name="src">{_opt("", src, "Barcha manbalar")}{_opt("etender", src, "etender.uzex.uz")}'
              f'{_opt("xarid", src, "xarid.uzex.uz")}</select>'
+             f'<select name="y" title="Yo\'nalish">{dir_opts}</select>'
              f'<select name="r">{region_opts}</select>'
              f'<span class="grp">Summa $ {money_inp("min", "dan")}–{money_inp("max", "gacha")}</span>'
              f'{_sort_inputs(sort, direction)}')
-    xl = ctx.url("/all.xlsx", k=kind, q=q, src=src, r=region, sort=sort, dir=direction, **_nf_query(nf))
+    xl = ctx.url("/all.xlsx", k=kind, q=q, src=src, r=region, y=yon, sort=sort, dir=direction, **_nf_query(nf))
     note = ""
     if total > shown_limit:
         note = (f'<p class="count">Jadvalda birinchi {shown_limit} tasi ko\'rsatilgan (jami {total}). '
                 "Qidiruv yoki filtr bilan toraytiring — Excel'da hammasi bor.</p>")
     table = table_html(ctx, "/all", rows[:shown_limit], CATALOG_COLS, sort=sort, direction=direction,
-                       query={"k": kind, "q": q, "src": src, "r": region, **_nf_query(nf)},
+                       query={"k": kind, "q": q, "src": src, "r": region, "y": yon, **_nf_query(nf)},
                        detail=lambda r: r.url, bulk=[], noun="lot", external=True)
     info = ('<p class="sub">Davlat xaridlari (etender.uzex.uz va xarid.uzex.uz) dagi barcha ochiq lotlar. '
             "Ro'yxat har 30 daqiqada avtomatik yangilanadi. Qatorni bosing — lot asl saytda ochiladi. "

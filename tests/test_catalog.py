@@ -93,5 +93,23 @@ async def test_catalog_page(client):
     assert "Уголь" in only_xarid and "Kompyuter stollarini" not in only_xarid
     reg = await (await client.get("/tender/all", params={"r": "Toshkent"})).text()
     assert "Kompyuter stollarini" in reg and "Уголь" not in reg
+    furn = await (await client.get("/tender/all", params={"y": "furniture"})).text()
+    assert "Kompyuter stollarini" in furn and "Уголь" not in furn
+    assert "Mebel va inventar (1)" in html and "Yoqilg&#x27;i va energiya (1)" in html
+    fuel = await (await client.get("/tender/all", params={"y": "fuel"})).text()
+    assert "Уголь" in fuel and "Kompyuter stollarini" not in fuel
+    assert (await client.get("/tender/all", params={"y": "nonsense"})).status == 200
     r = await client.get("/tender/all.xlsx", params={"k": "all"})
     assert r.status == 200 and r.headers["Content-Disposition"].startswith('attachment; filename="barcha_tenderlar')
+
+
+@pytest.mark.parametrize("title,key", [
+    ("Kompyuter stollarini yetkazib berish", "furniture"), ("Кокс и нефтепродукты", "fuel"),
+    ("Колбаса махсулотларини харид қилиш", "food"), ("PQ-20-sonli qaror doirasida tibbiy buyumlarni xarid qilish", "medical"),
+    ("Оборудование компьютерное, электронное и оптическое", "tech"), ("Diodli lampa", "electric"),
+    ("Огнеупорные материалы и припасы для футеровки печей / ўтга чидамли материаллар ва жиҳозлар", "build"),
+    ("Услуги почтовой связи и услуги курьерские", "transport"), ("Отбор наилучшего предложения", "other"),
+])
+def test_direction(title, key):
+    from app.tenders.catalog import direction
+    assert direction(title) == key

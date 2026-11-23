@@ -373,6 +373,11 @@ def _cat_deadline(_ctx: Ctx, r, now: datetime) -> str:
             f'{h(fmt_local(r.deadline_at))}</span>')
 
 
+def _cat_direction(r) -> str:
+    from app.tenders.catalog import DIRECTION_LABEL
+    return DIRECTION_LABEL.get(r.direction, "Boshqa")
+
+
 def _cat_kind(r) -> str:
     cls, label = KIND_PILL.get(r.kind, ("", r.kind))
     return f'<span class="pill {cls}">{h(label)}</span>'
@@ -383,6 +388,8 @@ CATALOG_COLS: list[Col] = [
         "asc", 70, "wide"),
     Col("kind", "Turi", lambda r: r.kind, lambda c, r, n: _cat_kind(r),
         lambda r: KIND_PILL.get(r.kind, ("", r.kind))[1], "asc", 12),
+    Col("dir", "Yo'nalish", lambda r: r.direction or None,
+        lambda c, r, n: _t(_cat_direction(r), 26), _cat_direction, "asc", 26, "mid"),
     Col("no", "Lot №", lambda r: int(r.external_id) if r.external_id.isdigit() else None,
         lambda c, r, n: f'<span class="lotno">{ext_link(r.url, r.external_id)}</span>',
         lambda r: r.external_id, "desc", 14),

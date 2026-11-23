@@ -25,6 +25,7 @@ from app.core.states import JobStatus
 from app.db.models import Job, Lot, LotStatus, SentMessage
 from app.pipeline.service import FreelanceService
 from app.tenders import cards as tc
+from app.tenders.catalog import DIRECTION_LABEL
 from app.tenders.filters import is_it_lot
 from app.tenders.service import ACTIVE, TenderService
 from app.tenders.timeutil import TASHKENT, as_utc, now_utc
@@ -368,6 +369,8 @@ async def _query_catalog(request: web.Request) -> tuple[list, dict]:
     src = request.query.get("src", "")
     src = src if src in ("etender", "xarid") else ""
     region = request.query.get("r", "").strip()[:128]
+    yon = request.query.get("y", "")
+    yon = yon if yon in DIRECTION_LABEL else ""
     q = request.query.get("q", "").strip()[:100]
     sort, direction = _sort_params(request, tables.CATALOG_COLS, "deadline", "asc")
     nf = {k: v for k, v in _num_filters(request).items() if k in ("min", "max")}
@@ -387,11 +390,19 @@ async def _query_catalog(request: web.Request) -> tuple[list, dict]:
         live = [r for r in live if ql in r.title.lower() or ql in (r.customer_name or "").lower()
                 or ql in r.external_id or ql in (r.customer_region or "").lower()]
     live = tables.apply_num_filters(live, nf, lambda r: r.usd, lambda r: None, lambda r: None)
+    # Kind tabs count the yo'nalish too; the yo'nalish list counts what the current tab would show.
+    in_kind = live if kind == "all" else [r for r in live if r.kind == kind]
+    dir_counts: dict[str, int] = {}
+    for r in in_kind:
+        dir_counts[r.direction] = dir_counts.get(r.direction, 0) + 1
+    if yon:
+        live = [r for r in live if r.direction == yon]
     counts = {k: sum(r.kind == k for r in live) for k in ("goods", "service", "it")}
-    shown = live if kind == "all" else [r for r in live if r.kind == kind]
+    shown = [r for r in in_kind if r.direction == yon] if yon else in_kind
     shown = tables.sort_rows(shown, tables.CATALOG_COLS, sort, direction)
     next_scan = d.tenders.next_scan_at() if d.tenders else None
     return shown, {"kind": kind, "q": q, "src": src, "region": region, "regions": regions, "counts": counts,
+                   "yon": yon, "dir_counts": dir_counts,
                    "updated": updated, "next_scan": next_scan, "nf": nf, "sort": sort, "direction": direction}
 
 
