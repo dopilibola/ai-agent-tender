@@ -182,6 +182,7 @@ async def test_prices_page(watch, settings, sessionmaker):
         await asyncio.gather(*pw._ai_tasks.values())
         one = await (await c.get("/tender/all/uzum/lot/etender-10")).text()
         assert "Narx: QIMMAT" in one and "Printer 4 baravar qimmat" in one and "Qayta tahlil" in one
+        assert "<tfoot>" in one and "Jami: 2 ta solishtirilgan" in one and "+16 mln so&#x27;m" in one
         assert 'data-href="#i-0"' in one and 'id="i-0"' in one  # row → the item's own details
         assert pw.analyzer.calls == 1
         r = await c.post("/tender/all/uzum/lot/etender-10/ai", data={"csrf": "bad"}, allow_redirects=False)

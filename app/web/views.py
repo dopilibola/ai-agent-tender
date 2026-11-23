@@ -860,6 +860,23 @@ def _item_cards(rows) -> str:
     return "".join(out)
 
 
+def _lot_totals(ok, tender_sum: float, uzum_sum: float) -> dict[str, str]:
+    """Totals row under the lot's item table: compared items × quantity, and the net gap (+ dearer / − cheaper)."""
+    net = tender_sum - uzum_sum
+    ratio = tender_sum / uzum_sum if uzum_sum else 0
+    if net >= 0:
+        gap = f'<b style="color:var(--bad)">+{h(tc.money_uzs(net))}</b>'
+        side = f'<span class="pill bad">tender ×{ratio:.1f} qimmat</span>' if ratio else ""
+        word = "tender qimmat (Uzum arzon)"
+    else:
+        gap = f'<b style="color:var(--good)">−{h(tc.money_uzs(-net))}</b>'
+        side = f'<span class="pill good">tender ×{1 / ratio:.1f} arzon</span>' if ratio else ""
+        word = "tender arzon (Uzum qimmat)"
+    return {"name": f"Jami: {len(ok)} ta solishtirilgan mahsulot <span class=\"muted\">(narx × miqdor)</span>",
+            "tender": h(tc.money_uzs(tender_sum)), "uzum": h(tc.money_uzs(uzum_sum)), "ratio": side,
+            "over": gap, "status": h(word)}
+
+
 def price_lot_page(ctx: Ctx, lp, *, big: float, detail: dict, ai: dict | None, ai_busy: bool) -> str:
     """One goods lot: card details, AI summary, every item with its Uzum check."""
     from app.web.tables import price_cols, table_html
@@ -868,11 +885,12 @@ def price_lot_page(ctx: Ctx, lp, *, big: float, detail: dict, ai: dict | None, a
     cols = [c for c in price_cols(big) if c.key not in ("no", "deadline", "customer")]
     order = {"ok": 0, "far": 1, "nomatch": 2, "pending": 3}
     rows = sorted(lp.rows, key=lambda r: (order.get(r.status, 4), -r.ratio, r.idx))
-    table = table_html(ctx, f"/all/uzum/lot/{lot.id}", rows, cols, sort="", direction="desc", query={},
-                       detail=lambda r: f"#i-{r.idx}", bulk=[], noun="mahsulot")
     ok = lp.compared
     tender_sum = sum(r.price_uzs * (r.item.qty or 1) for r in ok)
     uzum_sum = sum(r.uzum_med * (r.item.qty or 1) for r in ok)
+    table = table_html(ctx, f"/all/uzum/lot/{lot.id}", rows, cols, sort="", direction="desc", query={},
+                       detail=lambda r: f"#i-{r.idx}", bulk=[], noun="mahsulot",
+                       foot=_lot_totals(ok, tender_sum, uzum_sum) if ok else None)
     stats = (stat("Lotdagi mahsulotlar", len(lp.rows), "hammasi quyida", blue=True)
              + stat("Uzum bilan solishtirildi", len(ok), f"Uzum arzon: {len(lp.dearer(big))} tasi")
              + stat("Solishtirilganlar: tenderda", tc.money_uzs(tender_sum), f"Uzum bo'yicha {tc.money_uzs(uzum_sum)}")

@@ -411,7 +411,7 @@ CATALOG_COLS: list[Col] = [
 # ── Rendering ───────────────────────────────────────────────────────────────
 def table_html(ctx: Ctx, path: str, rows: list, cols: list[Col], *, sort: str, direction: str, query: dict,
                detail: Callable[[Any], str], bulk: list[tuple[str, str, str]], noun: str,
-               external: bool = False) -> str:
+               external: bool = False, foot: dict[str, str] | None = None) -> str:
     """CRM table: optional checkbox column + bulk bar, sortable headers, one-line rows that open `detail`."""
     now = now_utc()
     head = ['<th class="cb"><input type="checkbox" data-all title="Hammasini belgilash"></th>'] if bulk else []
@@ -443,8 +443,13 @@ def table_html(ctx: Ctx, path: str, rows: list, cols: list[Col], *, sort: str, d
         bar = (f'<form id="bulk" class="bulk" method="post" action="{h(ctx.url(path.rstrip("/") + "/bulk"))}">'
                f'<input type="hidden" name="csrf" value="{h(ctx.csrf)}"><input type="hidden" name="back" '
                f'value="{h(ctx.here)}"><b data-count>0</b><span class="muted">ta tanlandi</span>{buttons}</form>')
+    tfoot = ""
+    if foot:  # one totals row: cell html by column key
+        cells = ('<td class="cb"></td>' if bulk else "") + "".join(
+            f'<td class="{c.cls}">{foot.get(c.key, "")}</td>' for c in cols if c.cls != "hidden")
+        tfoot = f"<tfoot><tr>{cells}</tr></tfoot>"
     return (f'{count}{bar}<div class="tablewrap"><table class="grid"><thead><tr>{"".join(head)}</tr></thead>'
-            f'<tbody>{"".join(body)}</tbody></table></div>')
+            f'<tbody>{"".join(body)}</tbody>{tfoot}</table></div>')
 
 
 def excel_rows(rows: list, cols: list[Col]) -> tuple[list[str], list[list[Any]], list[int]]:
