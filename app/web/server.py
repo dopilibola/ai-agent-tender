@@ -419,6 +419,50 @@ async def catalog_xlsx(request: web.Request) -> web.Response:
     return _xlsx_response(name, "Tenderlar", rows, tables.CATALOG_COLS)
 
 
+# ── «Uzum narxlari»: tender unit prices vs Uzum Market ─────────────────────
+async def _query_prices(request: web.Request) -> tuple[list, dict]:
+    d = request.app[DEPS]
+    pw = d.tenders.prices if d.tenders else None
+    big = d.settings.config.tenders.prices.big_ratio
+    f = request.query.get("f", "big")
+    f = f if f in ("big", "over", "under", "all") else "big"
+    yon = request.query.get("y", "")
+    yon = yon if yon in DIRECTION_LABEL else ""
+    q = request.query.get("q", "").strip()[:100]
+    cols = tables.price_cols(big)
+    sort, direction = _sort_params(request, cols, "over" if f != "under" else "ratio",
+                                   "desc" if f != "under" else "asc")
+    rows, state = await pw.comparison() if pw else ([], {"phone": "o'chirilgan (config: tenders.prices)"})
+    if q:
+        ql = q.lower()
+        rows = [r for r in rows if ql in r.item.name.lower() or ql in (r.lot.customer_name or "").lower()
+                or ql in r.lot.external_id]
+    dir_counts: dict[str, int] = {}
+    for r in rows:
+        dir_counts[r.lot.direction] = dir_counts.get(r.lot.direction, 0) + 1
+    if yon:
+        rows = [r for r in rows if r.lot.direction == yon]
+    groups = {"all": rows, "over": [r for r in rows if r.ratio >= big],
+              "under": [r for r in rows if 0 < r.ratio <= 1 / big]}
+    groups["big"] = groups["over"] + groups["under"]
+    counts = {k: len(v) for k, v in groups.items()}
+    shown = tables.sort_rows(groups[f], cols, sort, direction)
+    next_run = pw.next_run_at() if pw else None
+    return shown, {"f": f, "q": q, "yon": yon, "dir_counts": dir_counts, "counts": counts, "state": state,
+                   "big": big, "sort": sort, "direction": direction, "next_run": next_run}
+
+
+async def prices_index(request: web.Request) -> web.Response:
+    ctx = _ctx(request)
+    rows, p = await _query_prices(request)
+    return _page(request, ctx, views.prices_page(ctx, rows, shown_limit=CATALOG_SHOWN, **p))
+
+
+async def prices_xlsx(request: web.Request) -> web.Response:
+    rows, p = await _query_prices(request)
+    return _xlsx_response("uzum_narxlari", "Uzum narxlari", rows, tables.price_cols(p["big"]))
+
+
 # ── Owner auth + actions ────────────────────────────────────────────────────
 def _safe_next(d: Deps, value: str | None) -> str:
     home = f"{d.base}/"
@@ -614,6 +658,8 @@ def build_app(settings: Settings, sessionmaker: async_sessionmaker, *, tenders: 
     app.router.add_get(f"{b}/feed", feed_index)
     app.router.add_get(f"{b}/all", catalog_index)
     app.router.add_get(f"{b}/all.xlsx", catalog_xlsx)
+    app.router.add_get(f"{b}/all/uzum", prices_index)
+    app.router.add_get(f"{b}/all/uzum.xlsx", prices_xlsx)
     app.router.add_get(f"{b}/lots", tenders_index)
     app.router.add_get(f"{b}/lots.xlsx", tenders_xlsx)
     app.router.add_post(f"{b}/lots/bulk", lots_bulk)

@@ -147,6 +147,16 @@ async def main() -> None:
             coalesce=True,
         )
         tender_service.next_scan_at = lambda: scan_job.next_run_time
+        price_watch = None
+        if tcfg.prices.enabled:
+            from app.tenders.prices import PriceWatch
+
+            price_watch = PriceWatch(settings, sessionmaker, tender_service)
+            price_job = scheduler.add_job(price_watch.run, "interval", minutes=tcfg.prices.interval_min,
+                              next_run_time=datetime.now(UTC) + timedelta(minutes=4),
+                              id="tenders_prices", max_instances=1, coalesce=True)
+            price_watch.next_run_at = lambda: price_job.next_run_time
+        tender_service.prices = price_watch
         scheduler.add_job(tender_service.run_reminders, "interval", minutes=10, id="tenders_reminders",
                           max_instances=1, coalesce=True)
         scheduler.add_job(tender_service.send_daily_report, "cron", hour=hh, minute=mm,

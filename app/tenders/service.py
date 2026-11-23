@@ -91,6 +91,7 @@ class TenderService:
         self.filter = KeywordFilter(self.cfg)
         self._scan_lock = asyncio.Lock()
         self.next_scan_at: Callable[[], datetime | None] = lambda: None
+        self.prices = None  # PriceWatch (Uzum price check), set in main.py
 
     @property
     def scanning(self) -> bool:

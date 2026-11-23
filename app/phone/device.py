@@ -22,6 +22,7 @@ import aiohttp
 log = logging.getLogger(__name__)
 CHROME = "com.android.chrome/com.google.android.apps.chrome.Main"
 APP_ID = "fh-bid-bot"
+PHONE_LOCK = asyncio.Lock()  # one Chrome tab: bids and Uzum price checks take turns
 LOCAL = "127.0.0.1:5555"  # adbd's fixed port (`adb tcpip 5555`): reachable from Termux on any network
 
 

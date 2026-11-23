@@ -21,7 +21,7 @@ from app.core.states import JobStatus
 from app.core.status import transition
 from app.db.models import ApprovalKind, Job, Proposal
 from app.phone.agent import AgentResult, BidAgent, BidFields
-from app.phone.device import Phone, PhoneUnavailable
+from app.phone.device import PHONE_LOCK, Phone, PhoneUnavailable
 from app.tenders.timeutil import now_utc
 
 log = logging.getLogger(__name__)
@@ -55,7 +55,7 @@ class PhoneSubmitter:
     async def run_queue(self) -> None:
         if self._lock.locked():
             return
-        async with self._lock:
+        async with self._lock, PHONE_LOCK:
             for _ in range(3):
                 nxt = await self._next()
                 if nxt is None:

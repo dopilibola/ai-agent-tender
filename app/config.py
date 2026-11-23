@@ -154,6 +154,18 @@ class TenderAnalysisConfig(BaseModel):
     backfill_per_run: int = Field(10, ge=0)  # already-announced lots analysed quietly per scan
 
 
+class PriceCheckConfig(BaseModel):
+    """🛒 Uzum Market price check of goods lots, read in the phone's own Chrome. See app/tenders/prices.py."""
+
+    enabled: bool = True
+    interval_min: int = Field(30, ge=10)
+    max_lots_per_run: int = Field(60, ge=0)        # lot cards opened per run (item lines are cached)
+    max_searches_per_run: int = Field(40, ge=0)    # Uzum searches on the phone per run
+    cache_days: float = Field(3, gt=0)             # an item name is searched again after this many days
+    delay_s: float = Field(4, ge=1)                # pause between two Uzum searches
+    big_ratio: float = Field(2.0, gt=1)            # «katta farq»: tender ≥ 2× Uzum or ≤ ½ of it
+
+
 class TendersConfig(BaseModel):
     enabled: bool = False
     poll_interval_min: int = Field(30, ge=5)
@@ -171,6 +183,7 @@ class TendersConfig(BaseModel):
     keywords: TenderKeywords = TenderKeywords()
     exclude: TenderExclude = TenderExclude()
     analysis: TenderAnalysisConfig = TenderAnalysisConfig()
+    prices: PriceCheckConfig = PriceCheckConfig()
 
     @field_validator("daily_report_time")
     @classmethod

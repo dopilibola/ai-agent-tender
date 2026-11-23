@@ -618,7 +618,7 @@ def catalog_page(ctx: Ctx, rows: list, *, kind: str, q: str, src: str, region: s
     seg = "".join(
         f'<a class="{"on" if key == kind else ""}" href="{h(ctx.url("/all", k=key, q=q, src=src, r=region, y=yon, **_nf_query(nf)))}">'
         f'{h(label)} <span class="muted">{sum(counts.values()) if key == "all" else counts.get(key, 0)}</span></a>'
-        for key, label in CATALOG_KINDS)
+        for key, label in CATALOG_KINDS) + _uzum_tab(ctx, False)
 
     def money_inp(name: str, ph: str) -> str:
         val = nf.get(name)
@@ -658,6 +658,60 @@ def catalog_page(ctx: Ctx, rows: list, *, kind: str, q: str, src: str, region: s
 {filter_bar(ctx, "/all", inner, xlsx=xl)}{note}{table}""", title="Barcha tenderlar",
                   sub="Tovar yetkazib berish va boshqa davlat xaridlari · har 30 daqiqada yangilanadi",
                   tools=f'<div class="seg">{seg}</div>').replace(
+        "<title>", '<meta http-equiv="refresh" content="900"><title>', 1)
+
+
+def _uzum_tab(ctx: Ctx, on: bool) -> str:
+    return f'<a class="{"on" if on else ""}" href="{h(ctx.url("/all/uzum"))}">🛒 Uzum narxlari</a>'
+
+
+PRICE_FILTERS = (("big", "Katta farq"), ("over", "Tender qimmat"), ("under", "Tender arzon"), ("all", "Hammasi"))
+
+
+def prices_page(ctx: Ctx, rows: list, *, f: str, q: str, yon: str, dir_counts: dict[str, int],
+                counts: dict[str, int], state: dict, big: float, shown_limit: int, sort: str, direction: str,
+                next_run) -> str:
+    from app.tenders.catalog import DIRECTION_LABEL
+    from app.web.tables import price_cols, table_html
+
+    seg = "".join(f'<a href="{h(ctx.url("/all", k=key))}">{h(label)}</a>' for key, label in CATALOG_KINDS)
+    seg += _uzum_tab(ctx, True)
+    ftabs = "".join(
+        f'<a class="{"on" if key == f else ""}" href="{h(ctx.url("/all/uzum", f=key, q=q, y=yon))}">'
+        f'{h(label)} <span class="muted">{counts.get(key, 0)}</span></a>' for key, label in PRICE_FILTERS)
+    at = state.get("at")
+    last = fmt_local(datetime.fromisoformat(at)) if at else "hali yo'q"
+    phone = state.get("phone") or "—"
+    stats = (stat("Katta farq", counts.get("big", 0), f"tender ≥{big:g}× qimmat yoki ≤{big:g}× arzon", blue=True)
+             + stat("Solishtirilgan", state.get("compared", 0), f"{state.get('piece', 0)} ta donalik mahsulotdan")
+             + stat("Navbatda", state.get("pending", 0), "telefon hali Uzum'da qidirmagan")
+             + stat("Oxirgi tekshiruv", last.split(" ")[-1] if at else "—",
+                    ("telefon: ishlayapti" if phone == "ok" else phone)
+                    + (f" · keyingisi {fmt_local(next_run)}" if next_run else "")))
+    ordered = sorted(dir_counts, key=lambda k: (k == "other", -dir_counts[k]))
+    if yon and yon not in dir_counts:
+        ordered.append(yon)
+    dir_opts = _opt("", yon, f"Barcha yo'nalishlar ({sum(dir_counts.values())})") + "".join(
+        _opt(k, yon, f"{DIRECTION_LABEL.get(k, k)} ({dir_counts.get(k, 0)})") for k in ordered)
+    inner = (f'<input type="hidden" name="f" value="{h(f)}">'
+             f'<input type="search" name="q" value="{h(q)}" placeholder="Qidirish: mahsulot, buyurtmachi, lot raqami…">'
+             f'<select name="y" title="Yo\'nalish">{dir_opts}</select>{_sort_inputs(sort, direction)}')
+    xl = ctx.url("/all/uzum.xlsx", f=f, q=q, y=yon, sort=sort, dir=direction)
+    note = (f'<p class="count">Jadvalda birinchi {shown_limit} tasi (jami {len(rows)}) — Excel\'da hammasi bor.</p>'
+            if len(rows) > shown_limit else "")
+    table = table_html(ctx, "/all/uzum", rows[:shown_limit], price_cols(big), sort=sort, direction=direction,
+                       query={"f": f, "q": q, "y": yon}, detail=lambda r: r.lot.url, bulk=[], noun="mahsulot",
+                       external=True)
+    info = ("<p class=\"sub\">Tovar lotlaridagi har bir mahsulotning <b>1 dona narxi</b> Uzum Market'dagi shu nomli "
+            "mahsulotlarning o'rtacha narxi bilan solishtiriladi. Uzum'ni telefonning o'zi Chrome'da ochib qidiradi "
+            "(har 30 daqiqada yangi mahsulotlar). Faqat dona/komplekt/pachka bilan o'lchanadigan mahsulotlar; "
+            "nomi Uzum'dagi kamida 3 ta mahsulotga mos kelganlari ko'rsatiladi (20 baravardan ortiq farq — boshqa "
+            "mahsulot deb hisoblanadi va chiqarilmaydi). «Uzum narxi» ustiga bosing — "
+            "Uzum'dagi qidiruv ochiladi, qatorni bosing — lot ochiladi. "
+            "<span class=\"muted\">Uzum chakana narxi; tenderda yetkazib berish, kafolat va QQS ham bo'lishi mumkin.</span></p>")
+    return layout(ctx, "goods", f"""{info}<div class="stats">{stats}</div><div class="seg" style="margin:0 0 12px">{ftabs}</div>
+{filter_bar(ctx, "/all/uzum", inner, xlsx=xl)}{note}{table}""", title="Uzum narxlari bilan solishtirish",
+                  sub="Tender narxi ↔ Uzum Market · katta farqlar", tools=f'<div class="seg">{seg}</div>').replace(
         "<title>", '<meta http-equiv="refresh" content="900"><title>', 1)
 
 
