@@ -1,4 +1,3 @@
-import asyncio
 from datetime import UTC, datetime, timedelta
 
 import pytest
@@ -101,13 +100,17 @@ class FakeUzum:
 
 class FakeAnalyzer:
     calls = 0
+    max_per_day = 100
+
+    async def requests_today(self):
+        return 0
 
     async def __call__(self, lp, detail, *, big):
         self.calls += 1
         assert detail["description"] == "Maktabga kompyuter jihozlari" and len(lp.rows) == 3
         return {"summary_uz": "Printer va stullar.", "price_verdict": "QIMMAT", "price_comment_uz":
                 "Printer 4 baravar qimmat.", "supplier_verdict": "SHARTLI", "supplier_reason_uz": "Foyda bor.",
-                "est_margin_percent": [30, 60], "key_conditions": [], "risks": ["Kafolat"], "red_flags": [],
+                "est_margin_percent": [30, 60], "win_chance_percent": [20, 45], "key_conditions": [], "risks": ["Kafolat"], "red_flags": [],
                 "item_notes": [], "questions_for_customer_uz": []}
 
 
@@ -117,7 +120,7 @@ async def watch(settings, sessionmaker):
     settings.config.web.base_path = "/tender"
     future = datetime.now(UTC) + timedelta(days=3)
     cards = {"10": LotRecord(source="etender", external_id="10", url="https://etender.uzex.uz/lot/10", title="t",
-                             description="Maktabga kompyuter jihozlari",
+                             description="Maktabga kompyuter jihozlari", pledge_percent=3, pledge_amount=900_000,
                              raw={"budget_products": [
                                  {"Product_Name": "Printer Canon", "Quantity": 4, "Price": 5_000_000,
                                   "Js_Properties": [{"Property_Name": "Ўлчов бирлиги", "User_Value": "дона"}]},
@@ -173,14 +176,15 @@ async def test_prices_page(watch, settings, sessionmaker):
         every = await (await c.get("/tender/all/uzum", params={"f": "all"})).text()
         assert "Stul ofis" in every
         main = await (await c.get("/tender/all", params={"k": "it"})).text()
+        goods = await (await c.get("/tender/all")).text()
+        assert "900 000 so&#x27;m" in goods or "900 ming so&#x27;m" in goods or "0.9 mln so&#x27;m" in goods
+        assert "Shartli" in goods and "20–45%" in goods and "Jami: 1 ta lot" in goods
         assert 'href="/tender/all/uzum"' in main and "katta farqlar" in main and "×4.5 qimmat" in main
         lots = await (await c.get("/tender/all/uzum", params={"f": "lots"})).text()
         assert "2 / 3" in lots and "1 ta" in lots and 'data-href="/tender/all/uzum/lot/etender-10"' in lots
         one = await (await c.get("/tender/all/uzum/lot/etender-10")).text()
         assert "Lot ma'lumotlari" in one and "Maktabga kompyuter jihozlari" in one  # lot card details
-        assert "AI lotni tahlil qilmoqda" in one and 'http-equiv="refresh"' in one
-        await asyncio.gather(*pw._ai_tasks.values())
-        one = await (await c.get("/tender/all/uzum/lot/etender-10")).text()
+        assert pw.analyzer.calls == 1 and "AI lotni tahlil qilmoqda" not in one  # done by the run itself
         assert "Narx: QIMMAT" in one and "Printer 4 baravar qimmat" in one and "Qayta tahlil" in one
         assert "<tfoot>" in one and "Jami: 2 ta solishtirilgan" in one and "+16 mln so&#x27;m" in one
         assert 'data-href="#i-0"' in one and 'id="i-0"' in one  # row → the item's own details
@@ -215,11 +219,12 @@ async def test_goods_analyzer(watch, sessionmaker):
         async def generate_json(self, prompt, schema, **kw):
             seen["prompt"], seen["purpose"] = prompt, kw["purpose"]
             return GoodsAnalysis(summary_uz="s", price_verdict="QIMMAT", price_comment_uz="p",
-                                 supplier_verdict="SHARTLI", supplier_reason_uz="r", est_margin_percent=[60, 20],
+                                 supplier_verdict="SHARTLI", supplier_reason_uz="r", est_margin_percent=[60, 20], win_chance_percent=[150],
                                  key_conditions=[" ", "to'lov 30 kun"], risks=[], red_flags=[],
                                  item_notes=[{"name": "Printer Canon", "note": "qimmat"}], questions_for_customer_uz=[])
 
     data = await GoodsAnalyzer(FakeGemini(), sessionmaker)(lp, await pw.lot_detail(lp.lot), big=2.0)
+    assert data["win_chance_percent"] == [100, 100]
     assert data["est_margin_percent"] == [20, 60] and data["key_conditions"] == ["to'lov 30 kun"]
     assert seen["purpose"] == "goods_analysis" and "Printer Canon" in seen["prompt"] and "uzum_orta" in seen["prompt"]
     assert "Maktabga kompyuter jihozlari" in seen["prompt"] and data["_model"] == "gemini-test"

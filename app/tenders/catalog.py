@@ -102,6 +102,11 @@ class CatalogRow:
     is_category: bool
     usd: float | None = None  # filled when shown (today's rate); not stored
     direction: str = ""  # yo'nalish key, see DIRECTIONS (computed on load, so new terms apply at once)
+    # Filled when shown, from the goods lot card and its AI summary (app/tenders/prices.py); not stored.
+    pledge_pct: float | None = None
+    pledge_uzs: float | None = None  # None = card not read yet; 0 = no deposit
+    ai_verdict: str = ""
+    win: list[int] | None = None
 
     # tables.Col / table_html expect an `id`; catalog rows are not DB rows.
     @property

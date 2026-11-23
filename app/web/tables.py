@@ -402,6 +402,30 @@ def _cat_kind(r) -> str:
     return f'<span class="pill {cls}">{h(label)}</span>'
 
 
+GOODS_VERDICT = {"QATNASHISH MUMKIN": ("good", "Qatnashsa bo'ladi", 0), "SHARTLI": ("maybe", "Shartli", 1),
+                 "TAVSIYA ETILMAYDI": ("bad", "Tavsiya etilmaydi", 2)}
+
+
+def _cat_pledge_cell(r) -> str:
+    if r.pledge_uzs is None:
+        return ('<span class="muted" title="Lot kartasi hali o\'qilmagan">…</span>' if r.kind == "goods"
+                else '<span class="muted">—</span>')
+    if not r.pledge_uzs:
+        return '<span class="muted">yo\'q</span>'
+    return f'{h(tc.money_uzs(r.pledge_uzs))} <span class="muted">· {r.pledge_pct:g}%</span>'
+
+
+def _cat_verdict_cell(r) -> str:
+    if not r.ai_verdict:
+        return '<span class="pill">Kutilmoqda</span>' if r.kind == "goods" else '<span class="muted">—</span>'
+    cls, label, _ = GOODS_VERDICT.get(r.ai_verdict, ("", r.ai_verdict, 3))
+    return f'<span class="pill {cls}">{h(label)}</span>'
+
+
+def _cat_win(r) -> int | None:
+    return r.win[0] if r.win and len(r.win) == 2 else None
+
+
 CATALOG_COLS: list[Col] = [
     Col("title", "Nomi", lambda r: r.title.lower(), lambda c, r, n: _t(_cat_title(r), 70), _cat_title,
         "asc", 70, "wide"),
@@ -419,6 +443,13 @@ CATALOG_COLS: list[Col] = [
         lambda r: fmt_local(r.deadline_at) if r.deadline_at else "", "asc", 18),
     Col("price", "Narx", lambda r: cat_usd(r) if cat_usd(r) is not None else r.start_cost,
         lambda c, r, n: _cat_price(r), lambda r: r.start_cost, "desc", 16, "num"),
+    Col("pledge", "Kiritiladigan pul (zakalat)", lambda r: r.pledge_uzs, lambda c, r, n: _cat_pledge_cell(r),
+        lambda r: round(r.pledge_uzs) if r.pledge_uzs is not None else "", "desc", 18, "num"),
+    Col("verdict", "AI xulosa", lambda r: GOODS_VERDICT[r.ai_verdict][2] if r.ai_verdict in GOODS_VERDICT else None,
+        lambda c, r, n: _cat_verdict_cell(r), lambda r: GOODS_VERDICT.get(r.ai_verdict, ("", r.ai_verdict))[1],
+        "asc", 16),
+    Col("win", "Yutish %", _cat_win, lambda c, r, n: win_bar(_cat_win(r), "–".join(map(str, r.win or []))),
+        lambda r: "–".join(map(str, r.win or [])), "desc", 9, "num"),
     Col("customer", "Buyurtmachi", lambda r: (r.customer_name or "").lower() or None,
         lambda c, r, n: _t(r.customer_name, 36), lambda r: r.customer_name or "", "asc", 40, "mid"),
     Col("region", "Hudud", lambda r: (r.customer_region or "").lower() or None,
@@ -430,7 +461,7 @@ CATALOG_COLS: list[Col] = [
 # ── Rendering ───────────────────────────────────────────────────────────────
 def table_html(ctx: Ctx, path: str, rows: list, cols: list[Col], *, sort: str, direction: str, query: dict,
                detail: Callable[[Any], str], bulk: list[tuple[str, str, str]], noun: str,
-               external: bool = False, foot: dict[str, str] | None = None) -> str:
+               external: bool | Callable[[Any], bool] = False, foot: dict[str, str] | None = None) -> str:
     """CRM table: optional checkbox column + bulk bar, sortable headers, one-line rows that open `detail`."""
     now = now_utc()
     head = ['<th class="cb"><input type="checkbox" data-all title="Hammasini belgilash"></th>'] if bulk else []
@@ -450,7 +481,7 @@ def table_html(ctx: Ctx, path: str, rows: list, cols: list[Col], *, sort: str, d
     for r in rows:
         tds = "".join(f'<td class="{c.cls}">{c.cell(ctx, r, now)}</td>' for c in cols if c.cls != "hidden")
         cb = (f'<td class="cb"><input type="checkbox" name="ids" value="{r.id}" form="bulk"></td>' if bulk else "")
-        ext = ' data-ext="1"' if external else ""
+        ext = ' data-ext="1"' if (external(r) if callable(external) else external) else ""
         body.append(f'<tr data-href="{h(detail(r))}"{ext}>{cb}{tds}</tr>')
     count = f'<p class="count">{len(rows)} ta {h(noun)}</p>'
     if not body:

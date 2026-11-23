@@ -27,7 +27,7 @@ from app.pipeline.service import FreelanceService
 from app.tenders import cards as tc
 from app.tenders.catalog import DIRECTION_LABEL
 from app.tenders.filters import is_it_lot
-from app.tenders.prices import group_by_lot
+from app.tenders.prices import LotPrices, group_by_lot
 from app.tenders.service import ACTIVE, TenderService
 from app.tenders.timeutil import TASHKENT, as_utc, now_utc
 from app.web import tables, views, xlsx
@@ -379,8 +379,17 @@ async def _query_catalog(request: web.Request) -> tuple[list, dict]:
     rows, updated = await d.tenders.catalog() if d.tenders else ([], {})
     rate = await d.tenders.fx.get() if d.tenders and d.tenders.fx else None
     live = [r for r in rows if not r.deadline_at or as_utc(r.deadline_at) > now]
+    pw = d.tenders.prices if d.tenders else None
+    try:
+        infos = await pw.lot_infos() if pw else {}
+    except Exception:  # the lot list must still open if the price data is broken
+        log.exception("web.lot_infos_failed")
+        infos = {}
     for r in live:
         r.usd = tc.usd(r.start_cost, r.currency, rate)
+        info = infos.get(r.id) or {}
+        r.pledge_pct, r.pledge_uzs = info.get("pledge_pct"), info.get("pledge_uzs")
+        r.ai_verdict, r.win = info.get("ai_verdict") or "", info.get("win")
     regions = sorted({r.customer_region for r in live if r.customer_region})
     if src:
         live = [r for r in live if r.source == src]
@@ -480,17 +489,27 @@ async def prices_xlsx(request: web.Request) -> web.Response:
     return _xlsx_response("uzum_narxlari", "Uzum narxlari", rows, tables.price_cols(p["big"]))
 
 
+async def _goods_lot(pw, lot_id: str):
+    """One open goods lot with its item rows (none yet is fine: the page still shows the card and AI summary)."""
+    if pw is None:
+        return None
+    rows, _ = await pw.comparison()
+    mine = [r for r in rows if r.lot.id == lot_id]
+    if mine:
+        return group_by_lot(mine)[0]
+    lot = next((r for r in await pw._open_goods() if r.id == lot_id), None)
+    return LotPrices(lot, []) if lot else None
+
+
 async def prices_lot(request: web.Request) -> web.Response:
     """Every item of one lot: tender price, Uzum price and why an item was not compared."""
     d = request.app[DEPS]
     ctx = _ctx(request)
     pw = d.tenders.prices if d.tenders else None
     lot_id = request.match_info["id"]
-    rows, _ = await pw.comparison() if pw else ([], {})
-    mine = [r for r in rows if r.lot.id == lot_id]
-    if not mine:
-        raise web.HTTPNotFound(text="Bu lot uchun mahsulotlar hali yig'ilmagan (yoki lot yopilgan).")
-    lp = group_by_lot(mine)[0]
+    lp = await _goods_lot(pw, lot_id)
+    if lp is None:
+        raise web.HTTPNotFound(text="Bunday ochiq tovar loti yo'q (yoki lot yopilgan).")
     detail = await pw.lot_detail(lp.lot)
     ai, busy = await pw.ai_summary(lp, detail)
     return _page(request, ctx, views.price_lot_page(ctx, lp, big=d.settings.config.tenders.prices.big_ratio,
@@ -502,11 +521,9 @@ async def prices_lot_ai(request: web.Request) -> web.Response:
     d, back = await _require_owner(request)
     pw = d.tenders.prices if d.tenders else None
     lot_id = request.match_info["id"]
-    rows, _ = await pw.comparison() if pw else ([], {})
-    mine = [r for r in rows if r.lot.id == lot_id]
-    if not mine:
+    lp = await _goods_lot(pw, lot_id)
+    if lp is None:
         raise web.HTTPNotFound()
-    lp = group_by_lot(mine)[0]
     await pw.ai_summary(lp, await pw.lot_detail(lp.lot), fresh=True)
     raise web.HTTPSeeOther(f"{d.base}/all/uzum/lot/{lot_id}#ai")
 

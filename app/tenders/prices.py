@@ -398,13 +398,14 @@ class PriceWatch:
                 fetched = await self._fetch_items(lots)
                 await self._prune({lot.id for lot in lots})
                 searched, phone = await self._search(lots)
+                analyzed = await self._analyze(lots)
             except Exception:
                 log.exception("prices.run_failed")
                 return
             await self._kv_set(KV_STATE, {"at": now_utc().isoformat(), "fetched": fetched, "searched": searched,
-                                          "phone": phone})
+                                          "phone": phone, "analyzed": analyzed})
             log.info("prices.run", extra={"lots": len(lots), "fetched": fetched, "searched": searched,
-                                          "phone": phone})
+                                          "phone": phone, "analyzed": analyzed})
 
     async def _open_goods(self) -> list[CatalogRow]:
         rows, _ = await self.tenders.catalog()
@@ -427,15 +428,16 @@ class PriceWatch:
         return out
 
     async def _fetch_items(self, lots: list[CatalogRow]) -> int:
-        async with self.sessionmaker() as s:
-            have = set(await s.scalars(select(KV.key).where(KV.key.like(KV_ITEMS + "%"))))
+        have = await self._items()
         rates = await self._rates()
 
         def size(r: CatalogRow) -> float:
             return (r.start_cost or 0) * rates.get(r.currency, 0)
 
-        todo = sorted((r for r in lots if KV_ITEMS + r.id not in have and r.source in self.tenders.sources),
-                      key=size, reverse=True)[: self.cfg.max_lots_per_run]
+        mine = [r for r in lots if r.source in self.tenders.sources]
+        new = sorted((r for r in mine if r.id not in have), key=size, reverse=True)
+        old = sorted((r for r in mine if r.id in have and not have[r.id].get("d")), key=size, reverse=True)
+        todo = (new + old)[: self.cfg.max_lots_per_run]  # cards read before details were kept: once more
         done = fails = 0
         for r in todo:
             try:
@@ -547,6 +549,62 @@ class PriceWatch:
         await self._kv_set(KV_ITEMS + lot.id, value)
         return value["d"]
 
+    async def _analyze(self, lots: list[CatalogRow]) -> int:
+        """AI summary (verdict, win %) for goods lots that have none yet, biggest first, within the daily cap."""
+        if self.analyzer is None or not self.cfg.ai_per_run:
+            return 0
+        items = await self._items()
+        async with self.sessionmaker() as s:
+            done = {kv.key[len(KV_AI):]: kv.value or {} for kv in
+                    (await s.scalars(select(KV).where(KV.key.like(KV_AI + "%")))).all()}
+        rates = await self._rates()
+        soon = now_utc() + timedelta(hours=3)
+
+        def wanted(r: CatalogRow) -> bool:
+            a = done.get(r.id)
+            fresh_err = a and a.get("error") and a.get("_at", "") > (now_utc() - timedelta(days=1)).isoformat()
+            return (bool(items.get(r.id, {}).get("d")) and not fresh_err
+                    and (not a or a.get("error") or "win_chance_percent" not in a)
+                    and not (r.deadline_at and as_utc(r.deadline_at) < soon))
+
+        todo = sorted(filter(wanted, lots), key=lambda r: (r.start_cost or 0) * rates.get(r.currency, 0),
+                      reverse=True)[: self.cfg.ai_per_run]
+        if not todo:
+            return 0
+        rows, _ = await self.comparison()
+        by_lot = {lp.id: lp for lp in group_by_lot(rows)}
+        n = 0
+        for r in todo:
+            if await self.analyzer.requests_today() >= self.analyzer.max_per_day:
+                break
+            lp = by_lot.get(r.id) or LotPrices(r, [])
+            await self._make_ai(lp, items[r.id]["d"])
+            n += 1
+        return n
+
+    async def lot_infos(self) -> dict[str, dict[str, Any]]:
+        """Per goods lot: deposit (from its card) and AI verdict / win chance, for the «Barcha tenderlar» table."""
+        items = await self._items()
+        async with self.sessionmaker() as s:
+            ai = {kv.key[len(KV_AI):]: kv.value or {} for kv in
+                  (await s.scalars(select(KV).where(KV.key.like(KV_AI + "%")))).all()}
+        rates = await self._rates()
+        out: dict[str, dict[str, Any]] = {}
+        for lot_id, v in items.items():
+            d = v.get("d")
+            if not d:
+                continue
+            pct, amount = d.get("pledge_pct"), d.get("pledge")
+            rate = rates.get(d.get("cur") or v.get("cur") or "UZS")
+            info: dict[str, Any] = {"pledge_pct": pct or None,
+                                    "pledge_uzs": (amount * rate if amount and rate else None) if pct else 0.0}
+            a = ai.get(lot_id) or {}
+            if a and not a.get("error"):
+                info["ai_verdict"] = a.get("supplier_verdict") or ""
+                info["win"] = a.get("win_chance_percent") or None
+            out[lot_id] = info
+        return out
+
     @staticmethod
     def ai_sig(lp: LotPrices) -> str:
         """The summary is redone when more items of the lot got an Uzum price."""
@@ -560,7 +618,8 @@ class PriceWatch:
         cached = dict(kv.value or {}) if kv else None
         task = self._ai_tasks.get(lp.id)
         busy = task is not None and not task.done()
-        stale = fresh or not cached or (cached.get("_sig") != self.ai_sig(lp) and not cached.get("error"))
+        stale = fresh or not cached or (not cached.get("error") and (
+            cached.get("_sig") != self.ai_sig(lp) or "win_chance_percent" not in cached))
         if self.analyzer is not None and stale and not busy:
             self._ai_tasks[lp.id] = asyncio.create_task(self._make_ai(lp, detail))
             busy = True

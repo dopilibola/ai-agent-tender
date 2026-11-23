@@ -86,7 +86,9 @@ async def test_catalog_page(client):
     assert "ta'mirlash ishlari" not in html  # service, not on the goods tab
     assert "Eski stul" not in html  # deadline passed
     assert "<b>Maktab</b>" not in html and "&lt;b&gt;Maktab" in html
-    assert 'data-ext="1"' in html
+    assert 'data-href="/tender/all/uzum/lot/etender-10"' in html  # goods lot → our page with the AI summary
+    assert "Kiritiladigan pul (zakalat)" in html and "Yutish %" in html and "Hammasida qatnashish uchun" in html
+    assert 'data-ext="1"' in await (await client.get("/tender/all", params={"k": "service"})).text()
     svc = await (await client.get("/tender/all", params={"k": "service"})).text()
     assert "ta&#x27;mirlash ishlari" in svc and "Kompyuter stollarini" not in svc
     only_xarid = await (await client.get("/tender/all", params={"src": "xarid"})).text()

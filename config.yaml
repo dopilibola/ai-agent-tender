@@ -76,7 +76,10 @@ gemini:
   timeout_s: 120
   # USD per 1M tokens, used only for cost logging. Fill in from ai.google.dev/pricing;
   # models missing here are logged with cost 0.
-  prices: {}
+  prices:
+    max_lots_per_run: 250    # lot cards (HTTP, not the phone) read per run
+    ai_per_run: 60
+    ai_max_per_day: 900
 
 # 📧 Upwork / Fiverr xabarnomalari Gmail orqali (faqat o'qiydi; .env: IMAP_USER, IMAP_APP_PASSWORD)
 email_watch:

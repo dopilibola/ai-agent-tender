@@ -35,6 +35,7 @@ class GoodsAnalysis(BaseModel):
     supplier_verdict: Literal["QATNASHISH MUMKIN", "SHARTLI", "TAVSIYA ETILMAYDI"]
     supplier_reason_uz: str
     est_margin_percent: list[int] = Field(description="[min, max] yoki []")
+    win_chance_percent: list[int] = Field(description="[min, max], 0-100: yetkazib beruvchi yutish ehtimoli")
     key_conditions: list[str] = Field(description="yetkazish, to'lov, zakalat, kafolat shartlari")
     risks: list[str]
     red_flags: list[str]
@@ -101,8 +102,9 @@ class GoodsAnalyzer:
         res: GoodsAnalysis = await self.gemini.generate_json(prompt, GoodsAnalysis, role="fast", system=system,
                                                              purpose=PURPOSE, temperature=0.2)
         data = res.model_dump()
-        m = sorted(int(x) for x in data["est_margin_percent"][:2])
-        data["est_margin_percent"] = [m[0], m[0]] if len(m) == 1 else m
+        for k, lo, hi in (("est_margin_percent", -100, 1000), ("win_chance_percent", 0, 100)):
+            m = sorted(min(max(int(x), lo), hi) for x in data[k][:2])
+            data[k] = [m[0], m[0]] if len(m) == 1 else m
         for k in ("key_conditions", "risks", "red_flags", "questions_for_customer_uz"):
             data[k] = [x.strip() for x in data[k] if x and x.strip()][:8]
         data["item_notes"] = [n for n in data["item_notes"] if n["name"] and n["note"]][:8]

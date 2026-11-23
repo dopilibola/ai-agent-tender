@@ -627,9 +627,15 @@ def catalog_page(ctx: Ctx, rows: list, *, kind: str, q: str, src: str, region: s
         at = updated.get(name)
         return f"{name}: {fmt_local(at)}" if at else f"{name}: hali yo'q"
 
-    stats = (stat("Tovar yetkazib berish", counts.get("goods", 0), "ochiq lotlar, muddati o'tmagan", blue=True)
-             + stat("Xizmat va ishlar", counts.get("service", 0), "qurilish, ta'mir, xizmat ko'rsatish")
-             + stat("IT lotlar", counts.get("it", 0), "batafsil — «Tenderlar» bo'limida")
+    known = [r for r in rows if r.pledge_uzs is not None]
+    pledge_total = sum(r.pledge_uzs or 0 for r in known)
+    with_pledge = sum(1 for r in known if r.pledge_uzs)
+    good = sum(1 for r in rows if r.ai_verdict == "QATNASHISH MUMKIN")
+    goods_rows = [r for r in rows if r.kind == "goods"]
+    stats = (stat("Hammasida qatnashish uchun", tc.money_uzs(pledge_total),
+                  f"{len(known)} ta lot zakalati · {with_pledge} tasida bor", blue=True)
+             + stat("Tovar yetkazib berish", counts.get("goods", 0), "ochiq lotlar, muddati o'tmagan")
+             + stat("AI: qatnashsa bo'ladi", good, f"{sum(1 for r in goods_rows if r.ai_verdict)} ta lot tahlil qilingan")
              + stat("Oxirgi yangilanish", fmt_local(max(updated.values())).split(" ")[-1] if updated else "—",
                     "keyingisi: " + (fmt_local(next_scan) if next_scan else "~30 daqiqada")))
     seg = "".join(
@@ -666,9 +672,21 @@ def catalog_page(ctx: Ctx, rows: list, *, kind: str, q: str, src: str, region: s
                 "Qidiruv yoki filtr bilan toraytiring — Excel'da hammasi bor.</p>")
     table = table_html(ctx, "/all", rows[:shown_limit], CATALOG_COLS, sort=sort, direction=direction,
                        query={"k": kind, "q": q, "src": src, "r": region, "y": yon, **_nf_query(nf)},
-                       detail=lambda r: r.url, bulk=[], noun="lot", external=True)
+                       detail=lambda r: ctx.url(f"/all/uzum/lot/{r.id}") if r.kind == "goods" else r.url,
+                       bulk=[], noun="lot", external=lambda r: r.kind != "goods",
+                       foot={"title": f"Jami: {len(rows)} ta lot", "pledge": f"<b>{h(tc.money_uzs(pledge_total))}</b>"}
+                       if rows else None)
+    pending = sum(1 for r in goods_rows if r.pledge_uzs is None)
+    money_note = ('<p class="sub">«Kiritiladigan pul» — <b>zakalat</b>: ariza berganda birjadagi hisobingizda '
+                  "bloklanadi, yutmasangiz qaytariladi. Filtrdagi hamma lotlarda qatnashish uchun jami "
+                  f"<b>{h(tc.money_uzs(pledge_total))}</b> kerak (birja komissiyasi kirmaydi)."
+                  + (f" {pending} ta lotning kartasi hali o'qilmagan («…») — har 30 daqiqada 60 tadan o'qiladi."
+                     if pending else "")
+                  + " «AI xulosa» va «Yutish %» — tovar lotini AI yetkazib beruvchi ko'zi bilan baholaydi "
+                  "(har 30 daqiqada yangi lotlar). xarid.uzex.uz lotlarida zakalat ko'rsatilmaydi.</p>")
     info = ('<p class="sub">Davlat xaridlari (etender.uzex.uz va xarid.uzex.uz) dagi barcha ochiq lotlar. '
-            "Ro'yxat har 30 daqiqada avtomatik yangilanadi. Qatorni bosing — lot asl saytda ochiladi. "
+            "Ro'yxat har 30 daqiqada avtomatik yangilanadi. Xizmat/IT lot qatorini bossangiz — lot asl saytda ochiladi. "
+            "Tovar lotini bossangiz — lot haqida batafsil ma'lumot va AI xulosasi ochiladi. "
             "xarid.uzex.uz ro'yxatida mahsulot nomi yo'q, faqat kategoriya ko'rinadi. "
             f'<span class="muted">({h(upd("etender"))} · {h(upd("xarid"))})</span></p>')
     uz = ""
@@ -682,7 +700,7 @@ def catalog_page(ctx: Ctx, rows: list, *, kind: str, q: str, src: str, region: s
               f'<span class="muted">— eng katta {len(uzum)} tasi (jami {uzum_total})</span> '
               f'<a class="btn ghost" href="{h(ctx.url("/all/uzum"))}">Hammasi →</a></h2>{top}'
               f'<h2 style="margin:22px 0 8px">Lotlar</h2>')
-    return layout(ctx, "goods", f"""{info}<div class="stats">{stats}</div>{uz}
+    return layout(ctx, "goods", f"""{info}<div class="stats">{stats}</div>{money_note}{uz}
 {filter_bar(ctx, "/all", inner, xlsx=xl)}{note}{table}""", title="Barcha tenderlar",
                   sub="Tovar yetkazib berish va boshqa davlat xaridlari · har 30 daqiqada yangilanadi",
                   tools=f'<div class="seg">{seg}</div>').replace(

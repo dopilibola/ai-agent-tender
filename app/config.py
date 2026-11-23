@@ -165,7 +165,8 @@ class PriceCheckConfig(BaseModel):
     delay_s: float = Field(4, ge=1)                # pause between two Uzum searches
     big_ratio: float = Field(2.0, gt=1)            # «katta farq»: tender ≥ 2× Uzum or ≤ ½ of it
     ai_enabled: bool = True                        # Gemini summary on the lot page (app/tenders/goods_ai.py)
-    ai_max_per_day: int = Field(150, ge=0)
+    ai_max_per_day: int = Field(400, ge=0)
+    ai_per_run: int = Field(25, ge=0)              # goods lots summarised in the background each run
 
 
 class TendersConfig(BaseModel):
