@@ -76,10 +76,7 @@ gemini:
   timeout_s: 120
   # USD per 1M tokens, used only for cost logging. Fill in from ai.google.dev/pricing;
   # models missing here are logged with cost 0.
-  prices:
-    max_lots_per_run: 250    # lot cards (HTTP, not the phone) read per run
-    ai_per_run: 60
-    ai_max_per_day: 900
+  prices: {}
 
 # 📧 Upwork / Fiverr xabarnomalari Gmail orqali (faqat o'qiydi; .env: IMAP_USER, IMAP_APP_PASSWORD)
 email_watch:
@@ -113,6 +110,10 @@ tenders:
     xarid: {enabled: true}        # xarid.uzex.uz — taklif so'rovi (ochiq API)
     # xt-xarid.uz: robots.txt /api/ ni taqiqlaydi va sayt so'rovlarga javob bermadi (17.11.2026) — o'chiq
 
+  prices:                         # 🛒 Uzum narxlari, tovar lotlari kartasi va AI xulosasi
+    max_lots_per_run: 250         # lot kartalari (HTTP, telefon emas) bir tekshiruvda
+    ai_per_run: 60
+    ai_max_per_day: 900
   analysis:                       # 🤖 Gemini tahlili (3-bosqich)
     enabled: true
     max_doc_tokens: 30000         # bitta lot uchun TZ matni chegarasi (~4 belgi = 1 token)
