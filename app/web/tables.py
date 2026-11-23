@@ -147,6 +147,23 @@ def _lot_reason_cell(lot: Lot) -> str:
     return '<span class="muted">—</span>' if _a(lot).get("error") else _t(_lot_reason_text(lot), 55)
 
 
+def pledge_uzs(lot: Lot) -> float:
+    """Zakalat (bid security, blocked on the UZEX account while bidding) in so'm; 0 = not required."""
+    if not lot.pledge_percent or not lot.pledge_amount:
+        return 0.0
+    if lot.currency == "UZS":
+        return lot.pledge_amount
+    return lot.pledge_amount * lot.usd_rate if lot.currency == "USD" and lot.usd_rate else 0.0
+
+
+def _pledge_cell(lot: Lot) -> str:
+    if not lot.pledge_percent:
+        return '<span class="muted">yo\'q</span>'
+    v = pledge_uzs(lot)
+    amount = tc.money_uzs(v) if v else tc.money_uzs(lot.pledge_amount, lot.currency)
+    return f'<span>{h(amount)} <span class="muted">· {lot.pledge_percent:g}%</span></span>'
+
+
 LOT_COLS: list[Col] = [
     Col("title", "Tavsif", lambda lot: (_a(lot).get("summary_uz") or lot.title).lower(),
         lambda c, lot, n: _t(_a(lot).get("summary_uz") or lot.title, 60),
@@ -163,6 +180,8 @@ LOT_COLS: list[Col] = [
         lambda c, lot, n: _t(lot.customer_name, 34), lambda lot: lot.customer_name or "", "asc", 35, "mid"),
     Col("price", "Narx", lambda lot: _usd_cost(lot) if _usd_cost(lot) is not None else lot.start_cost,
         lambda c, lot, n: _lot_price(lot), lambda lot: lot.start_cost, "desc", 16, "num"),
+    Col("pledge", "Kiritiladigan pul (zakalat)", lambda lot: pledge_uzs(lot),
+        lambda c, lot, n: _pledge_cell(lot), lambda lot: round(pledge_uzs(lot)), "desc", 18, "num"),
     Col("verdict", "AI xulosa", lambda lot: VERDICT_RANK.get(lot.verdict or ""),
         lambda c, lot, n: _verdict_pill(lot), lambda lot: lot.verdict or "", "desc", 14),
     Col("fit", "Fit", lambda lot: _a(lot).get("fit_score"),

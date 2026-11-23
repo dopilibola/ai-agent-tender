@@ -38,7 +38,7 @@ async def client(settings, sessionmaker):
         s.add_all([
             Lot(source="etender", external_id="525968", url="https://etender.uzex.uz/lot/525968",
                 title='<script>alert(1)</script> Dasturiy ta\'minot', customer_name="Vazirlik", start_cost=2e8,
-                deadline_at=future, status=LotStatus.NOTIFIED, verdict="QATNASHAMIZ",
+                pledge_percent=3, pledge_amount=6e6, deadline_at=future, status=LotStatus.NOTIFIED, verdict="QATNASHAMIZ",
                 analysis={"fit_score": 82, "summary_uz": "Veb-portal ishlab chiqish"}),
             Lot(source="xarid", external_id="777", url="javascript:alert(1)", title="Server", status=LotStatus.NOTIFIED,
                 deadline_at=future),
@@ -185,6 +185,9 @@ async def test_lots_table_sorting_and_ai_column(client, sessionmaker):
     html = await (await client.get("/tender/lots?sort=fit&dir=asc")).text()
     assert html.index("525968") < html.index(">777<")  # empty values stay at the bottom
     assert (await client.get("/tender/lots?sort=bogus&dir=evil")).status == 200
+    html = await (await client.get("/tender/lots")).text()
+    assert "Kiritiladigan pul (zakalat)" in html and "Hammasida qatnashish uchun" in html
+    assert "6 mln so&#x27;m" in html and "<tfoot>" in html and "Jami: 2 ta lot" in html
 
 
 async def test_excel_export(client):

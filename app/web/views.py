@@ -354,10 +354,16 @@ def _usd_short(v: float) -> str:
 
 def tenders_page(ctx: Ctx, lots: list[Lot], *, q: str, verdict: str, status: str, counts: dict[str, int],
                  health: dict[str, dict], sort: str = "deadline", direction: str = "asc", nf: dict | None = None) -> str:
-    from app.web.tables import LOT_COLS, table_html
+    from app.web.tables import LOT_COLS, pledge_uzs, table_html
 
     nf = nf or {}
-    stats = (stat("Ochiq IT lotlar", counts.get("open", 0), "muddati o'tmaganlar")
+    with_pledge = [lot for lot in lots if pledge_uzs(lot)]
+    pledge_total = sum(pledge_uzs(lot) for lot in with_pledge)
+    unknown = sum(1 for lot in lots if lot.pledge_percent and not pledge_uzs(lot))
+    biggest = max(with_pledge, key=pledge_uzs, default=None)
+    stats = (stat("Hammasida qatnashish uchun", tc.money_uzs(pledge_total),
+                  f"jadvaldagi {len(lots)} ta lot zakalati · {len(with_pledge)} tasida bor", blue=True)
+             + stat("Ochiq IT lotlar", counts.get("open", 0), "muddati o'tmaganlar")
              + stat("Qatnashsa bo'ladi", counts.get("good", 0), "AI xulosasi: qatnashamiz", blue=True)
              + stat("Shartli", counts.get("maybe", 0), "qo'shimcha tekshirish kerak")
              + stat("Qatnashyapmiz", counts.get("bidding", 0), "ariza topshirilmoqda"))
@@ -374,8 +380,16 @@ def tenders_page(ctx: Ctx, lots: list[Lot], *, q: str, verdict: str, status: str
                        query={"q": q, "v": verdict, "s": status, **_nf_query(nf)},
                        detail=lambda lot: ctx.url(f"/lot/{lot.id}"),
                        bulk=[("bid", "Qatnashamiz", ""), ("ignore", "Kerak emas", "ghost"),
-                             ("unbid", "Qatnashmaymiz", "ghost")], noun="lot")
-    return layout(ctx, "tenders", f"""{health_html}<div class="stats">{stats}</div>
+                             ("unbid", "Qatnashmaymiz", "ghost")], noun="lot",
+                       foot={"title": f"Jami: {len(lots)} ta lot", "pledge": f"<b>{h(tc.money_uzs(pledge_total))}</b>"}
+                       if lots else None)
+    money_note = (f'<p class="sub">«Kiritiladigan pul» — <b>zakalat</b>: ariza berganda birjadagi hisobingizda '
+                  "bloklanadi, yutmasangiz qaytariladi, yutsangiz shartnoma tuzilguncha turadi. Jadvaldagi hamma "
+                  f"lotlarda qatnashish uchun jami <b>{h(tc.money_uzs(pledge_total))}</b> kerak"
+                  + (f" (eng kattasi: lot {h(biggest.external_id)} — {h(tc.money_uzs(pledge_uzs(biggest)))})" if biggest else "")
+                  + (f"; {unknown} ta lotning zakalati so'mda hisoblanmadi" if unknown else "")
+                  + ". Birja komissiyasi bunga kirmaydi.</p>")
+    return layout(ctx, "tenders", f"""{health_html}<div class="stats">{stats}</div>{money_note}
 {filter_bar(ctx, "/lots", inner, xlsx=xl)}{table}""", title="Davlat IT tenderlari",
                   sub="Faqat IT xizmatlari · etender.uzex.uz va xarid.uzex.uz")
 
