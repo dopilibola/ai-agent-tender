@@ -873,7 +873,9 @@ def _item_cards(rows) -> str:
         if it.code:
             lines.append(("Mahsulot kodi", it.code))
         lines.append(("Holat", r.status_text))
-        if r.uzum_med:
+        if r.status == "ai":
+            lines.append(("🤖 AI bozor narxi", f"{tc.money_uzs(r.uzum_med)} — {r.note}"))
+        elif r.uzum_med:
             lines.append(("Uzum narxi", f"o'rtacha {tc.money_uzs(r.uzum_med)} · eng arzoni {tc.money_uzs(r.uzum_min)} "
                                         f"· {r.n} ta mos mahsulot"))
         if r.ratio:
@@ -904,7 +906,9 @@ def _lot_totals(ok, tender_sum: float, uzum_sum: float) -> dict[str, str]:
         gap = f'<b style="color:var(--good)">−{h(tc.money_uzs(-net))}</b>'
         side = f'<span class="pill good">tender ×{1 / ratio:.1f} arzon</span>' if ratio else ""
         word = "tender arzon (Uzum qimmat)"
-    return {"name": f"Jami: {len(ok)} ta solishtirilgan mahsulot <span class=\"muted\">(narx × miqdor)</span>",
+    n_ai = sum(1 for r in ok if r.status == "ai")
+    return {"name": f"Jami: {len(ok)} ta mahsulot <span class=\"muted\">(narx × miqdor · Uzum {len(ok) - n_ai}, "
+                    f"🤖 AI {n_ai})</span>",
             "tender": h(tc.money_uzs(tender_sum)), "uzum": h(tc.money_uzs(uzum_sum)), "ratio": side,
             "over": gap, "status": h(word)}
 
@@ -923,9 +927,10 @@ def price_lot_page(ctx: Ctx, lp, *, big: float, detail: dict, ai: dict | None, a
     table = table_html(ctx, f"/all/uzum/lot/{lot.id}", rows, cols, sort="", direction="desc", query={},
                        detail=lambda r: f"#i-{r.idx}", bulk=[], noun="mahsulot",
                        foot=_lot_totals(ok, tender_sum, uzum_sum) if ok else None)
+    n_ai = sum(1 for r in ok if r.status == "ai")
     stats = (stat("Lotdagi mahsulotlar", len(lp.rows), "hammasi quyida", blue=True)
-             + stat("Uzum bilan solishtirildi", len(ok), f"Uzum arzon: {len(lp.dearer(big))} tasi")
-             + stat("Solishtirilganlar: tenderda", tc.money_uzs(tender_sum), f"Uzum bo'yicha {tc.money_uzs(uzum_sum)}")
+             + stat("Narxi hisoblandi", f"{len(ok)} / {len(lp.rows)}", f"Uzum: {len(ok) - n_ai} · 🤖 AI taxmini: {n_ai}")
+             + stat("Hisoblanganlar: tenderda", tc.money_uzs(tender_sum), f"bozor narxida {tc.money_uzs(uzum_sum)}")
              + stat("Ortiqcha summa", tc.money_uzs(max(lp.overpay(big), 0)), f"Uzum ≥{big:g}× arzon bo'lganlar"))
     head = (f'<div class="panel"><b style="font-size:15px">{h(detail.get("title") or lot.title)}</b>'
             f'<p style="margin:10px 0 0">{ext_link(lot.url, "📄 Lotni tender saytida ochish", "btn ghost xs")} '
@@ -934,7 +939,8 @@ def price_lot_page(ctx: Ctx, lp, *, big: float, detail: dict, ai: dict | None, a
             f'<a class="btn link xs" href="{h(ctx.url("/all/uzum", f="lots"))}">← Lotlar</a></p></div>')
     note = ('<p class="sub">«📄 Tender» — lot asl saytda ochiladi, «🛒 Uzum» — mahsulot Uzum\'da qidiriladi. '
             "Qatorning boshqa joyini bossangiz — shu mahsulot haqida batafsil ma'lumot (pastda) ochiladi. "
-            "«Navbatda» bo'lganlarini telefon keyingi tekshiruvlarda qidiradi.</p>")
+            "«Navbatda» bo'lganlarini telefon keyingi tekshiruvlarda qidiradi. Uzum'da solishtirib bo'lmagan "
+            "mahsulotlar (kg/litr/metr, Uzum'da yo'q) narxini AI bozor narxi bo'yicha taxmin qiladi — «🤖» belgisi.</p>")
     body = (f'{head}<div class="stats">{stats}</div>{_ai_block(ctx, lp, ai, ai_busy)}{_lot_info(lot, detail)}'
             f'<h2 id="items">Mahsulotlar va Uzum narxlari</h2>{note}{table}'
             f'<h2>Mahsulotlar batafsil</h2>{_item_cards(rows)}')

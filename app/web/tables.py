@@ -534,6 +534,8 @@ def _ratio_cell(r, big: float) -> str:
 
 
 def _uzum_cell(r) -> str:
+    if r.status == "ai":
+        return (f'<span title="{h("AI bozor narxi taxmini: " + r.note)}">🤖 {h(tc.money_uzs(r.uzum_med))}</span>')
     if not r.uzum_med:
         return f'<span class="muted">{ext_link(r.uzum_url, "qidirish")}</span>' if r.status != "unit" else "—"
     tip = (f"{r.n} ta mos mahsulot · eng arzoni {tc.money_uzs(r.uzum_min)}"

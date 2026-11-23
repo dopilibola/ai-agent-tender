@@ -47,7 +47,8 @@ MAX_UNIT_UZS = 200e6  # one item dearer than this is not sold on Uzum
 
 PIECE_UNITS = ("дона", "dona", "шт", "штук", "комплект", "komplekt", "тўплам", "to'plam", "пачка", "pachka",
                "упаков", "қадоқ", "qadoq", "жуфт", "juft", "пар", "рулон", "rulon", "флакон", "flakon", "қути",
-               "quti", "коробк", "набор", "блок", "blok", "единиц", "бирлик", "birlik", "экземпляр", "nusxa")
+               "quti", "коробк", "набор", "блок", "blok", "единиц", "бирлик", "birlik", "экземпляр", "nusxa",
+               "жамланма", "jamlanma", "компл", "рул")
 STOP = {"uchun", "bilan", "va", "yoki", "для", "и", "с", "на", "по", "из", "в", "или", "учун", "билан", "ва",
         "сотиб", "olish", "олиш", "харид", "xarid", "qilish", "қилиш", "yetkazib", "етказиб", "berish", "бериш",
         "поставка", "закупка", "приобретение", "товар", "tovar", "mahsulot", "маҳсулот", "маҳсулотлари",
@@ -283,11 +284,13 @@ class PriceRow:
     best: Hit | None
     checked_at: datetime | None
     status: str = "ok"
+    family: bool = False  # same name, different prices in this lot: compared against one Uzum price
+    note: str = ""  # AI estimate: what the price is based on
     ratio: float = field(init=False)
     overpay: float = field(init=False)
 
     def __post_init__(self) -> None:
-        ok = self.status == "ok" and self.uzum_med
+        ok = self.status in PRICED and self.uzum_med
         self.ratio = self.price_uzs / self.uzum_med if ok else 0
         self.overpay = (self.price_uzs - self.uzum_med) * (self.item.qty or 1) if ok else 0
 
@@ -301,7 +304,8 @@ class PriceRow:
 
     @property
     def status_text(self) -> str:
-        return STATUS.get(self.status, self.status)
+        text = STATUS.get(self.status, self.status)
+        return text + " · bir nomda har xil narxli" if self.family and self.status == "ok" else text
 
 
 @dataclass
@@ -317,6 +321,11 @@ class LotPrices:
 
     @property
     def compared(self) -> list[PriceRow]:
+        """Rows with a reference price (Uzum or the AI estimate)."""
+        return [r for r in self.rows if r.status in PRICED]
+
+    @property
+    def on_uzum(self) -> list[PriceRow]:
         return [r for r in self.rows if r.status == "ok"]
 
     def dearer(self, big: float) -> list[PriceRow]:
@@ -355,15 +364,16 @@ STATUS = {
     "far": "20 baravardan ortiq farq — boshqa mahsulot",
     "dear": "1 donasi 200 mln so'mdan qimmat",
     "noprice": "Narx ko'rsatilmagan",
+    "ai": "AI bozor narxi taxmini (Uzum'da solishtirib bo'lmadi)",
 }
+PRICED = ("ok", "ai")  # rows that carry a reference price: Uzum median or the AI market estimate
+AI_PRICE_FOR = ("unit", "nomatch", "far", "dear", "ai")  # no Uzum price → the AI summary estimates one
 
 
-def item_status(it: Item, family: bool, rate: float) -> str | None:
+def item_status(it: Item, family: bool, rate: float) -> str | None:  # noqa: ARG001 (family: compared too now)
     """Why an item is not searched on Uzum, or None if it is."""
     if it.price <= 0:
         return "noprice"
-    if family:
-        return "family"
     if not is_piece(it.unit) or not stems(it.name):
         return "unit"
     if it.price * rate > MAX_UNIT_UZS:
@@ -564,7 +574,7 @@ class PriceWatch:
             a = done.get(r.id)
             fresh_err = a and a.get("error") and a.get("_at", "") > (now_utc() - timedelta(days=1)).isoformat()
             return (bool(items.get(r.id, {}).get("d")) and not fresh_err
-                    and (not a or a.get("error") or "win_chance_percent" not in a)
+                    and (not a or a.get("error") or "item_prices" not in a)
                     and not (r.deadline_at and as_utc(r.deadline_at) < soon))
 
         todo = sorted(filter(wanted, lots), key=lambda r: (r.start_cost or 0) * rates.get(r.currency, 0),
@@ -608,7 +618,7 @@ class PriceWatch:
     @staticmethod
     def ai_sig(lp: LotPrices) -> str:
         """The summary is redone when more items of the lot got an Uzum price."""
-        return f"{len(lp.rows)}:{len(lp.compared)}"
+        return f"{len(lp.rows)}:{len(lp.on_uzum)}"
 
     async def ai_summary(self, lp: LotPrices, detail: dict[str, Any], *, fresh: bool = False
                          ) -> tuple[dict | None, bool]:
@@ -619,7 +629,7 @@ class PriceWatch:
         task = self._ai_tasks.get(lp.id)
         busy = task is not None and not task.done()
         stale = fresh or not cached or (not cached.get("error") and (
-            cached.get("_sig") != self.ai_sig(lp) or "win_chance_percent" not in cached))
+            cached.get("_sig") != self.ai_sig(lp) or "item_prices" not in cached))
         if self.analyzer is not None and stale and not busy:
             self._ai_tasks[lp.id] = asyncio.create_task(self._make_ai(lp, detail))
             busy = True
@@ -653,6 +663,8 @@ class PriceWatch:
         rates = await self._rates()
         async with self.sessionmaker() as s:
             st = await s.get(KV, KV_STATE)
+            ai = {kv.key[len(KV_AI):]: (kv.value or {}) for kv in
+                  (await s.scalars(select(KV).where(KV.key.like(KV_AI + "%")))).all()}
         state = dict(st.value or {}) if st else {}
         rows: list[PriceRow] = []
         for lot_id, v in items.items():
@@ -660,6 +672,9 @@ class PriceWatch:
             rate = rates.get(v.get("cur") or "UZS")
             if lot is None or not rate:
                 continue
+            a = ai.get(lot_id) or {}
+            est = a.get("item_prices") or {}
+            ai_at = datetime.fromisoformat(a["_at"]) if a.get("_at") else None
             for idx, it, family in _merged([Item.from_json(d) for d in v.get("items") or []]):
                 loc, text = search_query(it.name)
                 base = (lot, idx, it, it.price * rate)
@@ -668,23 +683,28 @@ class PriceWatch:
                 if status is None and not c:
                     status = "pending"
                 if status:
-                    rows.append(PriceRow(*base, 0, 0, 0, text, loc, None, None, status))
-                    continue
-                hits = [Hit(x.get("t") or "", x.get("p") or 0, x.get("u") or "") for x in c.get("hits") or []]
-                med, mn, n, best = match_stats(text, hits, loc)
-                at = datetime.fromisoformat(c["at"]) if c.get("at") else None
-                if med is None:
-                    rows.append(PriceRow(*base, 0, 0, n, text, loc, best, at, "nomatch"))
-                elif not 1 / MAX_RATIO <= it.price * rate / med <= MAX_RATIO:
-                    rows.append(PriceRow(*base, med, mn or med, n, text, loc, best, at, "far"))
+                    row = PriceRow(*base, 0, 0, 0, text, loc, None, None, status, family)
                 else:
-                    rows.append(PriceRow(*base, med, mn or med, n, text, loc, best, at))
+                    hits = [Hit(x.get("t") or "", x.get("p") or 0, x.get("u") or "") for x in c.get("hits") or []]
+                    med, mn, n, best = match_stats(text, hits, loc)
+                    at = datetime.fromisoformat(c["at"]) if c.get("at") else None
+                    if med is None:
+                        row = PriceRow(*base, 0, 0, n, text, loc, best, at, "nomatch", family)
+                    elif not 1 / MAX_RATIO <= it.price * rate / med <= MAX_RATIO:
+                        row = PriceRow(*base, med, mn or med, n, text, loc, best, at, "far", family)
+                    else:
+                        row = PriceRow(*base, med, mn or med, n, text, loc, best, at, "ok", family)
+                e = est.get(str(idx))
+                if row.status in AI_PRICE_FOR and e and e.get("p", 0) > 0:
+                    row = PriceRow(*base, e["p"], e["p"], 0, text, loc, None, ai_at, "ai", family, e.get("n") or "")
+                rows.append(row)
         counts: dict[str, int] = {}
         for r in rows:
             counts[r.status] = counts.get(r.status, 0) + 1
         searchable = sum(v for k, v in counts.items() if k in ("ok", "pending", "nomatch", "far"))
         state.update({"lots": len(lots), "lots_with_items": sum(1 for k in items if k in lots), "items": len(rows),
                       "piece": searchable, "pending": counts.get("pending", 0), "compared": counts.get("ok", 0),
+                      "ai_priced": counts.get("ai", 0),
                       "status_counts": counts})
         return rows, state
 

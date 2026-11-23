@@ -15,6 +15,7 @@ from app.db.models import LLMCall
 from app.llm.prompts import load_prompt
 from app.llm.safety import new_tag, untrusted_rule, wrap_untrusted
 from app.tenders import cards
+from app.tenders.prices import AI_PRICE_FOR, STATUS
 from app.tenders.timeutil import TASHKENT, as_utc, now_utc
 
 log = logging.getLogger(__name__)
@@ -26,6 +27,12 @@ SUPPLY_VERDICTS = ("QATNASHISH MUMKIN", "SHARTLI", "TAVSIYA ETILMAYDI")
 class ItemNote(BaseModel):
     name: str
     note: str
+
+
+class ItemPrice(BaseModel):
+    i: int = Field(description="mahsulotning «i» raqami")
+    price_uzs: float = Field(description="1 birlik uchun O'zbekistondagi odatiy bozor narxi, so'm, QQS bilan")
+    basis: str = Field(description="qisqa: nimaga asoslanib (masalan: 'A-92 benzin 1 litr chakana')")
 
 
 class GoodsAnalysis(BaseModel):
@@ -40,6 +47,7 @@ class GoodsAnalysis(BaseModel):
     risks: list[str]
     red_flags: list[str]
     item_notes: list[ItemNote]
+    item_prices: list[ItemPrice] = Field(description="ai_narx_kerak=true bo'lgan har bir mahsulot uchun")
     questions_for_customer_uz: list[str]
 
 
@@ -50,12 +58,14 @@ def _money(v: float | None, cur: str = "UZS") -> str | None:
 def lot_input(lp, detail: dict[str, Any], big: float) -> dict[str, Any]:
     lot = lp.lot
     d = detail or {}
-    ok = lp.compared
+    ok = lp.on_uzum
     items = []
     for r in lp.rows:
         it = r.item
-        row = {"nomi": it.name, "miqdori": it.qty, "birlik": it.unit or None,
-               "tender_narxi_1ta": cards.money_uzs(r.price_uzs), "holat": r.status_text}
+        row = {"i": r.idx, "nomi": it.name, "miqdori": it.qty, "birlik": it.unit or None,
+               "tender_narxi_1ta": cards.money_uzs(r.price_uzs), "holat": STATUS.get(r.status, r.status)}
+        if r.status in AI_PRICE_FOR:
+            row["ai_narx_kerak"] = True
         if r.status in ("ok", "far"):
             row.update({"uzum_orta": cards.money_uzs(r.uzum_med), "uzum_eng_arzon": cards.money_uzs(r.uzum_min),
                         "uzumda_mos": r.n, "nisbat_tender_uzum": round(r.ratio, 2) if r.ratio else None,
@@ -70,8 +80,7 @@ def lot_input(lp, detail: dict[str, Any], big: float) -> dict[str, Any]:
         "avans_foiz": d.get("advance_pct"), "tolov_muddati_kun": d.get("pay_days"),
         "yetkazish_muddati_kun": d.get("exec_days"), "kafolat": d.get("warranty"),
         "moliyalash": d.get("financing"), "malaka_talablari": d.get("qualification") or None,
-        "jami": {"mahsulotlar": len(lp.rows), "solishtirilgan": len(ok),
-                 f"uzum_{big:g}x_arzon": len(lp.dearer(big)),
+        "jami": {"mahsulotlar": len(lp.rows), "uzum_bilan_solishtirilgan": len(ok),
                  "solishtirilganlar_tenderda": cards.money_uzs(sum(r.price_uzs * (r.item.qty or 1) for r in ok)),
                  "solishtirilganlar_uzumda": cards.money_uzs(sum(r.uzum_med * (r.item.qty or 1) for r in ok))},
         "mahsulotlar": items[:80],
@@ -108,6 +117,9 @@ class GoodsAnalyzer:
         for k in ("key_conditions", "risks", "red_flags", "questions_for_customer_uz"):
             data[k] = [x.strip() for x in data[k] if x and x.strip()][:8]
         data["item_notes"] = [n for n in data["item_notes"] if n["name"] and n["note"]][:8]
+        want = {r.idx for r in lp.rows if r.status in AI_PRICE_FOR}
+        data["item_prices"] = {str(x["i"]): {"p": float(x["price_uzs"]), "n": x["basis"][:160]}
+                               for x in data["item_prices"] if x["i"] in want and x["price_uzs"] > 0}
         data["_model"] = self.gemini.model_for("fast")
         data["_prompt"] = self.prompt.version
         log.info("prices.ai_done", extra={"lot": lp.id, "price": data["price_verdict"],

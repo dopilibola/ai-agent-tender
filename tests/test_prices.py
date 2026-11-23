@@ -111,7 +111,8 @@ class FakeAnalyzer:
         return {"summary_uz": "Printer va stullar.", "price_verdict": "QIMMAT", "price_comment_uz":
                 "Printer 4 baravar qimmat.", "supplier_verdict": "SHARTLI", "supplier_reason_uz": "Foyda bor.",
                 "est_margin_percent": [30, 60], "win_chance_percent": [20, 45], "key_conditions": [], "risks": ["Kafolat"], "red_flags": [],
-                "item_notes": [], "questions_for_customer_uz": []}
+                "item_notes": [], "questions_for_customer_uz": [],
+                "item_prices": {"2": {"p": 13_000, "n": "A-92 benzin, 1 litr"}}}
 
 
 @pytest.fixture
@@ -150,7 +151,9 @@ async def test_run_and_compare(watch):
     assert src.opened == ["10"]  # the service lot is not opened
     assert [t for _, t in uzum.queries] == ["Printer Canon", "Stul ofis uchun"]  # litres are not searched
     rows, state = await pw.comparison()
-    assert {r.item.name: r.status for r in rows}["Benzin"] == "unit"
+    benzin = {r.item.name: r for r in rows}["Benzin"]  # litres: not on Uzum, priced by the AI estimate
+    assert benzin.status == "ai" and benzin.uzum_med == 13_000 and benzin.overpay == -100_000
+    assert benzin.note == "A-92 benzin, 1 litr" and state["ai_priced"] == 1
     rows = [r for r in rows if r.status == "ok"]
     by = {r.item.name: r for r in rows}
     assert by["Printer Canon"].uzum_med == 1_100_000 and round(by["Printer Canon"].ratio, 1) == 4.5
@@ -181,18 +184,19 @@ async def test_prices_page(watch, settings, sessionmaker):
         assert "Shartli" in goods and "20–45%" in goods and "Jami: 1 ta lot" in goods
         assert 'href="/tender/all/uzum"' in main and "katta farqlar" in main and "×4.5 qimmat" in main
         lots = await (await c.get("/tender/all/uzum", params={"f": "lots"})).text()
-        assert "2 / 3" in lots and "1 ta" in lots and 'data-href="/tender/all/uzum/lot/etender-10"' in lots
+        assert "3 / 3" in lots and "1 ta" in lots and 'data-href="/tender/all/uzum/lot/etender-10"' in lots
         one = await (await c.get("/tender/all/uzum/lot/etender-10")).text()
         assert "Lot ma'lumotlari" in one and "Maktabga kompyuter jihozlari" in one  # lot card details
         assert pw.analyzer.calls == 1 and "AI lotni tahlil qilmoqda" not in one  # done by the run itself
         assert "Narx: QIMMAT" in one and "Printer 4 baravar qimmat" in one and "Qayta tahlil" in one
-        assert "<tfoot>" in one and "Jami: 2 ta solishtirilgan" in one and "+16 mln so&#x27;m" in one
+        assert "<tfoot>" in one and "Jami: 3 ta mahsulot" in one and "+15.9 mln so&#x27;m" in one
+        assert "🤖 13 000 so&#x27;m" in one and "A-92 benzin, 1 litr" in one
         assert 'data-href="#i-0"' in one and 'id="i-0"' in one  # row → the item's own details
         assert pw.analyzer.calls == 1
         r = await c.post("/tender/all/uzum/lot/etender-10/ai", data={"csrf": "bad"}, allow_redirects=False)
         assert r.status == 403
         assert "Printer Canon" in one and "Stul ofis" in one and "Benzin" in one  # every item of the lot
-        assert "O&#x27;lchov birligi" in one and "Solishtirildi" in one
+        assert "AI bozor narxi taxmini" in one and "Solishtirildi" in one
         assert "📄 Tender" in one and "🛒 Uzum" in one and 'href="https://etender.uzex.uz/lot/10"' in one
         assert "📄 Tender" in html and "🛒 Uzum" in html and "📄 Tender" in main
         assert (await c.get("/tender/all/uzum/lot/etender-999")).status == 404
@@ -221,10 +225,14 @@ async def test_goods_analyzer(watch, sessionmaker):
             return GoodsAnalysis(summary_uz="s", price_verdict="QIMMAT", price_comment_uz="p",
                                  supplier_verdict="SHARTLI", supplier_reason_uz="r", est_margin_percent=[60, 20], win_chance_percent=[150],
                                  key_conditions=[" ", "to'lov 30 kun"], risks=[], red_flags=[],
-                                 item_notes=[{"name": "Printer Canon", "note": "qimmat"}], questions_for_customer_uz=[])
+                                 item_notes=[{"name": "Printer Canon", "note": "qimmat"}], questions_for_customer_uz=[],
+                                 item_prices=[{"i": 2, "price_uzs": 13000, "basis": "benzin litr"},
+                                              {"i": 0, "price_uzs": 1, "basis": "Uzum has it"}])
 
     data = await GoodsAnalyzer(FakeGemini(), sessionmaker)(lp, await pw.lot_detail(lp.lot), big=2.0)
     assert data["win_chance_percent"] == [100, 100]
+    assert data["item_prices"] == {"2": {"p": 13000.0, "n": "benzin litr"}}  # only items Uzum could not price
+    assert '"ai_narx_kerak": true' in seen["prompt"]
     assert data["est_margin_percent"] == [20, 60] and data["key_conditions"] == ["to'lov 30 kun"]
     assert seen["purpose"] == "goods_analysis" and "Printer Canon" in seen["prompt"] and "uzum_orta" in seen["prompt"]
     assert "Maktabga kompyuter jihozlari" in seen["prompt"] and data["_model"] == "gemini-test"
