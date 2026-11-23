@@ -160,7 +160,7 @@ class PriceCheckConfig(BaseModel):
     enabled: bool = True
     interval_min: int = Field(30, ge=10)
     max_lots_per_run: int = Field(60, ge=0)        # lot cards opened per run (item lines are cached)
-    max_searches_per_run: int = Field(40, ge=0)    # Uzum searches on the phone per run
+    max_searches_per_run: int = Field(80, ge=0)    # Uzum searches on the phone per run
     cache_days: float = Field(3, gt=0)             # an item name is searched again after this many days
     delay_s: float = Field(4, ge=1)                # pause between two Uzum searches
     big_ratio: float = Field(2.0, gt=1)            # «katta farq»: tender ≥ 2× Uzum or ≤ ½ of it

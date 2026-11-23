@@ -659,7 +659,7 @@ def catalog_page(ctx: Ctx, rows: list, *, kind: str, q: str, src: str, region: s
         from app.web.tables import price_cols
         cols = [c for c in price_cols(big) if c.key in ("name", "no", "qty", "tender", "uzum", "ratio", "over")]
         top = table_html(ctx, "/all/uzum", uzum, cols, sort="over", direction="desc", query={"f": "big"},
-                         detail=lambda r: r.lot.url, bulk=[], noun="mahsulot", external=True)
+                         detail=lambda r: ctx.url(f"/all/uzum/lot/{r.lot.id}"), bulk=[], noun="mahsulot")
         top = re.sub(r'<p class="count">[^<]*</p>', "", top, count=1)
         uz = (f'<h2 style="margin:18px 0 8px">🛒 Uzum narxi bilan katta farqlar '
               f'<span class="muted">— eng katta {len(uzum)} tasi (jami {uzum_total})</span> '
@@ -676,14 +676,15 @@ def _uzum_tab(ctx: Ctx, on: bool) -> str:
     return f'<a class="{"on" if on else ""}" href="{h(ctx.url("/all/uzum"))}">🛒 Uzum narxlari</a>'
 
 
-PRICE_FILTERS = (("big", "Katta farq"), ("over", "Tender qimmat"), ("under", "Tender arzon"), ("all", "Hammasi"))
+PRICE_FILTERS = (("big", "Katta farq"), ("over", "Tender qimmat (Uzum arzon)"), ("under", "Tender arzon (Uzum qimmat)"),
+                 ("all", "Hamma solishtirilgan"), ("lots", "Lot bo'yicha"))
 
 
 def prices_page(ctx: Ctx, rows: list, *, f: str, q: str, yon: str, dir_counts: dict[str, int],
                 counts: dict[str, int], state: dict, big: float, shown_limit: int, sort: str, direction: str,
                 next_run) -> str:
     from app.tenders.catalog import DIRECTION_LABEL
-    from app.web.tables import price_cols, table_html
+    from app.web.tables import lot_price_cols, price_cols, table_html
 
     seg = "".join(f'<a href="{h(ctx.url("/all", k=key))}">{h(label)}</a>' for key, label in CATALOG_KINDS)
     seg += _uzum_tab(ctx, True)
@@ -710,20 +711,48 @@ def prices_page(ctx: Ctx, rows: list, *, f: str, q: str, yon: str, dir_counts: d
     xl = ctx.url("/all/uzum.xlsx", f=f, q=q, y=yon, sort=sort, dir=direction)
     note = (f'<p class="count">Jadvalda birinchi {shown_limit} tasi (jami {len(rows)}) — Excel\'da hammasi bor.</p>'
             if len(rows) > shown_limit else "")
-    table = table_html(ctx, "/all/uzum", rows[:shown_limit], price_cols(big), sort=sort, direction=direction,
-                       query={"f": f, "q": q, "y": yon}, detail=lambda r: r.lot.url, bulk=[], noun="mahsulot",
-                       external=True)
+    lots = f == "lots"
+    table = table_html(ctx, "/all/uzum", rows[:shown_limit], lot_price_cols(big) if lots else [c for c in price_cols(big) if c.key != "status"],
+                       sort=sort, direction=direction, query={"f": f, "q": q, "y": yon},
+                       detail=lambda r: ctx.url(f"/all/uzum/lot/{r.lot.id}"), bulk=[],
+                       noun="lot" if lots else "mahsulot")
     info = ("<p class=\"sub\">Tovar lotlaridagi har bir mahsulotning <b>1 dona narxi</b> Uzum Market'dagi shu nomli "
             "mahsulotlarning o'rtacha narxi bilan solishtiriladi. Uzum'ni telefonning o'zi Chrome'da ochib qidiradi "
             "(har 30 daqiqada yangi mahsulotlar). Faqat dona/komplekt/pachka bilan o'lchanadigan mahsulotlar; "
             "nomi Uzum'dagi kamida 3 ta mahsulotga mos kelganlari ko'rsatiladi (20 baravardan ortiq farq — boshqa "
             "mahsulot deb hisoblanadi va chiqarilmaydi). «Uzum narxi» ustiga bosing — "
-            "Uzum'dagi qidiruv ochiladi, qatorni bosing — lot ochiladi. "
+            "Uzum'dagi qidiruv ochiladi; qatorni bosing — lotdagi <b>hamma mahsulotlar</b> ro'yxati ochiladi. "
             "<span class=\"muted\">Uzum chakana narxi; tenderda yetkazib berish, kafolat va QQS ham bo'lishi mumkin.</span></p>")
     return layout(ctx, "goods", f"""{info}<div class="stats">{stats}</div><div class="seg" style="margin:0 0 12px">{ftabs}</div>
 {filter_bar(ctx, "/all/uzum", inner, xlsx=xl)}{note}{table}""", title="Uzum narxlari bilan solishtirish",
                   sub="Tender narxi ↔ Uzum Market · katta farqlar", tools=f'<div class="seg">{seg}</div>').replace(
         "<title>", '<meta http-equiv="refresh" content="900"><title>', 1)
+
+
+def price_lot_page(ctx: Ctx, lp, *, big: float) -> str:
+    """Every item of one lot with its Uzum check."""
+    from app.web.tables import price_cols, table_html
+
+    lot = lp.lot
+    cols = [c for c in price_cols(big) if c.key not in ("no", "deadline", "customer")]
+    order = {"ok": 0, "far": 1, "nomatch": 2, "pending": 3}
+    rows = sorted(lp.rows, key=lambda r: (order.get(r.status, 4), -r.ratio, r.idx))
+    table = table_html(ctx, f"/all/uzum/lot/{lot.id}", rows, cols, sort="", direction="desc", query={},
+                       detail=lambda r: r.uzum_url, bulk=[], noun="mahsulot", external=True)
+    ok = lp.compared
+    tender_sum = sum(r.price_uzs * (r.item.qty or 1) for r in ok)
+    uzum_sum = sum(r.uzum_med * (r.item.qty or 1) for r in ok)
+    stats = (stat("Lotdagi mahsulotlar", len(lp.rows), "hammasi quyida", blue=True)
+             + stat("Uzum bilan solishtirildi", len(ok), f"Uzum arzon: {len(lp.dearer(big))} tasi")
+             + stat("Solishtirilganlar: tenderda", tc.money_uzs(tender_sum), f"Uzum bo'yicha {tc.money_uzs(uzum_sum)}")
+             + stat("Ortiqcha summa", tc.money_uzs(max(lp.overpay(big), 0)), f"Uzum ≥{big:g}× arzon bo'lganlar"))
+    head = (f'<div class="panel"><b>{h(lot.title)}</b><p class="muted" style="margin:6px 0 0">'
+            f'{h(lot.customer_name or "")} · muddat {h(fmt_local(lot.deadline_at) if lot.deadline_at else "—")} · '
+            f'{ext_link(lot.url, "Lotni saytda ochish")} · <a href="{h(ctx.url("/all/uzum", f="lots"))}">← Lotlar</a></p></div>')
+    note = ('<p class="sub">Qatorni bosing — shu mahsulot Uzum\'da qidiriladi. «Holat» ustunida nima uchun ba\'zi '
+            "mahsulotlar solishtirilmagani yozilgan; «Navbatda» bo'lganlarini telefon keyingi tekshiruvlarda qidiradi.</p>")
+    return layout(ctx, "goods", f"{head}<div class=\"stats\">{stats}</div>{note}{table}",
+                  title=f"Lot {lot.external_id}: Uzum bilan solishtirish", sub="Lotdagi hamma mahsulotlar")
 
 
 def login_page(ctx: Ctx, *, error: str = "", next_url: str = "", user: str = "") -> str:

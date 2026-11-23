@@ -27,6 +27,7 @@ from app.pipeline.service import FreelanceService
 from app.tenders import cards as tc
 from app.tenders.catalog import DIRECTION_LABEL
 from app.tenders.filters import is_it_lot
+from app.tenders.prices import group_by_lot
 from app.tenders.service import ACTIVE, TenderService
 from app.tenders.timeutil import TASHKENT, as_utc, now_utc
 from app.web import tables, views, xlsx
@@ -416,7 +417,7 @@ async def catalog_index(request: web.Request) -> web.Response:
     if pw:
         try:
             cmp_rows, _ = await pw.comparison()
-            gaps = [r for r in cmp_rows if r.ratio >= big or 0 < r.ratio <= 1 / big]
+            gaps = [r for r in cmp_rows if r.status == "ok" and (r.ratio >= big or 0 < r.ratio <= 1 / big)]
             uzum = sorted(gaps, key=lambda r: -abs(r.overpay))
         except Exception:  # the lot list must still open if the price data is broken
             log.exception("web.uzum_top_failed")
@@ -437,11 +438,11 @@ async def _query_prices(request: web.Request) -> tuple[list, dict]:
     pw = d.tenders.prices if d.tenders else None
     big = d.settings.config.tenders.prices.big_ratio
     f = request.query.get("f", "big")
-    f = f if f in ("big", "over", "under", "all") else "big"
+    f = f if f in ("big", "over", "under", "all", "lots") else "big"
     yon = request.query.get("y", "")
     yon = yon if yon in DIRECTION_LABEL else ""
     q = request.query.get("q", "").strip()[:100]
-    cols = tables.price_cols(big)
+    cols = tables.lot_price_cols(big) if f == "lots" else tables.price_cols(big)
     sort, direction = _sort_params(request, cols, "over" if f != "under" else "ratio",
                                    "desc" if f != "under" else "asc")
     rows, state = await pw.comparison() if pw else ([], {"phone": "o'chirilgan (config: tenders.prices)"})
@@ -454,8 +455,10 @@ async def _query_prices(request: web.Request) -> tuple[list, dict]:
         dir_counts[r.lot.direction] = dir_counts.get(r.lot.direction, 0) + 1
     if yon:
         rows = [r for r in rows if r.lot.direction == yon]
-    groups = {"all": rows, "over": [r for r in rows if r.ratio >= big],
-              "under": [r for r in rows if 0 < r.ratio <= 1 / big]}
+    lots = group_by_lot(rows)
+    ok = [r for r in rows if r.status == "ok"]
+    groups = {"all": ok, "over": [r for r in ok if r.ratio >= big],
+              "under": [r for r in ok if 0 < r.ratio <= 1 / big], "lots": lots}
     groups["big"] = groups["over"] + groups["under"]
     counts = {k: len(v) for k, v in groups.items()}
     shown = tables.sort_rows(groups[f], cols, sort, direction)
@@ -472,7 +475,23 @@ async def prices_index(request: web.Request) -> web.Response:
 
 async def prices_xlsx(request: web.Request) -> web.Response:
     rows, p = await _query_prices(request)
+    if p["f"] == "lots":
+        return _xlsx_response("uzum_lotlar", "Lotlar", rows, tables.lot_price_cols(p["big"]))
     return _xlsx_response("uzum_narxlari", "Uzum narxlari", rows, tables.price_cols(p["big"]))
+
+
+async def prices_lot(request: web.Request) -> web.Response:
+    """Every item of one lot: tender price, Uzum price and why an item was not compared."""
+    d = request.app[DEPS]
+    ctx = _ctx(request)
+    pw = d.tenders.prices if d.tenders else None
+    lot_id = request.match_info["id"]
+    rows, _ = await pw.comparison() if pw else ([], {})
+    mine = [r for r in rows if r.lot.id == lot_id]
+    if not mine:
+        raise web.HTTPNotFound(text="Bu lot uchun mahsulotlar hali yig'ilmagan (yoki lot yopilgan).")
+    lp = group_by_lot(mine)[0]
+    return _page(request, ctx, views.price_lot_page(ctx, lp, big=d.settings.config.tenders.prices.big_ratio))
 
 
 # ── Owner auth + actions ────────────────────────────────────────────────────
@@ -672,6 +691,7 @@ def build_app(settings: Settings, sessionmaker: async_sessionmaker, *, tenders: 
     app.router.add_get(f"{b}/all.xlsx", catalog_xlsx)
     app.router.add_get(f"{b}/all/uzum", prices_index)
     app.router.add_get(f"{b}/all/uzum.xlsx", prices_xlsx)
+    app.router.add_get(f"{b}/all/uzum/lot/{{id}}", prices_lot)
     app.router.add_get(f"{b}/lots", tenders_index)
     app.router.add_get(f"{b}/lots.xlsx", tenders_xlsx)
     app.router.add_post(f"{b}/lots/bulk", lots_bulk)

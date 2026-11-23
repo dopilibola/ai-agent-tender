@@ -461,9 +461,16 @@ def _qty(r) -> str:
 
 
 def _ratio_text(r) -> str:
+    if not r.ratio:
+        return "—"
     if r.ratio >= 1:
         return f"×{r.ratio:.1f} qimmat"
     return f"×{1 / r.ratio:.1f} arzon" if r.ratio else "—"
+
+
+def _status_cell(r) -> str:
+    cls = {"ok": "good", "pending": "blue", "nomatch": "", "far": "maybe"}.get(r.status, "")
+    return f'<span class="pill {cls}" title="{h(r.status_text)}">{h(tc.short(r.status_text, 34))}</span>'
 
 
 def _ratio_cell(r, big: float) -> str:
@@ -472,6 +479,8 @@ def _ratio_cell(r, big: float) -> str:
 
 
 def _uzum_cell(r) -> str:
+    if not r.uzum_med:
+        return f'<span class="muted">{ext_link(r.uzum_url, "qidirish")}</span>' if r.status != "unit" else "—"
     tip = (f"{r.n} ta mos mahsulot · eng arzoni {tc.money_uzs(r.uzum_min)}"
            + (f" · masalan: {r.best.title}" if r.best else ""))
     return f'<span title="{h(tip)}">{ext_link(r.uzum_url, tc.money_uzs(r.uzum_med))}</span>'
@@ -485,14 +494,18 @@ def price_cols(big: float) -> list[Col]:
             lambda c, r, n: f'<span class="lotno">{ext_link(r.lot.url, r.lot.external_id)}</span>',
             lambda r: r.lot.external_id, "desc", 12),
         Col("qty", "Miqdori", lambda r: r.item.qty, lambda c, r, n: h(_qty(r)), _qty, "desc", 14, "num"),
-        Col("tender", "Tender narxi (1 ta)", lambda r: r.price_uzs, lambda c, r, n: h(tc.money_uzs(r.price_uzs)),
+        Col("tender", "Tender narxi (1 ta)", lambda r: r.price_uzs or None,
+            lambda c, r, n: h(tc.money_uzs(r.price_uzs)),
             lambda r: round(r.price_uzs), "desc", 18, "num"),
-        Col("uzum", "Uzum narxi (o'rtacha)", lambda r: r.uzum_med, lambda c, r, n: _uzum_cell(r),
-            lambda r: round(r.uzum_med), "desc", 18, "num"),
-        Col("ratio", "Farq", lambda r: r.ratio, lambda c, r, n: _ratio_cell(r, big), _ratio_text, "desc", 14),
-        Col("over", "Farq summasi", lambda r: r.overpay, lambda c, r, n: h(tc.money_uzs(r.overpay))
-            if r.overpay >= 0 else f'<span class="muted">−{h(tc.money_uzs(-r.overpay))}</span>',
-            lambda r: round(r.overpay), "desc", 18, "num"),
+        Col("uzum", "Uzum narxi (o'rtacha)", lambda r: r.uzum_med or None, lambda c, r, n: _uzum_cell(r),
+            lambda r: round(r.uzum_med) if r.uzum_med else "", "desc", 18, "num"),
+        Col("ratio", "Farq", lambda r: r.ratio or None, lambda c, r, n: _ratio_cell(r, big), _ratio_text, "desc", 14),
+        Col("over", "Farq summasi", lambda r: r.overpay if r.ratio else None,
+            lambda c, r, n: ('<span class="muted">—</span>' if not r.ratio else h(tc.money_uzs(r.overpay))
+                             if r.overpay >= 0 else f'<span class="muted">−{h(tc.money_uzs(-r.overpay))}</span>'),
+            lambda r: round(r.overpay) if r.ratio else "", "desc", 18, "num"),
+        Col("status", "Holat", lambda r: r.status, lambda c, r, n: _status_cell(r), lambda r: r.status_text,
+            "asc", 30),
         Col("deadline", "Muddat", lambda r: as_utc(r.lot.deadline_at) if r.lot.deadline_at else None,
             lambda c, r, n: _cat_deadline(c, r.lot, n),
             lambda r: fmt_local(r.lot.deadline_at) if r.lot.deadline_at else "", "asc", 18),
@@ -501,5 +514,32 @@ def price_cols(big: float) -> list[Col]:
         Col("match", "Uzum'dagi o'xshash", None, lambda c, r, n: "",
             lambda r: r.best.title if r.best else "", width=50, cls="hidden"),
         Col("uzum_url", "Uzum havola", None, lambda c, r, n: "", lambda r: r.uzum_url, width=40, cls="hidden"),
+        Col("url", "Lot havola", None, lambda c, r, n: "", lambda r: r.lot.url, width=40, cls="hidden"),
+    ]
+
+
+def lot_price_cols(big: float) -> list[Col]:
+    """«Lot bo'yicha»: one row per lot — how many items, how many compared, how much dearer than Uzum."""
+    return [
+        Col("no", "Lot №", lambda r: int(r.lot.external_id) if r.lot.external_id.isdigit() else None,
+            lambda c, r, n: f'<span class="lotno">{ext_link(r.lot.url, r.lot.external_id)}</span>',
+            lambda r: r.lot.external_id, "desc", 12),
+        Col("title", "Lot nomi", lambda r: r.lot.title.lower(), lambda c, r, n: _t(r.lot.title, 60),
+            lambda r: r.lot.title, "asc", 60, "wide"),
+        Col("items", "Mahsulotlar", lambda r: len(r.rows), lambda c, r, n: str(len(r.rows)),
+            lambda r: len(r.rows), "desc", 12, "num"),
+        Col("checked", "Solishtirildi", lambda r: len(r.compared),
+            lambda c, r, n: f"{len(r.compared)} / {len(r.rows)}", lambda r: len(r.compared), "desc", 14, "num"),
+        Col("dearer", "Uzum arzon", lambda r: len(r.dearer(big)),
+            lambda c, r, n: (f'<span class="pill bad">{len(r.dearer(big))} ta</span>' if r.dearer(big)
+                             else '<span class="muted">—</span>'), lambda r: len(r.dearer(big)), "desc", 12),
+        Col("over", "Ortiqcha summa", lambda r: r.overpay(big) or None,
+            lambda c, r, n: h(tc.money_uzs(r.overpay(big))) if r.overpay(big) else '<span class="muted">—</span>',
+            lambda r: round(r.overpay(big)), "desc", 18, "num"),
+        Col("deadline", "Muddat", lambda r: as_utc(r.lot.deadline_at) if r.lot.deadline_at else None,
+            lambda c, r, n: _cat_deadline(c, r.lot, n),
+            lambda r: fmt_local(r.lot.deadline_at) if r.lot.deadline_at else "", "asc", 18),
+        Col("customer", "Buyurtmachi", lambda r: (r.lot.customer_name or "").lower() or None,
+            lambda c, r, n: _t(r.lot.customer_name, 30), lambda r: r.lot.customer_name or "", "asc", 36, "mid"),
         Col("url", "Lot havola", None, lambda c, r, n: "", lambda r: r.lot.url, width=40, cls="hidden"),
     ]

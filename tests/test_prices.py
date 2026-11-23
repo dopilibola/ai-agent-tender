@@ -50,7 +50,8 @@ def test_merged_skips_families_and_joins_duplicates():
     from app.tenders.prices import Item, _merged
     rows = _merged([Item("Shina", 4, "дона", 500_000), Item("Shina", 4, "дона", 7_000_000),
                     Item("Javon", 2, "дона", 1_000_000), Item("Javon", 3, "дона", 1_000_000)])
-    assert [(i, it.name, it.qty) for i, it in rows] == [(2, "Javon", 5)]
+    assert [(i, it.name, it.qty, fam) for i, it, fam in rows] == [
+        (0, "Shina", 4, True), (1, "Shina", 4, True), (2, "Javon", 5, False)]
 
 
 def test_items_from_records():
@@ -131,6 +132,8 @@ async def test_run_and_compare(watch):
     assert src.opened == ["10"]  # the service lot is not opened
     assert [t for _, t in uzum.queries] == ["Printer Canon", "Stul ofis uchun"]  # litres are not searched
     rows, state = await pw.comparison()
+    assert {r.item.name: r.status for r in rows}["Benzin"] == "unit"
+    rows = [r for r in rows if r.status == "ok"]
     by = {r.item.name: r for r in rows}
     assert by["Printer Canon"].uzum_med == 1_100_000 and round(by["Printer Canon"].ratio, 1) == 4.5
     assert by["Printer Canon"].overpay == (5_000_000 - 1_100_000) * 4
@@ -156,5 +159,13 @@ async def test_prices_page(watch, settings, sessionmaker):
         assert "Stul ofis" in every
         main = await (await c.get("/tender/all", params={"k": "it"})).text()
         assert 'href="/tender/all/uzum"' in main and "katta farqlar" in main and "×4.5 qimmat" in main
+        lots = await (await c.get("/tender/all/uzum", params={"f": "lots"})).text()
+        assert "2 / 3" in lots and "1 ta" in lots and 'data-href="/tender/all/uzum/lot/etender-10"' in lots
+        one = await (await c.get("/tender/all/uzum/lot/etender-10")).text()
+        assert "Printer Canon" in one and "Stul ofis" in one and "Benzin" in one  # every item of the lot
+        assert "O&#x27;lchov birligi" in one and "Solishtirildi" in one
+        assert (await c.get("/tender/all/uzum/lot/etender-999")).status == 404
+        r = await c.get("/tender/all/uzum.xlsx", params={"f": "lots"})
+        assert r.status == 200 and "uzum_lotlar" in r.headers["Content-Disposition"]
         r = await c.get("/tender/all/uzum.xlsx", params={"f": "all"})
         assert r.status == 200 and "uzum_narxlari" in r.headers["Content-Disposition"]

@@ -262,12 +262,14 @@ class PriceRow:
     locale: str
     best: Hit | None
     checked_at: datetime | None
+    status: str = "ok"
     ratio: float = field(init=False)
     overpay: float = field(init=False)
 
     def __post_init__(self) -> None:
-        self.ratio = self.price_uzs / self.uzum_med if self.uzum_med else 0
-        self.overpay = (self.price_uzs - self.uzum_med) * (self.item.qty or 1)
+        ok = self.status == "ok" and self.uzum_med
+        self.ratio = self.price_uzs / self.uzum_med if ok else 0
+        self.overpay = (self.price_uzs - self.uzum_med) * (self.item.qty or 1) if ok else 0
 
     @property
     def id(self) -> str:
@@ -277,25 +279,76 @@ class PriceRow:
     def uzum_url(self) -> str:
         return search_url(self.locale, self.query)
 
+    @property
+    def status_text(self) -> str:
+        return STATUS.get(self.status, self.status)
 
-def _merged(items: list[Item]) -> list[tuple[int, Item]]:
-    """Same name + same price in one lot → one row (quantities added). A name used for several items with
-    very different prices (tyres of every size, «spare parts» …) is a family, not one product: dropped."""
+
+@dataclass
+class LotPrices:
+    """One lot with every item line and how far the price check got."""
+
+    lot: CatalogRow
+    rows: list[PriceRow]
+
+    @property
+    def id(self) -> str:
+        return self.lot.id
+
+    @property
+    def compared(self) -> list[PriceRow]:
+        return [r for r in self.rows if r.status == "ok"]
+
+    def dearer(self, big: float) -> list[PriceRow]:
+        return [r for r in self.compared if r.ratio >= big]
+
+    def overpay(self, big: float) -> float:
+        return sum(r.overpay for r in self.dearer(big))
+
+
+def _merged(items: list[Item]) -> list[tuple[int, Item, bool]]:
+    """(index, item, family?). Same name + same price in one lot → one row (quantities added). A name used for
+    several items with very different prices (tyres of every size, «spare parts» …) is a family, not one
+    product: such items are kept one by one and flagged, they are not searched on Uzum."""
     prices: dict[str, list[float]] = {}
     for it in items:
         prices.setdefault(norm(it.name), []).append(it.price)
-    out: dict[tuple[str, float], tuple[int, Item]] = {}
+    out: dict[tuple[str, float], tuple[int, Item, bool]] = {}
     for idx, it in enumerate(items):
         ps = [p for p in prices[norm(it.name)] if p > 0]
-        if len(ps) > 1 and max(ps) > 2 * min(ps):
-            continue
-        key = (norm(it.name), it.price)
+        family = len(ps) > 1 and max(ps) > 2 * min(ps)
+        key = (norm(it.name), it.price) if not family else (f"#{idx}", it.price)
         if key in out:
             first = out[key][1]
             first.qty = (first.qty or 0) + (it.qty or 0) or None
         else:
-            out[key] = (idx, Item(it.name, it.qty, it.unit, it.price, it.code))
+            out[key] = (idx, Item(it.name, it.qty, it.unit, it.price, it.code), family)
     return list(out.values())
+
+
+STATUS = {
+    "ok": "Solishtirildi",
+    "pending": "Navbatda — telefon hali qidirmagan",
+    "nomatch": "Uzum'da mos mahsulot topilmadi",
+    "unit": "O'lchov birligi solishtirilmaydi (kg, litr, metr …)",
+    "family": "Bir nomda har xil narxli mahsulotlar",
+    "far": "20 baravardan ortiq farq — boshqa mahsulot",
+    "dear": "1 donasi 200 mln so'mdan qimmat",
+    "noprice": "Narx ko'rsatilmagan",
+}
+
+
+def item_status(it: Item, family: bool, rate: float) -> str | None:
+    """Why an item is not searched on Uzum, or None if it is."""
+    if it.price <= 0:
+        return "noprice"
+    if family:
+        return "family"
+    if not is_piece(it.unit) or not stems(it.name):
+        return "unit"
+    if it.price * rate > MAX_UNIT_UZS:
+        return "dear"
+    return None
 
 
 # ── Service ─────────────────────────────────────────────────────────────────
@@ -415,8 +468,8 @@ class PriceWatch:
             rate = rates.get(v.get("cur") or "UZS")
             if not rate:
                 continue
-            for _, it in _merged([Item.from_json(d) for d in v.get("items") or []]):
-                if it.price <= 0 or it.price * rate > MAX_UNIT_UZS or not is_piece(it.unit) or not stems(it.name):
+            for _, it, family in _merged([Item.from_json(d) for d in v.get("items") or []]):
+                if item_status(it, family, rate):
                     continue
                 loc, text = search_query(it.name)
                 key = query_key(loc, text)
@@ -457,6 +510,8 @@ class PriceWatch:
             await s.commit()
 
     async def comparison(self) -> tuple[list[PriceRow], dict[str, Any]]:
+        """Every item line of every open goods lot that has its card cached, with a status
+        (only status «ok» rows carry an Uzum price)."""
         lots = {r.id: r for r in await self._open_goods()}
         items = await self._items()
         cache = await self._uzum_cache()
@@ -465,28 +520,42 @@ class PriceWatch:
             st = await s.get(KV, KV_STATE)
         state = dict(st.value or {}) if st else {}
         rows: list[PriceRow] = []
-        total = piece = pending = 0
         for lot_id, v in items.items():
             lot = lots.get(lot_id)
             rate = rates.get(v.get("cur") or "UZS")
             if lot is None or not rate:
                 continue
-            for idx, it in _merged([Item.from_json(d) for d in v.get("items") or []]):
-                total += 1
-                if it.price <= 0 or it.price * rate > MAX_UNIT_UZS or not is_piece(it.unit) or not stems(it.name):
-                    continue
-                piece += 1
+            for idx, it, family in _merged([Item.from_json(d) for d in v.get("items") or []]):
                 loc, text = search_query(it.name)
-                c = cache.get(query_key(loc, text))
-                if not c:
-                    pending += 1
+                base = (lot, idx, it, it.price * rate)
+                status = item_status(it, family, rate)
+                c = None if status else cache.get(query_key(loc, text))
+                if status is None and not c:
+                    status = "pending"
+                if status:
+                    rows.append(PriceRow(*base, 0, 0, 0, text, loc, None, None, status))
                     continue
                 hits = [Hit(x.get("t") or "", x.get("p") or 0, x.get("u") or "") for x in c.get("hits") or []]
                 med, mn, n, best = match_stats(text, hits, loc)
-                if med is None or not 1 / MAX_RATIO <= it.price * rate / med <= MAX_RATIO:
-                    continue
                 at = datetime.fromisoformat(c["at"]) if c.get("at") else None
-                rows.append(PriceRow(lot, idx, it, it.price * rate, med, mn or med, n, text, loc, best, at))
-        state.update({"lots": len(lots), "lots_with_items": sum(1 for k in items if k in lots), "items": total,
-                      "piece": piece, "pending": pending, "compared": len(rows)})
+                if med is None:
+                    rows.append(PriceRow(*base, 0, 0, n, text, loc, best, at, "nomatch"))
+                elif not 1 / MAX_RATIO <= it.price * rate / med <= MAX_RATIO:
+                    rows.append(PriceRow(*base, med, mn or med, n, text, loc, best, at, "far"))
+                else:
+                    rows.append(PriceRow(*base, med, mn or med, n, text, loc, best, at))
+        counts: dict[str, int] = {}
+        for r in rows:
+            counts[r.status] = counts.get(r.status, 0) + 1
+        searchable = sum(v for k, v in counts.items() if k in ("ok", "pending", "nomatch", "far"))
+        state.update({"lots": len(lots), "lots_with_items": sum(1 for k in items if k in lots), "items": len(rows),
+                      "piece": searchable, "pending": counts.get("pending", 0), "compared": counts.get("ok", 0),
+                      "status_counts": counts})
         return rows, state
+
+
+def group_by_lot(rows: list[PriceRow]) -> list[LotPrices]:
+    out: dict[str, LotPrices] = {}
+    for r in rows:
+        out.setdefault(r.lot.id, LotPrices(r.lot, [])).rows.append(r)
+    return list(out.values())
