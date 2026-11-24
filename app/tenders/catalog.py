@@ -17,6 +17,7 @@ e.g. "Ofis qog'ozi") counts as goods.
 
 from __future__ import annotations
 
+import functools
 import re
 from dataclasses import dataclass
 from datetime import datetime
@@ -227,6 +228,7 @@ DIRECTION_LABEL = {key: label for key, label, _ in DIRECTIONS} | {"other": "Bosh
 _DIRECTION_RX = [(key, _build(terms)) for key, _, terms in DIRECTIONS]
 
 
+@functools.lru_cache(maxsize=32768)
 def direction(title: str) -> str:
     text = normalize(title)
     for key, patterns in _DIRECTION_RX:

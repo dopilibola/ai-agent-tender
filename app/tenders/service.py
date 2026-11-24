@@ -6,6 +6,7 @@ Read-only by design: nothing here submits bids, signs (E-IMZO) or messages a cus
 from __future__ import annotations
 
 import asyncio
+import copy
 import hashlib
 import logging
 from collections.abc import Awaitable, Callable
@@ -90,6 +91,9 @@ class TenderService:
         self.analyzer = analyzer
         self.filter = KeywordFilter(self.cfg)
         self._scan_lock = asyncio.Lock()
+        # Parsed «Barcha tenderlar» listing; only _save_catalog writes it, so that bumps the version.
+        self._catalog_cache: tuple[list[CatalogRow], dict[str, datetime]] | None = None
+        self.catalog_version = 0
         self.next_scan_at: Callable[[], datetime | None] = lambda: None
         self.prices = None  # PriceWatch (Uzum price check), set in main.py
 
@@ -238,26 +242,35 @@ class TenderService:
                 s.add(row)
             row.value = {"at": now.isoformat(), "rows": data}
             await s.commit()
+        self._catalog_cache = None
+        self.catalog_version += 1
         counts: dict[str, int] = {}
         for d in data:
             counts[d["k"]] = counts.get(d["k"], 0) + 1
         log.info("tenders.catalog_saved", extra={"source": name, **counts})
 
     async def catalog(self) -> tuple[list[CatalogRow], dict[str, datetime]]:
-        """Latest open-lot listing of every source + when each was fetched."""
-        async with self.sessionmaker() as s:
-            kvs = (await s.scalars(select(KV).where(KV.key.like(KV_PREFIX + "%")))).all()
-        out: list[CatalogRow] = []
-        at: dict[str, datetime] = {}
-        for kv in kvs:
-            name = kv.key[len(KV_PREFIX):]
-            if name not in self.sources:
-                continue
-            value = kv.value or {}
-            if value.get("at"):
-                at[name] = datetime.fromisoformat(value["at"])
-            out.extend(CatalogRow.from_json(d) for d in value.get("rows") or [])
-        return out, at
+        """Latest open-lot listing of every source + when each was fetched.
+
+        Parsing ~4000 rows (and classifying their yo'nalish) took seconds on the phone server, so the parsed
+        listing is kept in memory until the next scan saves a new one. Callers get their own row copies,
+        because the site fills per-request fields (usd, zakalat, AI verdict) on them."""
+        if self._catalog_cache is None:
+            async with self.sessionmaker() as s:
+                kvs = (await s.scalars(select(KV).where(KV.key.like(KV_PREFIX + "%")))).all()
+            out: list[CatalogRow] = []
+            at: dict[str, datetime] = {}
+            for kv in kvs:
+                name = kv.key[len(KV_PREFIX):]
+                if name not in self.sources:
+                    continue
+                value = kv.value or {}
+                if value.get("at"):
+                    at[name] = datetime.fromisoformat(value["at"])
+                out.extend(CatalogRow.from_json(d) for d in value.get("rows") or [])
+            self._catalog_cache = (out, at)
+        rows, at = self._catalog_cache
+        return [copy.copy(r) for r in rows], dict(at)
 
     async def _mark_checked(self, seen_id: int) -> None:
         async with self.sessionmaker() as s:

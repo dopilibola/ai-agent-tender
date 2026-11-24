@@ -188,6 +188,8 @@ async def main() -> None:
             )
         except OSError:
             log.exception("web.start_failed")  # the bot keeps working without the site
+        if tcfg.enabled and tender_service.prices is not None:
+            _warm_task = asyncio.create_task(tender_service.prices.warm())  # first view after a restart is fast too
 
     try:
         await bot.set_my_commands(COMMANDS)

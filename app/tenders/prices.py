@@ -40,6 +40,8 @@ log = logging.getLogger(__name__)
 KV_ITEMS = "pitems:"
 KV_UZUM = "uzum:"
 KV_STATE = "uzum_state"
+RATES_TTL_S = 600
+CMP_TTL_S = 60
 KV_AI = "pai:"  # Gemini summary of one goods lot (app/tenders/goods_ai.py)
 MIN_HITS = 3  # fewer matching Uzum products → no comparison
 MAX_RATIO = 20  # 20× apart = a different product (industrial transformer vs a retail one), not a price gap
@@ -398,6 +400,13 @@ class PriceWatch:
         self.analyzer = None  # GoodsAnalyzer, set in main when Gemini is configured
         self._ai_tasks: dict[str, asyncio.Task] = {}
         self.next_run_at: Callable[[], datetime | None] = lambda: None
+        # Page caches. Every write of pitems:/uzum:/pai: goes through _kv_set or _prune, which bump _gen,
+        # so a cached result is reused only while none of its inputs changed.
+        self._gen = 0
+        self._rates_cache: tuple[float, dict[str, float]] | None = None
+        self._cmp_cache: tuple[tuple, list[PriceRow], dict[str, Any]] | None = None
+        self._infos_cache: tuple[tuple, dict[str, dict[str, Any]]] | None = None
+        self._match_memo: dict[tuple, tuple] = {}
 
     async def run(self) -> None:
         if self._lock.locked():
@@ -416,6 +425,15 @@ class PriceWatch:
                                           "phone": phone, "analyzed": analyzed})
             log.info("prices.run", extra={"lots": len(lots), "fetched": fetched, "searched": searched,
                                           "phone": phone, "analyzed": analyzed})
+        await self.warm()
+
+    async def warm(self) -> None:
+        """Build the page caches now, so the next visitor of «Barcha tenderlar» / «Uzum narxlari» doesn't wait."""
+        try:
+            await self.comparison()
+            await self.lot_infos()
+        except Exception:
+            log.exception("prices.warm_failed")
 
     async def _open_goods(self) -> list[CatalogRow]:
         rows, _ = await self.tenders.catalog()
@@ -423,7 +441,15 @@ class PriceWatch:
         return [r for r in rows if r.kind == "goods" and (not r.deadline_at or as_utc(r.deadline_at) > now)]
 
     async def _rates(self) -> dict[str, float]:
-        """UZS per 1 unit of each currency."""
+        """UZS per 1 unit of each currency (CBU rates change once a day; re-read every 10 minutes)."""
+        loop_now = asyncio.get_running_loop().time()
+        if self._rates_cache and loop_now - self._rates_cache[0] < RATES_TTL_S:
+            return dict(self._rates_cache[1])
+        out = await self._read_rates()
+        self._rates_cache = (loop_now, out)
+        return dict(out)
+
+    async def _read_rates(self) -> dict[str, float]:
         fx = self.tenders.fx
         out = {"UZS": 1.0}
         if not fx:
@@ -473,6 +499,7 @@ class PriceWatch:
             stale += [k for k in ai if k[len(KV_AI):] not in open_ids]
             if stale:
                 await s.execute(delete(KV).where(KV.key.in_(stale)))
+                self._gen += 1
             old = (now_utc() - timedelta(days=self.cfg.cache_days * 4)).isoformat()
             uz = (await s.scalars(select(KV).where(KV.key.like(KV_UZUM + "%")))).all()
             for kv in uz:
@@ -594,11 +621,19 @@ class PriceWatch:
 
     async def lot_infos(self) -> dict[str, dict[str, Any]]:
         """Per goods lot: deposit (from its card) and AI verdict / win chance, for the «Barcha tenderlar» table."""
+        rates = await self._rates()
+        key = (self._gen, tuple(sorted(rates.items())))
+        if self._infos_cache and self._infos_cache[0] == key:
+            return {k: dict(v) for k, v in self._infos_cache[1].items()}
+        out = await self._lot_infos(rates)
+        self._infos_cache = (key, out)
+        return {k: dict(v) for k, v in out.items()}
+
+    async def _lot_infos(self, rates: dict[str, float]) -> dict[str, dict[str, Any]]:
         items = await self._items()
         async with self.sessionmaker() as s:
             ai = {kv.key[len(KV_AI):]: kv.value or {} for kv in
                   (await s.scalars(select(KV).where(KV.key.like(KV_AI + "%")))).all()}
-        rates = await self._rates()
         out: dict[str, dict[str, Any]] = {}
         for lot_id, v in items.items():
             d = v.get("d")
@@ -646,6 +681,7 @@ class PriceWatch:
         await self._kv_set(KV_AI + lp.id, data)
 
     async def _kv_set(self, key: str, value: dict) -> None:
+        self._gen += 1
         async with self.sessionmaker() as s:
             row = await s.get(KV, key)
             if row is None:
@@ -656,11 +692,35 @@ class PriceWatch:
 
     async def comparison(self) -> tuple[list[PriceRow], dict[str, Any]]:
         """Every item line of every open goods lot that has its card cached, with a status
-        (only status «ok» rows carry an Uzum price)."""
+        (only status «ok» rows carry an Uzum price).
+
+        Building this matches tens of thousands of Uzum titles, so the result is reused until a price input
+        changes (new card, Uzum search or AI summary, a new scan, new rates) or a minute passes (deadlines)."""
+        rates = await self._rates()
+        key = (self._gen, getattr(self.tenders, "catalog_version", None), tuple(sorted(rates.items())),
+               int(asyncio.get_running_loop().time() // CMP_TTL_S))
+        if self._cmp_cache and self._cmp_cache[0] == key:
+            return list(self._cmp_cache[1]), dict(self._cmp_cache[2])
+        rows, state = await self._comparison(rates)
+        self._cmp_cache = (key, rows, state)
+        return list(rows), dict(state)
+
+    def _match(self, key: str, c: dict, text: str, loc: str) -> tuple:
+        """match_stats of one cached Uzum search, remembered while that search result stays the same."""
+        memo_key = (key, c.get("at"), text, loc)
+        hit = self._match_memo.get(memo_key)
+        if hit is None:
+            hits = [Hit(x.get("t") or "", x.get("p") or 0, x.get("u") or "") for x in c.get("hits") or []]
+            hit = match_stats(text, hits, loc)
+            if len(self._match_memo) > 50_000:
+                self._match_memo.clear()
+            self._match_memo[memo_key] = hit
+        return hit
+
+    async def _comparison(self, rates: dict[str, float]) -> tuple[list[PriceRow], dict[str, Any]]:
         lots = {r.id: r for r in await self._open_goods()}
         items = await self._items()
         cache = await self._uzum_cache()
-        rates = await self._rates()
         async with self.sessionmaker() as s:
             st = await s.get(KV, KV_STATE)
             ai = {kv.key[len(KV_AI):]: (kv.value or {}) for kv in
@@ -679,14 +739,14 @@ class PriceWatch:
                 loc, text = search_query(it.name)
                 base = (lot, idx, it, it.price * rate)
                 status = item_status(it, family, rate)
-                c = None if status else cache.get(query_key(loc, text))
+                qk = query_key(loc, text)
+                c = None if status else cache.get(qk)
                 if status is None and not c:
                     status = "pending"
                 if status:
                     row = PriceRow(*base, 0, 0, 0, text, loc, None, None, status, family)
                 else:
-                    hits = [Hit(x.get("t") or "", x.get("p") or 0, x.get("u") or "") for x in c.get("hits") or []]
-                    med, mn, n, best = match_stats(text, hits, loc)
+                    med, mn, n, best = self._match(qk, c, text, loc)
                     at = datetime.fromisoformat(c["at"]) if c.get("at") else None
                     if med is None:
                         row = PriceRow(*base, 0, 0, n, text, loc, best, at, "nomatch", family)
