@@ -239,23 +239,20 @@ async def test_bulk_lot_actions(client, sessionmaker):
     assert (await client.get("/tender/static/app.js")).status == 200
 
 
-async def test_orders_table_and_filters(client):
+async def test_home_keeps_sections_apart(client):
     await login(client)
     html = await (await client.get("/tender/")).text()
-    assert "Zakazlar" in html and "Yutish %" in html and 'name="min"' in html
-    assert "Telegram bot kerak" in html and "Veb-portal" in html  # tenders + freelance in one table
+    assert "Bosh sahifa" in html and "IT tenderlar" in html and "Tovar va xizmat" in html and "Frilans" in html
+    it, rest = html.split("🏛", 1)[1].split("📦", 1)
+    goods, jobs = rest.split("💼", 1)
+    assert "Veb-portal" in it and "Telegram bot kerak" not in it  # the IT tender card has no freelance jobs
+    assert "Telegram bot kerak" in jobs and "Veb-portal" not in jobs
+    assert "Veb-portal" not in goods and "Telegram bot kerak" not in goods
     assert "<script>alert" not in html and "javascript:alert" not in html
-    html = await (await client.get("/tender/?t=freelance")).text()
-    assert "Telegram bot kerak" in html and "Veb-portal" not in html
-    html = await (await client.get("/tender/?fit=84")).text()  # lot fit 82 drops, job fit 85 stays
-    assert "Telegram bot kerak" in html and "Veb-portal" not in html
-    html = await (await client.get("/tender/?min=1")).text()  # no USD price anywhere → empty
-    assert "Hech narsa topilmadi" in html
-    assert (await client.get("/tender/?min=abc&win=-5&sort=evil")).status == 200
+    r = await client.get("/tender/?t=freelance", allow_redirects=False)  # old mixed-table links
+    assert r.status == 303 and r.headers["Location"] == "/tender/jobs"
     html = await (await client.get("/tender/lots?fit=90")).text()
     assert "Veb-portal" not in html
-    r = await client.get("/tender/orders.xlsx?t=tender")
-    assert r.status == 200 and r.headers["Content-Type"].startswith("application/vnd.openxmlformats")
 
 
 async def test_theme_and_profile(client):

@@ -77,17 +77,25 @@ font:14px/1.45 "IBM Plex Sans Variable","IBM Plex Sans",ui-sans-serif,system-ui,
 a{color:var(--brand);text-decoration:none}a:hover{text-decoration:underline}
 svg.i{width:18px;height:18px;flex:none;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;
 stroke-linejoin:round}
-.app{display:grid;grid-template-columns:56px minmax(0,1fr);min-height:100vh}.app>div{min-width:0}
-aside{background:var(--side);border-right:1px solid var(--line);padding:12px 0;position:sticky;top:0;height:100vh;
-display:flex;flex-direction:column;align-items:center;gap:6px;z-index:5}
-.logo{width:28px;height:28px;border-radius:8px;background:var(--ink);color:var(--on-ink);display:grid;place-content:center;
-font-weight:700;font-size:13px;margin-bottom:10px}.logo:hover{text-decoration:none}
-aside nav{display:flex;flex-direction:column;gap:4px}
-aside nav a,aside .out{position:relative;width:36px;height:36px;border-radius:8px;display:grid;place-content:center;
-color:var(--muted);background:none;border:0;padding:0;cursor:pointer}
-aside nav a:hover,aside .out:hover{background:var(--hover);color:var(--ink);text-decoration:none}
+.app{display:grid;grid-template-columns:212px minmax(0,1fr);min-height:100vh}.app>div{min-width:0}
+aside{background:var(--side);border-right:1px solid var(--line);padding:14px 10px;position:sticky;top:0;height:100vh;
+display:flex;flex-direction:column;gap:2px;z-index:5;overflow:auto}
+.logo{display:flex;align-items:center;gap:10px;color:var(--ink);font-weight:600;padding:2px 6px 12px}
+.logo i{width:28px;height:28px;border-radius:8px;background:var(--ink);color:var(--on-ink);display:grid;place-content:center;
+font-weight:700;font-size:13px;font-style:normal;flex:none}.logo span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.logo:hover{text-decoration:none}
+aside nav{display:flex;flex-direction:column;gap:2px}
+aside nav .grp{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--faint);
+padding:14px 10px 4px}
+aside nav a{display:flex;align-items:center;gap:10px;height:36px;padding:0 10px;border-radius:8px;color:var(--muted);
+font-weight:500;white-space:nowrap}
+aside nav a:hover{background:var(--hover);color:var(--ink);text-decoration:none}
 aside nav a.on{background:var(--active);color:var(--ink)}
-aside [data-tip]:hover::after{content:attr(data-tip);position:absolute;left:44px;top:50%;transform:translateY(-50%);
+aside .acts{display:flex;gap:4px;padding:0 4px}
+aside .out{position:relative;width:36px;height:36px;border-radius:8px;display:grid;place-content:center;
+color:var(--muted);background:none;border:0;padding:0;cursor:pointer}
+aside .out:hover{background:var(--hover);color:var(--ink);text-decoration:none}aside .out.on{background:var(--active);color:var(--ink)}
+aside [data-tip]:hover::after{content:attr(data-tip);position:absolute;left:50%;bottom:42px;transform:translateX(-50%);
 background:var(--ink);color:var(--on-ink);font-size:12px;font-weight:500;padding:4px 8px;border-radius:6px;white-space:nowrap;
 pointer-events:none}
 aside .grow{flex:1}
@@ -119,6 +127,23 @@ button:hover,.btn:hover{background:var(--btn-hover);text-decoration:none}
 .btn.ghost:hover,button.ghost:hover{background:var(--soft)}
 .panel.item:target{border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-bg)}
 summary{cursor:pointer}
+details.help{background:var(--soft);border:1px solid var(--line);border-radius:10px;padding:8px 14px;margin:0 0 14px;
+color:var(--muted);font-size:13px}details.help summary{font-weight:500;color:var(--ink)}details.help p{margin:8px 0 2px}
+.home{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;align-items:start}
+.home .card{min-width:0;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px;display:flex;
+flex-direction:column;gap:12px}
+.home .card h3{margin:0;font-size:16px;display:flex;align-items:center;gap:8px}
+.home .card h3 small{font-weight:400;color:var(--muted);font-size:12px;margin-left:auto}
+.home .nums{display:grid;grid-template-columns:repeat(3,auto);gap:8px}
+.home .nums div{background:var(--soft);border-radius:10px;padding:8px 10px}
+.home .nums b{display:block;font:500 17px/1.3 var(--mono);white-space:nowrap}.home .nums b.blue{color:var(--brand)}
+.home .nums span{font-size:12px;color:var(--muted)}
+.home ol{min-width:0;margin:0;padding:0;list-style:none;display:grid;gap:2px}
+.home li{margin:0;min-width:0}.home li a{display:flex;gap:10px;align-items:center;padding:7px 8px;border-radius:8px;color:var(--ink)}
+.home li a:hover{background:var(--soft);text-decoration:none}
+.home li .t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.home li .w{font:12px var(--mono);color:var(--muted);white-space:nowrap}
+.home .card>.btn{align-self:flex-start}
 .btn.xs{height:26px;padding:0 8px;font-size:12px;border-radius:6px;gap:4px}
 .btn.link{background:none;border-color:transparent;color:var(--muted)}.btn.link:hover{color:var(--ink);background:none}
 .seg{display:inline-flex;background:var(--chip);border-radius:9px;padding:3px;gap:2px}
@@ -190,8 +215,9 @@ padding:5px 10px;font-weight:500;font-size:13px;color:var(--ink)}
 .login input{height:38px!important}
 .solo main{max-width:none}
 @media (max-width:760px){.app{grid-template-columns:1fr}aside{position:sticky;height:auto;flex-direction:row;
-padding:8px 12px;border-right:0;border-bottom:1px solid var(--line)}.logo{margin:0 8px 0 0}aside nav{flex-direction:row}
-aside [data-tip]:hover::after{display:none}.top{position:static;padding:0 16px}.top .sub{display:none}
+align-items:center;padding:6px 10px;border-right:0;border-bottom:1px solid var(--line);overflow-x:auto}
+.logo{padding:0 6px 0 0}.logo span,aside nav .grp,aside .grow{display:none}aside nav{flex-direction:row}
+aside nav a{padding:0 9px;gap:6px}aside [data-tip]:hover::after{display:none}.top{position:static;padding:0 16px}.top .sub{display:none}
 main{padding:14px}dl.kv{grid-template-columns:1fr}input[type=search]{min-width:100%}}
 """
 # "Avtomatik" follows the device: same dark palette, applied by the OS setting.
@@ -207,6 +233,7 @@ _ICON = {
     "goods": '<path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8M7.5 5.5l9 5"/>',
     "jobs": '<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5.5A1.5 1.5 0 0 1 9.5 4h5A1.5 1.5 0 0 1 16 5.5V7M3 12.5h18"/>',
     "feed": '<path d="M21 4 3 11l7 2.5M21 4l-4 16-7-6.5M21 4 10 13.5V19l3-3"/>',
+    "cart": '<path d="M3 4h2l2.4 11.2a1 1 0 0 0 1 .8h9.2a1 1 0 0 0 1-.8L20 8H6.2"/><circle cx="9" cy="20" r="1.3"/><circle cx="17" cy="20" r="1.3"/>',
     "logout": '<path d="M9 20H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h3M15 16l4-4-4-4M19 12H9"/>',
     "download": '<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>',
     "moon": '<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>',
@@ -223,9 +250,12 @@ def icon(name: str, cls: str = "") -> str:
 
 def layout(ctx: Ctx, active: str, body: str, *, title: str = "", flash: str = "", error: bool = False,
            sub: str = "", tools: str = "") -> str:
-    tabs = [("orders", ctx.url("/"), "orders", "Zakazlar"), ("tenders", ctx.url("/lots"), "tenders", "Tenderlar"),
-            ("goods", ctx.url("/all"), "goods", "Barcha tenderlar (tovar)"),
-            ("jobs", ctx.url("/jobs"), "jobs", "Frilans ishlar"), ("feed", ctx.url("/feed"), "feed", "Telegram")]
+    tabs = [("", "orders", ctx.url("/"), "orders", "Bosh sahifa"),
+            ("Davlat tenderlari", "tenders", ctx.url("/lots"), "tenders", "IT tenderlar"),
+            ("", "goods", ctx.url("/all"), "goods", "Tovar va xizmat"),
+            ("", "uzum", ctx.url("/all/uzum"), "cart", "Uzum narxlari"),
+            ("Frilans", "jobs", ctx.url("/jobs"), "jobs", "Frilans ishlar"),
+            ("Boshqa", "feed", ctx.url("/feed"), "feed", "Telegram xabarlar")]
     flash = flash or ctx.flash
     flash_html = f'<div class="flash{" err" if error else ""}">{h(flash)}</div>' if flash else ""
     page_title = f"{title} — {ctx.title}" if title else ctx.title
@@ -237,8 +267,9 @@ def layout(ctx: Ctx, active: str, body: str, *, title: str = "", flash: str = ""
 <script src="{h(ctx.url("/static/app.js", v=ASSET_VER))}" defer></script></head>"""
     if not ctx.admin:  # login screen: nothing but the form
         return f'{head}<body class="solo"><main>{flash_html}{body}</main></body></html>'
-    nav = "".join(f'<a class="{"on" if key == active else ""}" href="{h(url)}" data-tip="{h(label)}" '
-                  f'aria-label="{h(label)}">{icon(ic)}</a>' for key, url, ic, label in tabs)
+    nav = "".join((f'<span class="grp">{h(grp)}</span>' if grp else "")
+                  + f'<a class="{"on" if key == active else ""}" href="{h(url)}">{icon(ic)}<span>{h(label)}</span></a>'
+                  for grp, key, url, ic, label in tabs)
     logout = (f'<form method="post" action="{h(ctx.url("/logout"))}">'
               f'<input type="hidden" name="csrf" value="{h(ctx.csrf)}">'
               f'<button class="out" type="submit" data-tip="Chiqish" aria-label="Chiqish">{icon("logout")}</button></form>')
@@ -254,8 +285,8 @@ def layout(ctx: Ctx, active: str, body: str, *, title: str = "", flash: str = ""
     top = (f'<div class="top"><b>{h(title or ctx.title)}</b><span class="sub">{h(sub)}</span>'
            f'<div class="tools">{tools}</div></div>')
     return f"""{head}<body><div class="app">
-<aside><a class="logo" href="{h(ctx.url("/"))}" title="{h(ctx.title)}">{initial}</a>
-<nav>{nav}</nav><div class="grow"></div>{theme_btn}{profile}{logout}</aside>
+<aside><a class="logo" href="{h(ctx.url("/"))}" title="{h(ctx.title)}"><i>{initial}</i><span>{h(ctx.title)}</span></a>
+<nav>{nav}</nav><div class="grow"></div><div class="acts">{theme_btn}{profile}{logout}</div></aside>
 <div>{top}<main>{flash_html}{body}</main>
 <footer>Tenderlar har 30 daqiqada, frilans ishlar har 5–10 daqiqada yangilanadi · Toshkent vaqti ·
 {h(fmt_local(now_utc()))}</footer></div></div></body></html>"""
@@ -281,6 +312,12 @@ def num_inputs(f: dict, *, fit: bool = True) -> str:
     if fit:
         out += f'<span class="grp">Fit ≥ {inp("fit", "ball", "sm")}</span>'
     return out
+
+
+def help_box(*paras: str, title: str = "Bu sahifa qanday ishlaydi?") -> str:
+    """Long explanations stay folded so the page shows the numbers and the table first (paras are HTML)."""
+    body = "".join(f"<p>{x}</p>" for x in paras if x)
+    return f'<details class="help"><summary>ℹ️ {h(title)}</summary>{body}</details>' if body else ""
 
 
 def stat(label: str, value, note: str = "", blue: bool = False) -> str:
@@ -383,15 +420,15 @@ def tenders_page(ctx: Ctx, lots: list[Lot], *, q: str, verdict: str, status: str
                              ("unbid", "Qatnashmaymiz", "ghost")], noun="lot",
                        foot={"title": f"Jami: {len(lots)} ta lot", "pledge": f"<b>{h(tc.money_uzs(pledge_total))}</b>"}
                        if lots else None)
-    money_note = (f'<p class="sub">«Kiritiladigan pul» — <b>zakalat</b>: ariza berganda birjadagi hisobingizda '
+    money_note = ("«Kiritiladigan pul» — <b>zakalat</b>: ariza berganda birjadagi hisobingizda "
                   "bloklanadi, yutmasangiz qaytariladi, yutsangiz shartnoma tuzilguncha turadi. Jadvaldagi hamma "
                   f"lotlarda qatnashish uchun jami <b>{h(tc.money_uzs(pledge_total))}</b> kerak"
                   + (f" (eng kattasi: lot {h(biggest.external_id)} — {h(tc.money_uzs(pledge_uzs(biggest)))})" if biggest else "")
                   + (f"; {unknown} ta lotning zakalati so'mda hisoblanmadi" if unknown else "")
-                  + ". Birja komissiyasi bunga kirmaydi.</p>")
-    return layout(ctx, "tenders", f"""{health_html}<div class="stats">{stats}</div>{money_note}
-{filter_bar(ctx, "/lots", inner, xlsx=xl)}{table}""", title="Davlat IT tenderlari",
-                  sub="Faqat IT xizmatlari · etender.uzex.uz va xarid.uzex.uz")
+                  + ". Birja komissiyasi bunga kirmaydi.")
+    return layout(ctx, "tenders", f"""{health_html}<div class="stats">{stats}</div>{help_box(money_note)}
+{filter_bar(ctx, "/lots", inner, xlsx=xl)}{table}""", title="IT tenderlar",
+                  sub="Davlat xaridlari: faqat IT xizmatlari · etender.uzex.uz va xarid.uzex.uz")
 
 
 def _nf_query(nf: dict) -> dict:
@@ -584,38 +621,57 @@ def job_page(ctx: Ctx, job: Job, proposal: Proposal | None) -> str:
 
 
 # ── Orders: tenders + freelance in one table ────────────────────────────────
-def orders_page(ctx: Ctx, rows: list, *, t: str, q: str, verdict: str, nf: dict, sort: str, direction: str) -> str:
-    from app.web.tables import ORDER_COLS, table_html
-
-    priced = [r.usd for r in rows if r.usd is not None]
-    wins = [r.win for r in rows if r.win is not None]
-    good = sum(r.verdict == "good" for r in rows)
-    stats = (stat("Zakazlar", len(rows), f"{sum(r.kind == 'tender' for r in rows)} tender · "
-                                         f"{sum(r.kind == 'freelance' for r in rows)} frilans")
-             + stat("Umumiy summa", _usd_short(sum(priced)) if priced else "$0", f"{len(priced)} ta zakazda narx bor",
-                    blue=True)
-             + stat("O'rtacha yutish", f"{sum(wins) / len(wins):.0f}%" if wins else "—",
-                    f"{len(wins)} ta zakaz baholangan")
-             + stat("AI tavsiya qiladi", good, "qatnashamiz / fit ≥ 80"))
-    seg = "".join(f'<a class="{"on" if key == t else ""}" href="{h(ctx.url("/", t=key, q=q, v=verdict, **_nf_query(nf)))}">'
-                  f'{h(label)}</a>' for key, label in (("", "Hammasi"), ("tender", "Tenderlar"),
-                                                       ("freelance", "Frilans")))
-    inner = (f'<input type="hidden" name="t" value="{h(t)}">'
-             f'<input type="search" name="q" value="{h(q)}" placeholder="Qidirish: nomi, buyurtmachi, platforma…">'
-             f'<select name="v">{_opt("", verdict, "Barcha xulosalar")}{_opt("good", verdict, "Tavsiya (yaxshi)")}'
-             f'{_opt("maybe", verdict, "Shartli / o‘rtacha")}{_opt("bad", verdict, "Yo‘q / past")}</select>'
-             f'{num_inputs(nf)}{_sort_inputs(sort, direction)}')
-    xl = ctx.url("/orders.xlsx", t=t, q=q, v=verdict, sort=sort, dir=direction, **_nf_query(nf))
-    table = table_html(ctx, "/", rows, ORDER_COLS, sort=sort, direction=direction,
-                       query={"t": t, "q": q, "v": verdict, **_nf_query(nf)}, detail=lambda r: r.detail,
-                       bulk=[], noun="zakaz")
-    return layout(ctx, "orders", f"""<div class="stats">{stats}</div>
-{filter_bar(ctx, "/", inner, xlsx=xl)}{table}""", title="Zakazlar",
-                  sub="Ochiq tenderlar va AI tavsiya qilgan frilans ishlar — bitta jadvalda",
-                  tools=f'<div class="seg">{seg}</div>')
+def _home_card(icon_txt: str, title: str, note: str, nums: list[tuple[str, str, bool]], items: list[tuple[str, str, str]],
+               more: tuple[str, str], empty: str) -> str:
+    """One section of the start page: 3 numbers, the best few items, a link to the full table."""
+    nums_html = "".join(f'<div><b class="{"blue" if blue else ""}">{h(v)}</b><span>{h(k)}</span></div>'
+                        for k, v, blue in nums)
+    lis = "".join(f'<li><a href="{h(url)}"><span class="t" title="{h(t)}">{h(t)}</span><span class="w">{h(w)}</span></a></li>'
+                  for t, w, url in items) or f'<li class="muted" style="padding:7px 8px">{h(empty)}</li>'
+    return (f'<section class="card"><h3>{icon_txt} {h(title)}<small>{h(note)}</small></h3>'
+            f'<div class="nums">{nums_html}</div><div><div class="count" style="margin:0 0 4px">Eng yaxshilari</div>'
+            f'<ol>{lis}</ol></div><a class="btn ghost" href="{h(more[0])}">{h(more[1])} →</a></section>')
 
 
-CATALOG_KINDS = (("goods", "Tovarlar"), ("service", "Xizmat / ish"), ("it", "IT"), ("all", "Hammasi"))
+def home_page(ctx: Ctx, *, it: list, goods: list, jobs: list, goods_pledge: float) -> str:
+    """Start page: IT tenders, goods/service tenders and freelance jobs side by side — never in one list."""
+    def best(rows, key):
+        return sorted(rows, key=key)[:5]
+
+    def win_txt(w) -> str:
+        return f"{w}%" if w is not None else ""
+
+    it_good = [r for r in it if r.verdict in ("good", "maybe")]
+    it_card = _home_card("🏛", "IT tenderlar", "davlat xaridlari", [
+        ("ochiq lot", str(len(it)), False), ("qatnashsa bo'ladi", str(sum(r.verdict == "good" for r in it)), True),
+        ("shartli", str(sum(r.verdict == "maybe" for r in it)), False)],
+        [(r.title, win_txt(r.win) or r.price, r.detail) for r in best(it_good, lambda r: -(r.win or 0))],
+        (ctx.url("/lots"), "Hamma IT tenderlar"), "Hozircha tavsiya qilingan IT lot yo'q")
+    g_ok = [r for r in goods if r.ai_verdict in ("QATNASHISH MUMKIN", "SHARTLI")]
+    goods_card = _home_card("📦", "Tovar va xizmat", "davlat xaridlari", [
+        ("ochiq lot", str(len(goods)), False),
+        ("AI: qatnashsa bo'ladi", str(sum(r.ai_verdict == "QATNASHISH MUMKIN" for r in goods)), True),
+        ("zakalat (hammasi)", tc.money_uzs(goods_pledge).replace(" so'm", ""), False)],
+        [(f"{r.title} · {r.customer_name}" if r.customer_name else r.title,
+          " · ".join(x for x in (win_txt(r.win[0] if r.win else None), tc.money_uzs(r.start_cost, r.currency)) if x),
+          ctx.url(f"/all/uzum/lot/{r.id}"))
+         for r in best(g_ok, lambda r: (r.ai_verdict != "QATNASHISH MUMKIN", -(r.win[0] if r.win else 0),
+                                        -(r.usd or 0)))],
+        (ctx.url("/all"), "Hamma tovar va xizmat tenderlari"), "AI hali tovar lotlarini tahlil qilmoqda")
+    j_good = [r for r in jobs if r.verdict in ("good", "maybe")]
+    jobs_card = _home_card("💼", "Frilans", "FL.ru, Kwork, Upwork…", [
+        ("ochiq ish", str(len(jobs)), False), ("juda mos (fit ≥ 80)", str(sum(r.verdict == "good" for r in jobs)), True),
+        ("o'rtacha mos", str(sum(r.verdict == "maybe" for r in jobs)), False)],
+        [(r.title, f"fit {r.fit}" if r.fit is not None else r.price, r.detail)
+         for r in best(j_good, lambda r: -(r.fit or 0))],
+        (ctx.url("/jobs"), "Hamma frilans ishlar"), "Hozircha mos frilans ish yo'q")
+    intro = ('<p class="sub">Uchta alohida yo\'nalish: <b>IT tenderlar</b>, <b>tovar va xizmat tenderlari</b> '
+             "(davlat xaridlari) va <b>frilans</b> ishlar. Har birini chap menyudan oching.</p>")
+    return layout(ctx, "orders", f'{intro}<div class="home">{it_card}{goods_card}{jobs_card}</div>',
+                  title="Bosh sahifa", sub="Bugungi eng yaxshi imkoniyatlar")
+
+
+CATALOG_KINDS = (("goods", "Tovarlar"), ("service", "Xizmat / ish"))
 
 
 def catalog_page(ctx: Ctx, rows: list, *, kind: str, q: str, src: str, region: str, regions: list[str],
@@ -640,8 +696,8 @@ def catalog_page(ctx: Ctx, rows: list, *, kind: str, q: str, src: str, region: s
                     "keyingisi: " + (fmt_local(next_scan) if next_scan else "~30 daqiqada")))
     seg = "".join(
         f'<a class="{"on" if key == kind else ""}" href="{h(ctx.url("/all", k=key, q=q, src=src, r=region, y=yon, **_nf_query(nf)))}">'
-        f'{h(label)} <span class="muted">{sum(counts.values()) if key == "all" else counts.get(key, 0)}</span></a>'
-        for key, label in CATALOG_KINDS) + _uzum_tab(ctx, False)
+        f'{h(label)} <span class="muted">{counts.get(key, 0)}</span></a>'
+        for key, label in CATALOG_KINDS)
 
     def money_inp(name: str, ph: str) -> str:
         val = nf.get(name)
@@ -677,18 +733,19 @@ def catalog_page(ctx: Ctx, rows: list, *, kind: str, q: str, src: str, region: s
                        foot={"title": f"Jami: {len(rows)} ta lot", "pledge": f"<b>{h(tc.money_uzs(pledge_total))}</b>"}
                        if rows else None)
     pending = sum(1 for r in goods_rows if r.pledge_uzs is None)
-    money_note = ('<p class="sub">«Kiritiladigan pul» — <b>zakalat</b>: ariza berganda birjadagi hisobingizda '
+    money_note = ("«Kiritiladigan pul» — <b>zakalat</b>: ariza berganda birjadagi hisobingizda "
                   "bloklanadi, yutmasangiz qaytariladi. Filtrdagi hamma lotlarda qatnashish uchun jami "
                   f"<b>{h(tc.money_uzs(pledge_total))}</b> kerak (birja komissiyasi kirmaydi)."
                   + (f" {pending} ta lotning kartasi hali o'qilmagan («…») — har 30 daqiqada navbatdagilari o'qiladi."
                      if pending else "")
                   + " «AI xulosa» va «Yutish %» — tovar lotini AI yetkazib beruvchi ko'zi bilan baholaydi "
-                  "(har 30 daqiqada yangi lotlar). xarid.uzex.uz lotlarida zakalat ko'rsatilmaydi.</p>")
-    info = ('<p class="sub">Davlat xaridlari (etender.uzex.uz va xarid.uzex.uz) dagi barcha ochiq lotlar. '
-            "Ro'yxat har 30 daqiqada avtomatik yangilanadi. Xizmat/IT lot qatorini bossangiz — lot asl saytda ochiladi. "
+                  "(har 30 daqiqada yangi lotlar). xarid.uzex.uz lotlarida zakalat ko'rsatilmaydi.")
+    info = ("Davlat xaridlari (etender.uzex.uz va xarid.uzex.uz) dagi ochiq tovar va xizmat lotlari "
+            "(IT lotlar alohida — «IT tenderlar» bo'limida). "
+            "Ro'yxat har 30 daqiqada avtomatik yangilanadi. Xizmat lot qatorini bossangiz — lot asl saytda ochiladi. "
             "Tovar lotini bossangiz — lot haqida batafsil ma'lumot va AI xulosasi ochiladi. "
             "xarid.uzex.uz ro'yxatida mahsulot nomi yo'q, faqat kategoriya ko'rinadi. "
-            f'<span class="muted">({h(upd("etender"))} · {h(upd("xarid"))})</span></p>')
+            f'<span class="muted">({h(upd("etender"))} · {h(upd("xarid"))})</span>')
     uz = ""
     if uzum:
         from app.web.tables import gap_lot_cols, price_cols
@@ -702,15 +759,11 @@ def catalog_page(ctx: Ctx, rows: list, *, kind: str, q: str, src: str, region: s
               f'<span class="muted">— eng katta {len(uzum)} tasi (jami {uzum_total})</span> '
               f'<a class="btn ghost" href="{h(ctx.url("/all/uzum"))}">Hammasi →</a></h2>{top}'
               f'<h2 style="margin:22px 0 8px">Lotlar</h2>')
-    return layout(ctx, "goods", f"""{info}<div class="stats">{stats}</div>{money_note}{uz}
-{filter_bar(ctx, "/all", inner, xlsx=xl)}{note}{table}""", title="Barcha tenderlar",
-                  sub="Tovar yetkazib berish va boshqa davlat xaridlari · har 30 daqiqada yangilanadi",
+    return layout(ctx, "goods", f"""<div class="stats">{stats}</div>{help_box(info, money_note)}{uz}
+{filter_bar(ctx, "/all", inner, xlsx=xl)}{note}{table}""", title="Tovar va xizmat tenderlari",
+                  sub="Davlat xaridlari: tovar yetkazib berish va xizmatlar (IT alohida) · har 30 daqiqada yangilanadi",
                   tools=f'<div class="seg">{seg}</div>').replace(
         "<title>", '<meta http-equiv="refresh" content="900"><title>', 1)
-
-
-def _uzum_tab(ctx: Ctx, on: bool) -> str:
-    return f'<a class="{"on" if on else ""}" href="{h(ctx.url("/all/uzum"))}">🛒 Uzum narxlari</a>'
 
 
 PRICE_FILTERS = (("big", "Katta farq"), ("over", "Tender qimmat (Uzum arzon)"), ("under", "Tender arzon (Uzum qimmat)"),
@@ -723,8 +776,6 @@ def prices_page(ctx: Ctx, rows: list, *, f: str, q: str, yon: str, dir_counts: d
     from app.tenders.catalog import DIRECTION_LABEL
     from app.web.tables import lot_price_cols, price_cols, table_html
 
-    seg = "".join(f'<a href="{h(ctx.url("/all", k=key))}">{h(label)}</a>' for key, label in CATALOG_KINDS)
-    seg += _uzum_tab(ctx, True)
     ftabs = "".join(
         f'<a class="{"on" if key == f else ""}" href="{h(ctx.url("/all/uzum", f=key, q=q, y=yon))}">'
         f'{h(label)} <span class="muted">{counts.get(key, 0)}</span></a>' for key, label in PRICE_FILTERS)
@@ -753,17 +804,19 @@ def prices_page(ctx: Ctx, rows: list, *, f: str, q: str, yon: str, dir_counts: d
                        sort=sort, direction=direction, query={"f": f, "q": q, "y": yon},
                        detail=lambda r: ctx.url(f"/all/uzum/lot/{r.lot.id}"), bulk=[],
                        noun="lot" if lots else "mahsulot")
-    info = ("<p class=\"sub\">Tovar lotlaridagi har bir mahsulotning <b>1 dona narxi</b> Uzum Market'dagi shu nomli "
+    info = ("Tovar lotlaridagi har bir mahsulotning <b>1 dona narxi</b> Uzum Market'dagi shu nomli "
             "mahsulotlarning o'rtacha narxi bilan solishtiriladi. Uzum'ni telefonning o'zi Chrome'da ochib qidiradi "
             "(har 30 daqiqada yangi mahsulotlar). Faqat dona/komplekt/pachka bilan o'lchanadigan mahsulotlar; "
             "nomi Uzum'dagi kamida 3 ta mahsulotga mos kelganlari ko'rsatiladi (20 baravardan ortiq farq — boshqa "
             "mahsulot deb hisoblanadi va chiqarilmaydi). «Uzum narxi» ustiga bosing — "
             "Uzum'dagi qidiruv ochiladi; «📄 Tender» / «🛒 Uzum» tugmalari — lot asl saytda yoki mahsulot Uzum'da ochiladi; "
             "qatorning boshqa joyini bosing — lotdagi <b>hamma mahsulotlar</b> ro'yxati ochiladi. "
-            "<span class=\"muted\">Uzum chakana narxi; tenderda yetkazib berish, kafolat va QQS ham bo'lishi mumkin.</span></p>")
-    return layout(ctx, "goods", f"""{info}<div class="stats">{stats}</div><div class="seg" style="margin:0 0 12px">{ftabs}</div>
+            "<span class=\"muted\">Uzum chakana narxi; tenderda yetkazib berish, kafolat va QQS ham bo'lishi mumkin. "
+            "Uzum'da solishtirib bo'lmaydigan mahsulotlar (kg, litr…) narxini AI taxmin qiladi — 🤖 belgisi bilan, "
+            "lot sahifasida.</span>")
+    return layout(ctx, "uzum", f"""<div class="stats">{stats}</div>{help_box(info)}<div class="seg" style="margin:0 0 12px">{ftabs}</div>
 {filter_bar(ctx, "/all/uzum", inner, xlsx=xl)}{note}{table}""", title="Uzum narxlari bilan solishtirish",
-                  sub="Tender narxi ↔ Uzum Market · katta farqlar", tools=f'<div class="seg">{seg}</div>').replace(
+                  sub="Tovar tenderlaridagi narx ↔ Uzum Market").replace(
         "<title>", '<meta http-equiv="refresh" content="900"><title>', 1)
 
 

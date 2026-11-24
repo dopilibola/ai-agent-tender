@@ -179,7 +179,7 @@ async def test_prices_page(watch, settings, sessionmaker):
         assert "https://uzum.uz/uz/search?query=Printer%20Canon" in html
         every = await (await c.get("/tender/all/uzum", params={"f": "all"})).text()
         assert "Stul ofis" in every
-        main = await (await c.get("/tender/all", params={"k": "it"})).text()
+        main = await (await c.get("/tender/all")).text()
         goods = await (await c.get("/tender/all")).text()
         assert "900 000 so&#x27;m" in goods or "900 ming so&#x27;m" in goods or "0.9 mln so&#x27;m" in goods
         assert "Shartli" in goods and "20–45%" in goods and "Jami: 1 ta lot" in goods

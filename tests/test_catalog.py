@@ -81,7 +81,10 @@ async def test_catalog_page(client):
     assert (await client.get("/tender/all", allow_redirects=False)).status == 303  # login first
     await login(client)
     html = await (await client.get("/tender/all")).text()
-    assert "Barcha tenderlar" in html and 'href="/tender/all"' in html
+    assert "Tovar va xizmat tenderlari" in html and 'href="/tender/all"' in html
+    assert ">IT tenderlar<" in html and ">Frilans ishlar<" in html  # sections stay separate in the menu
+    r = await client.get("/tender/all", params={"k": "it"}, allow_redirects=False)
+    assert r.status == 303 and r.headers["Location"] == "/tender/lots"  # IT lots are not mixed in here
     assert "Kompyuter stollarini" in html and "Уголь" in html
     assert "ta'mirlash ishlari" not in html  # service, not on the goods tab
     assert "Eski stul" not in html  # deadline passed
@@ -101,8 +104,8 @@ async def test_catalog_page(client):
     fuel = await (await client.get("/tender/all", params={"y": "fuel"})).text()
     assert "Уголь" in fuel and "Kompyuter stollarini" not in fuel
     assert (await client.get("/tender/all", params={"y": "nonsense"})).status == 200
-    r = await client.get("/tender/all.xlsx", params={"k": "all"})
-    assert r.status == 200 and r.headers["Content-Disposition"].startswith('attachment; filename="barcha_tenderlar')
+    r = await client.get("/tender/all.xlsx", params={"k": "service"})
+    assert r.status == 200 and r.headers["Content-Disposition"].startswith('attachment; filename="xizmat_tenderlar')
 
 
 @pytest.mark.parametrize("title,key", [

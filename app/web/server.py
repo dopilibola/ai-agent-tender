@@ -18,6 +18,7 @@ from urllib.parse import urlencode
 from aiohttp import web
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import async_sessionmaker
+from sqlalchemy.orm import defer
 
 from app.bot.feed import KINDS
 from app.config import Settings
@@ -44,6 +45,9 @@ VERDICT_KEY = {"good": "QATNASHAMIZ", "maybe": "SHARTLI", "bad": "YO'Q"}
 LOT_ACTIONS = {"bid": (LotStatus.BIDDING, "📌 Qatnashamiz"), "unbid": (LotStatus.NOTIFIED, "↩️ Qatnashmaymiz"),
                "ignore": (LotStatus.IGNORED, "🚫 Kerak emas")}
 MAX_ROWS = 300
+# List pages never read the platform's raw JSON (~70 KB per lot), so it is not loaded for them.
+LOT_LIST = (defer(Lot.raw, raiseload=True),)
+JOB_LIST = (defer(Job.raw, raiseload=True),)
 
 
 @dataclass
@@ -185,7 +189,7 @@ async def _query_lots(request: web.Request) -> tuple[list[Lot], dict]:
     nf = _num_filters(request)
     now = now_utc()
     async with d.sessionmaker() as s:
-        stmt = select(Lot)
+        stmt = select(Lot).options(*LOT_LIST)
         if status == "bidding":
             stmt = stmt.where(Lot.status == LotStatus.BIDDING)
         elif status != "all":
@@ -198,7 +202,7 @@ async def _query_lots(request: web.Request) -> tuple[list[Lot], dict]:
                                   Lot.description.ilike(like)))
         order = Lot.deadline_at.asc() if status != "all" else Lot.id.desc()
         lots = list((await s.scalars(stmt.order_by(order).limit(MAX_ROWS))).all())
-        open_all = (await s.scalars(select(Lot).where(Lot.status.in_(ACTIVE)))).all()
+        open_all = (await s.scalars(select(Lot).options(*LOT_LIST).where(Lot.status.in_(ACTIVE)))).all()
     if status != "all":  # "all" = everything, incl. closed and lots the AI said are not IT services
         lots = [lot for lot in lots if (not lot.deadline_at or as_utc(lot.deadline_at) > now) and is_it_lot(lot)]
     lots = tables.apply_num_filters(lots, nf, tables._usd_cost, tables._win, lambda lot: tables._a(lot).get("fit_score"))
@@ -262,7 +266,7 @@ async def _query_jobs(request: web.Request) -> tuple[list[Job], dict]:
     sort, direction = _sort_params(request, tables.JOB_COLS, "posted", "desc")
     nf = _num_filters(request)
     async with d.sessionmaker() as s:
-        stmt = select(Job)
+        stmt = select(Job).options(*JOB_LIST)
         if show != "all":
             stmt = stmt.where(Job.status.not_in(HIDDEN_JOB))
         if platform:
@@ -326,7 +330,7 @@ async def _query_orders(request: web.Request, ctx: views.Ctx) -> tuple[list, dic
     rows: list[tables.Order] = []
     async with d.sessionmaker() as s:
         if t != "freelance":
-            stmt = select(Lot).where(Lot.status.in_(ACTIVE))
+            stmt = select(Lot).options(*LOT_LIST).where(Lot.status.in_(ACTIVE))
             if q:
                 like = f"%{q}%"
                 stmt = stmt.where(or_(Lot.title.ilike(like), Lot.customer_name.ilike(like),
@@ -335,7 +339,7 @@ async def _query_orders(request: web.Request, ctx: views.Ctx) -> tuple[list, dic
                 if (not lot.deadline_at or as_utc(lot.deadline_at) > now) and is_it_lot(lot):
                     rows.append(tables.order_from_lot(ctx, lot, now))
         if t != "tender":
-            stmt = select(Job).where(Job.status.not_in(HIDDEN_JOB))
+            stmt = select(Job).options(*JOB_LIST).where(Job.status.not_in(HIDDEN_JOB))
             if q:
                 like = f"%{q}%"
                 stmt = stmt.where(or_(Job.title.ilike(like), Job.description.ilike(like), Job.platform.ilike(like)))
@@ -349,9 +353,20 @@ async def _query_orders(request: web.Request, ctx: views.Ctx) -> tuple[list, dic
 
 
 async def orders_index(request: web.Request) -> web.Response:
+    """Start page: IT tenders, goods tenders and freelance jobs as three separate cards."""
     ctx = _ctx(request)
-    rows, p = await _query_orders(request, ctx)
-    return _page(request, ctx, views.orders_page(ctx, rows, **p))
+    if request.query:  # old links with filters (?t=…) → the separate pages
+        t = request.query.get("t")
+        raise web.HTTPSeeOther(ctx.url("/jobs" if t == "freelance" else "/lots"))
+    rows, _ = await _query_orders(request, ctx)
+    try:
+        goods, _ = await _query_catalog(request)
+    except Exception:  # the start page must open even if the lot list is broken
+        log.exception("web.home_goods_failed")
+        goods = []
+    pledge = sum(r.pledge_uzs or 0 for r in goods)
+    return _page(request, ctx, views.home_page(ctx, it=[r for r in rows if r.kind == "tender"], goods=goods,
+                                               jobs=[r for r in rows if r.kind == "freelance"], goods_pledge=pledge))
 
 
 async def orders_xlsx(request: web.Request) -> web.Response:
@@ -381,7 +396,7 @@ async def _fill_lot_infos(pw, rows: list) -> None:
 async def _query_catalog(request: web.Request) -> tuple[list, dict]:
     d = request.app[DEPS]
     kind = request.query.get("k", "goods")
-    kind = kind if kind in ("goods", "service", "it", "all") else "goods"
+    kind = kind if kind in ("goods", "service") else "goods"  # IT lots live on «IT tenderlar» (/lots)
     src = request.query.get("src", "")
     src = src if src in ("etender", "xarid") else ""
     region = request.query.get("r", "").strip()[:128]
@@ -434,6 +449,8 @@ async def _query_catalog(request: web.Request) -> tuple[list, dict]:
 
 async def catalog_index(request: web.Request) -> web.Response:
     ctx = _ctx(request)
+    if request.query.get("k") == "it":  # IT lots have their own page
+        raise web.HTTPSeeOther(ctx.url("/lots"))
     rows, p = await _query_catalog(request)
     infos = p.pop("infos")
     d = request.app[DEPS]
