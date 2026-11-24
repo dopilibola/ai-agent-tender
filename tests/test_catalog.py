@@ -100,7 +100,10 @@ async def test_catalog_page(client):
     assert "Kompyuter stollarini" in reg and "Уголь" not in reg
     furn = await (await client.get("/tender/all", params={"y": "furniture"})).text()
     assert "Kompyuter stollarini" in furn and "Уголь" not in furn
-    assert "Mebel va inventar (1)" in html and "Yoqilg&#x27;i va energiya (1)" in html
+    assert "Mebel va inventar <span>1</span>" in html and "Yoqilg&#x27;i va energiya <span>1</span>" in html
+    both = await (await client.get("/tender/all", params={"y": "furniture,fuel"})).text()  # several at once
+    assert "Kompyuter stollarini" in both and "Уголь" in both and "2 ta tanlangan" in both
+    assert 'href="/tender/all?y=fuel' in both  # clicking a chosen one removes it
     fuel = await (await client.get("/tender/all", params={"y": "fuel"})).text()
     assert "Уголь" in fuel and "Kompyuter stollarini" not in fuel
     assert (await client.get("/tender/all", params={"y": "nonsense"})).status == 200

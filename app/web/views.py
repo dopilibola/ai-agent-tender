@@ -127,6 +127,13 @@ button:hover,.btn:hover{background:var(--btn-hover);text-decoration:none}
 .btn.ghost:hover,button.ghost:hover{background:var(--soft)}
 .panel.item:target{border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-bg)}
 summary{cursor:pointer}
+.dirs{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 14px;margin:0 0 12px}
+.dirs>b{font-size:13px;margin-right:8px}.dirs>.muted{font-size:12px}
+.dirs .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.chipf{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:4px 11px;
+font-size:13px;color:var(--ink);background:var(--field)}.chipf:hover{border-color:var(--line2);background:var(--soft);text-decoration:none}
+.chipf span{font:11px var(--mono);color:var(--muted)}
+.chipf.on{background:var(--brand-bg);border-color:var(--brand);color:var(--brand);font-weight:500}.chipf.on span{color:var(--brand)}
 details.help{background:var(--soft);border:1px solid var(--line);border-radius:10px;padding:8px 14px;margin:0 0 14px;
 color:var(--muted);font-size:13px}details.help summary{font-weight:500;color:var(--ink)}details.help p{margin:8px 0 2px}
 .home{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;align-items:start}
@@ -312,6 +319,30 @@ def num_inputs(f: dict, *, fit: bool = True) -> str:
     if fit:
         out += f'<span class="grp">Fit ≥ {inp("fit", "ball", "sm")}</span>'
     return out
+
+
+def dir_chips(ctx: Ctx, path: str, yon: str, dir_counts: dict[str, int], **query) -> str:
+    """Yo'nalish filter: one button per direction (with its count); click to add / remove, several at once."""
+    from app.tenders.catalog import DIRECTION_LABEL
+
+    chosen = {k for k in yon.split(",") if k}
+    keys = sorted(dir_counts, key=lambda k: (k == "other", -dir_counts[k]))
+    keys += sorted(chosen - set(keys))
+
+    def link(sel: set[str]) -> str:
+        return h(ctx.url(path, y=",".join(sorted(sel)), **query))
+
+    chips = [f'<a class="chipf{"" if chosen else " on"}" href="{link(set())}">Hammasi '
+             f'<span>{sum(dir_counts.values())}</span></a>']
+    for k in keys:
+        on = k in chosen
+        chips.append(f'<a class="chipf{" on" if on else ""}" href="{link(chosen ^ {k})}" '
+                     f'title="{"Olib tashlash" if on else "Qo‘shish"}">{"✓ " if on else ""}{h(DIRECTION_LABEL.get(k, k))} '
+                     f'<span>{dir_counts.get(k, 0)}</span></a>')
+    hint = (f'{len(chosen)} ta tanlangan — yana bosib qo\'shing yoki olib tashlang' if chosen
+            else "bittasini yoki bir nechtasini bosing")
+    return (f'<div class="dirs"><b>Yo\'nalish</b><span class="muted">{h(hint)}</span>'
+            f'<div class="chips">{"".join(chips)}</div></div>')
 
 
 def help_box(*paras: str, title: str = "Bu sahifa qanday ishlaydi?") -> str:
@@ -708,16 +739,11 @@ def catalog_page(ctx: Ctx, rows: list, *, kind: str, q: str, src: str, region: s
     from app.tenders.catalog import DIRECTION_LABEL
 
     region_opts = _opt("", region, "Barcha hududlar") + "".join(_opt(x, region, x) for x in regions)
-    ordered = sorted(dir_counts, key=lambda k: (k == "other", -dir_counts[k]))
-    if yon and yon not in dir_counts:
-        ordered.append(yon)
-    dir_opts = _opt("", yon, f"Barcha yo'nalishlar ({sum(dir_counts.values())})") + "".join(
-        _opt(k, yon, f"{DIRECTION_LABEL.get(k, k)} ({dir_counts.get(k, 0)})") for k in ordered)
     inner = (f'<input type="hidden" name="k" value="{h(kind)}">'
              f'<input type="search" name="q" value="{h(q)}" placeholder="Qidirish: nomi, buyurtmachi, lot raqami…">'
              f'<select name="src">{_opt("", src, "Barcha manbalar")}{_opt("etender", src, "etender.uzex.uz")}'
              f'{_opt("xarid", src, "xarid.uzex.uz")}</select>'
-             f'<select name="y" title="Yo\'nalish">{dir_opts}</select>'
+             f'<input type="hidden" name="y" value="{h(yon)}">'
              f'<select name="r">{region_opts}</select>'
              f'<span class="grp">Summa $ {money_inp("min", "dan")}–{money_inp("max", "gacha")}</span>'
              f'{_sort_inputs(sort, direction)}')
@@ -759,7 +785,8 @@ def catalog_page(ctx: Ctx, rows: list, *, kind: str, q: str, src: str, region: s
               f'<span class="muted">— eng katta {len(uzum)} tasi (jami {uzum_total})</span> '
               f'<a class="btn ghost" href="{h(ctx.url("/all/uzum"))}">Hammasi →</a></h2>{top}'
               f'<h2 style="margin:22px 0 8px">Lotlar</h2>')
-    return layout(ctx, "goods", f"""<div class="stats">{stats}</div>{help_box(info, money_note)}{uz}
+    return layout(ctx, "goods", f"""<div class="stats">{stats}</div>{help_box(info, money_note)}
+{dir_chips(ctx, "/all", yon, dir_counts, k=kind, q=q, src=src, r=region, **_nf_query(nf))}{uz}
 {filter_bar(ctx, "/all", inner, xlsx=xl)}{note}{table}""", title="Tovar va xizmat tenderlari",
                   sub="Davlat xaridlari: tovar yetkazib berish va xizmatlar (IT alohida) · har 30 daqiqada yangilanadi",
                   tools=f'<div class="seg">{seg}</div>').replace(
@@ -788,14 +815,9 @@ def prices_page(ctx: Ctx, rows: list, *, f: str, q: str, yon: str, dir_counts: d
              + stat("Oxirgi tekshiruv", last.split(" ")[-1] if at else "—",
                     ("telefon: ishlayapti" if phone == "ok" else phone)
                     + (f" · keyingisi {fmt_local(next_run)}" if next_run else "")))
-    ordered = sorted(dir_counts, key=lambda k: (k == "other", -dir_counts[k]))
-    if yon and yon not in dir_counts:
-        ordered.append(yon)
-    dir_opts = _opt("", yon, f"Barcha yo'nalishlar ({sum(dir_counts.values())})") + "".join(
-        _opt(k, yon, f"{DIRECTION_LABEL.get(k, k)} ({dir_counts.get(k, 0)})") for k in ordered)
     inner = (f'<input type="hidden" name="f" value="{h(f)}">'
              f'<input type="search" name="q" value="{h(q)}" placeholder="Qidirish: mahsulot, buyurtmachi, lot raqami…">'
-             f'<select name="y" title="Yo\'nalish">{dir_opts}</select>{_sort_inputs(sort, direction)}')
+             f'<input type="hidden" name="y" value="{h(yon)}">{_sort_inputs(sort, direction)}')
     xl = ctx.url("/all/uzum.xlsx", f=f, q=q, y=yon, sort=sort, dir=direction)
     note = (f'<p class="count">Jadvalda birinchi {shown_limit} tasi (jami {len(rows)}) — Excel\'da hammasi bor.</p>'
             if len(rows) > shown_limit else "")
@@ -815,6 +837,7 @@ def prices_page(ctx: Ctx, rows: list, *, f: str, q: str, yon: str, dir_counts: d
             "Uzum'da solishtirib bo'lmaydigan mahsulotlar (kg, litr…) narxini AI taxmin qiladi — 🤖 belgisi bilan, "
             "lot sahifasida.</span>")
     return layout(ctx, "uzum", f"""<div class="stats">{stats}</div>{help_box(info)}<div class="seg" style="margin:0 0 12px">{ftabs}</div>
+{dir_chips(ctx, "/all/uzum", yon, dir_counts, f=f, q=q)}
 {filter_bar(ctx, "/all/uzum", inner, xlsx=xl)}{note}{table}""", title="Uzum narxlari bilan solishtirish",
                   sub="Tovar tenderlaridagi narx ↔ Uzum Market").replace(
         "<title>", '<meta http-equiv="refresh" content="900"><title>', 1)

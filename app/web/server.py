@@ -393,6 +393,12 @@ async def _fill_lot_infos(pw, rows: list) -> None:
         log.exception("web.lot_infos_failed")
 
 
+def _directions(request: web.Request) -> set[str]:
+    """?y=furniture,fuel (or ?y=furniture&y=fuel) → the chosen yo'nalishlar; unknown keys are dropped."""
+    raw = ",".join(request.query.getall("y", []))
+    return {k for k in (x.strip() for x in raw.split(",")) if k in DIRECTION_LABEL}
+
+
 async def _query_catalog(request: web.Request) -> tuple[list, dict]:
     d = request.app[DEPS]
     kind = request.query.get("k", "goods")
@@ -400,8 +406,8 @@ async def _query_catalog(request: web.Request) -> tuple[list, dict]:
     src = request.query.get("src", "")
     src = src if src in ("etender", "xarid") else ""
     region = request.query.get("r", "").strip()[:128]
-    yon = request.query.get("y", "")
-    yon = yon if yon in DIRECTION_LABEL else ""
+    yset = _directions(request)
+    yon = ",".join(sorted(yset))
     q = request.query.get("q", "").strip()[:100]
     sort, direction = _sort_params(request, tables.CATALOG_COLS, "deadline", "asc")
     nf = {k: v for k, v in _num_filters(request).items() if k in ("min", "max")}
@@ -435,10 +441,10 @@ async def _query_catalog(request: web.Request) -> tuple[list, dict]:
     dir_counts: dict[str, int] = {}
     for r in in_kind:
         dir_counts[r.direction] = dir_counts.get(r.direction, 0) + 1
-    if yon:
-        live = [r for r in live if r.direction == yon]
+    if yset:
+        live = [r for r in live if r.direction in yset]
     counts = {k: sum(r.kind == k for r in live) for k in ("goods", "service", "it")}
-    shown = [r for r in in_kind if r.direction == yon] if yon else in_kind
+    shown = [r for r in in_kind if r.direction in yset] if yset else in_kind
     shown = tables.sort_rows(shown, tables.CATALOG_COLS, sort, direction)
     next_scan = d.tenders.next_scan_at() if d.tenders else None
     return shown, {"kind": kind, "q": q, "src": src, "region": region, "regions": regions, "counts": counts,
@@ -462,6 +468,9 @@ async def catalog_index(request: web.Request) -> web.Response:
         try:
             cmp_rows, _ = await pw.comparison()
             gaps = [r for r in cmp_rows if r.status == "ok" and (r.ratio >= big or 0 < r.ratio <= 1 / big)]
+            yset = _directions(request)
+            if yset:  # the big-gap list follows the chosen yo'nalishlar too
+                gaps = [r for r in gaps if r.lot.direction in yset]
             uzum_total = len(gaps)
             uzum = sorted(gaps, key=lambda r: -abs(r.overpay))[:10]
             _set_lot_infos(infos, uzum)
@@ -485,8 +494,8 @@ async def _query_prices(request: web.Request) -> tuple[list, dict]:
     big = d.settings.config.tenders.prices.big_ratio
     f = request.query.get("f", "big")
     f = f if f in ("big", "over", "under", "all", "lots") else "big"
-    yon = request.query.get("y", "")
-    yon = yon if yon in DIRECTION_LABEL else ""
+    yset = _directions(request)
+    yon = ",".join(sorted(yset))
     q = request.query.get("q", "").strip()[:100]
     cols = tables.lot_price_cols(big) if f == "lots" else tables.price_cols(big)
     sort, direction = _sort_params(request, cols, "over" if f != "under" else "ratio",
@@ -501,8 +510,8 @@ async def _query_prices(request: web.Request) -> tuple[list, dict]:
     dir_counts: dict[str, int] = {}
     for r in rows:
         dir_counts[r.lot.direction] = dir_counts.get(r.lot.direction, 0) + 1
-    if yon:
-        rows = [r for r in rows if r.lot.direction == yon]
+    if yset:
+        rows = [r for r in rows if r.lot.direction in yset]
     lots = group_by_lot(rows)
     ok = [r for r in rows if r.status == "ok"]
     groups = {"all": ok, "over": [r for r in ok if r.ratio >= big],
