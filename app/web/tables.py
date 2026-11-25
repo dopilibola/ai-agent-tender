@@ -156,6 +156,15 @@ def pledge_uzs(lot: Lot) -> float:
     return lot.pledge_amount * lot.usd_rate if lot.currency == "USD" and lot.usd_rate else 0.0
 
 
+def lot_uzs(lot: Lot) -> float | None:
+    """Start cost in so'm (USD lots at the lot's own rate)."""
+    if lot.start_cost is None:
+        return None
+    if lot.currency == "UZS":
+        return lot.start_cost
+    return lot.start_cost * lot.usd_rate if lot.currency == "USD" and lot.usd_rate else None
+
+
 def _pledge_cell(lot: Lot) -> str:
     if not lot.pledge_percent:
         return '<span class="muted">yo\'q</span>'

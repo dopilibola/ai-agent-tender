@@ -206,6 +206,7 @@ async def _query_lots(request: web.Request) -> tuple[list[Lot], dict]:
     if status != "all":  # "all" = everything, incl. closed and lots the AI said are not IT services
         lots = [lot for lot in lots if (not lot.deadline_at or as_utc(lot.deadline_at) > now) and is_it_lot(lot)]
     lots = tables.apply_num_filters(lots, nf, tables._usd_cost, tables._win, lambda lot: tables._a(lot).get("fit_score"))
+    lots, bands = _money_bands(request, lots, tables.lot_uzs, tables.pledge_uzs)
     lots = tables.sort_rows(lots, tables.LOT_COLS, sort, direction)
     live = [lot for lot in open_all if (not lot.deadline_at or as_utc(lot.deadline_at) > now) and is_it_lot(lot)]
     counts = {
@@ -215,7 +216,7 @@ async def _query_lots(request: web.Request) -> tuple[list[Lot], dict]:
         "bidding": sum(lot.status == LotStatus.BIDDING for lot in live),
     }
     return lots, {"q": q, "verdict": verdict, "status": status, "counts": counts, "sort": sort,
-                  "direction": direction, "nf": nf}
+                  "direction": direction, "nf": nf, **bands}
 
 
 async def tenders_index(request: web.Request) -> web.Response:
@@ -418,6 +419,25 @@ def _band_of(bands, chosen: set[str]):
     return lambda v: any(_in_band(v, b) for b in picked)
 
 
+def _money_bands(request: web.Request, rows: list, uzs, pledge) -> tuple[list, dict]:
+    """Boshlang'ich summa / Zakalat chips (?sm=…&zk=…): the rows that pass, and the counts for every button
+    (each group counted with the other group applied)."""
+    sm = _keys(request, "sm", {b[0] for b in tables.SUM_BANDS})
+    zk = _keys(request, "zk", {b[0] for b in tables.PLEDGE_BANDS})
+    in_sum, in_zk = _band_of(tables.SUM_BANDS, sm), _band_of(tables.PLEDGE_BANDS, zk)
+
+    def ts(r) -> bool:
+        return in_sum(uzs(r)) if sm else True
+
+    def tz(r) -> bool:
+        return in_zk(pledge(r)) if zk else True
+
+    sum_counts = {b[0]: sum(1 for r in rows if tz(r) and _in_band(uzs(r), b)) for b in tables.SUM_BANDS}
+    zk_counts = {b[0]: sum(1 for r in rows if ts(r) and _in_band(pledge(r), b)) for b in tables.PLEDGE_BANDS}
+    return [r for r in rows if ts(r) and tz(r)], {"sm": ",".join(sorted(sm)), "zk": ",".join(sorted(zk)),
+                                                  "sum_counts": sum_counts, "zk_counts": zk_counts}
+
+
 async def _query_catalog(request: web.Request) -> tuple[list, dict]:
     d = request.app[DEPS]
     kind = request.query.get("k", "goods")
@@ -534,6 +554,11 @@ async def _query_prices(request: web.Request) -> tuple[list, dict]:
     rows, state = await pw.comparison() if pw else ([], {"phone": "o'chirilgan (config: tenders.prices)"})
     if pw:
         await _fill_lot_infos(pw, rows)
+    rate = await d.tenders.fx.get() if d.tenders and d.tenders.fx else None
+    for r in rows:
+        lot = r.lot
+        usd = tc.usd(lot.start_cost, lot.currency, rate)
+        lot.uzs = lot.start_cost if lot.currency == "UZS" else (usd * rate if usd is not None and rate else None)
     if q:
         ql = q.lower()
         rows = [r for r in rows if ql in r.item.name.lower() or ql in (r.lot.customer_name or "").lower()
@@ -543,6 +568,7 @@ async def _query_prices(request: web.Request) -> tuple[list, dict]:
         dir_counts[r.lot.direction] = dir_counts.get(r.lot.direction, 0) + 1
     if yset:
         rows = [r for r in rows if r.lot.direction in yset]
+    rows, bands = _money_bands(request, rows, lambda r: r.lot.uzs, lambda r: r.lot.pledge_uzs)
     lots = group_by_lot(rows)
     ok = [r for r in rows if r.status == "ok"]
     groups = {"all": ok, "over": [r for r in ok if r.ratio >= big],
@@ -551,7 +577,7 @@ async def _query_prices(request: web.Request) -> tuple[list, dict]:
     counts = {k: len(v) for k, v in groups.items()}
     shown = tables.sort_rows(groups[f], cols, sort, direction)
     next_run = pw.next_run_at() if pw else None
-    return shown, {"f": f, "q": q, "yon": yon, "dir_counts": dir_counts, "counts": counts, "state": state,
+    return shown, {**bands, "f": f, "q": q, "yon": yon, "dir_counts": dir_counts, "counts": counts, "state": state,
                    "big": big, "sort": sort, "direction": direction, "next_run": next_run}
 
 

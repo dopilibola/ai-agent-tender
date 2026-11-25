@@ -174,6 +174,9 @@ async def test_prices_page(watch, settings, sessionmaker):
         html = await (await c.get("/tender/all/uzum")).text()
         assert "Uzum narxlari" in html and "Printer Canon" in html and "×4.5 qimmat" in html
         assert "Stul ofis" not in html  # 1.04× is not a big difference
+        assert "Boshlang&#x27;ich summa" in html and "Zakalat" in html
+        none = await (await c.get("/tender/all/uzum", params={"sm": "s5", "f": "all"})).text()
+        assert "Printer Canon" not in none  # the 5 mlrd+ band has no lot here
         assert "Boshlang&#x27;ich narx" in html and "Shartli" in html and "20–45%" in html  # lot columns
         assert "&lt;b&gt;Maktab" in html and "<b>Maktab</b>" not in html
         assert "https://uzum.uz/uz/search?query=Printer%20Canon" in html
