@@ -191,6 +191,8 @@ LOT_COLS: list[Col] = [
         lambda c, lot, n: _lot_price(lot), lambda lot: lot.start_cost, "desc", 16, "num"),
     Col("pledge", "Kiritiladigan pul (zakalat)", lambda lot: pledge_uzs(lot),
         lambda c, lot, n: _pledge_cell(lot), lambda lot: round(pledge_uzs(lot)), "desc", 18, "num"),
+    Col("advance", "Avans", lambda lot: lot.advance_percent, lambda c, lot, n: _adv_cell(lot.advance_percent),
+        lambda lot: lot.advance_percent if lot.advance_percent is not None else "", "desc", 9, "num"),
     Col("verdict", "AI xulosa", lambda lot: VERDICT_RANK.get(lot.verdict or ""),
         lambda c, lot, n: _verdict_pill(lot), lambda lot: lot.verdict or "", "desc", 14),
     Col("fit", "Fit", lambda lot: _a(lot).get("fit_score"),
@@ -440,6 +442,16 @@ SUM_BANDS = (("s1", "50 mln gacha", 0, 50e6), ("s2", "50–200 mln", 50e6, 200e6
              ("s4", "1–5 mlrd", 1e9, 5e9), ("s5", "5 mlrd dan ko'p", 5e9, float("inf")))
 PLEDGE_BANDS = (("z0", "Zakalatsiz", 0, 0), ("z1", "5 mln gacha", 0, 5e6), ("z2", "5–20 mln", 5e6, 20e6),
                 ("z3", "20–100 mln", 20e6, 100e6), ("z4", "100 mln dan ko'p", 100e6, float("inf")))
+ADVANCE_BANDS = (("a0", "Avanssiz", 0, 0), ("a1", "20% gacha", 0, 20), ("a2", "20–30%", 20, 30),
+                 ("a3", "30–50%", 30, 50), ("a4", "50% dan ko'p", 50, float("inf")))
+BAND_GROUPS = {"sm": SUM_BANDS, "zk": PLEDGE_BANDS, "av": ADVANCE_BANDS}
+BAND_TITLES = {"sm": "Boshlang'ich summa", "zk": "Zakalat", "av": "Avans"}
+
+
+def _adv_cell(v: float | None) -> str:
+    if v is None:
+        return '<span class="muted">—</span>'
+    return f"{v:g}%" if v else '<span class="muted">yo\'q</span>'
 
 
 CATALOG_COLS: list[Col] = [
@@ -461,6 +473,8 @@ CATALOG_COLS: list[Col] = [
         lambda c, r, n: _cat_price(r), lambda r: r.start_cost, "desc", 16, "num"),
     Col("pledge", "Kiritiladigan pul (zakalat)", lambda r: r.pledge_uzs, lambda c, r, n: _cat_pledge_cell(r),
         lambda r: round(r.pledge_uzs) if r.pledge_uzs is not None else "", "desc", 18, "num"),
+    Col("advance", "Avans", lambda r: r.advance_pct, lambda c, r, n: _adv_cell(r.advance_pct),
+        lambda r: r.advance_pct if r.advance_pct is not None else "", "desc", 9, "num"),
     Col("verdict", "AI xulosa", lambda r: GOODS_VERDICT[r.ai_verdict][2] if r.ai_verdict in GOODS_VERDICT else None,
         lambda c, r, n: _cat_verdict_cell(r), lambda r: GOODS_VERDICT.get(r.ai_verdict, ("", r.ai_verdict))[1],
         "asc", 16),

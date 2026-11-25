@@ -255,6 +255,7 @@ async def test_home_keeps_sections_apart(client):
     assert "Veb-portal" not in html
     html = await (await client.get("/tender/lots")).text()
     assert "Boshlang&#x27;ich summa" in html and "Zakalatsiz" in html  # money bands on the IT page too
+    assert "Avanssiz" in html and ">Avans<" in html
     assert html.index("Boshlang&#x27;ich summa") < html.index('class="stats"')  # filters come first
 
 

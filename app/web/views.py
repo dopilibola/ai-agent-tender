@@ -341,18 +341,18 @@ def chip_group(ctx: Ctx, path: str, param: str, title: str, chosen_csv: str,
     return f'<div class="crow"><b>{h(title)}</b><div class="chips">{"".join(chips)}</div></div>'
 
 
-def money_chips(ctx: Ctx, path: str, sm: str, zk: str, sum_counts: dict | None, zk_counts: dict | None,
-                **query) -> str:
-    """«Boshlang'ich summa» and «Zakalat» button rows (several bands at once)."""
-    from app.web.tables import PLEDGE_BANDS, SUM_BANDS
+def money_chips(ctx: Ctx, path: str, chosen: dict[str, str], band_counts: dict | None, **query) -> str:
+    """«Boshlang'ich summa», «Zakalat» and «Avans» button rows (several bands at once in each)."""
+    from app.web.tables import BAND_GROUPS, BAND_TITLES
 
-    query = {k: v for k, v in query.items() if k not in ("sm", "zk")}
-    return ('<div class="filtbox">'
-            + chip_group(ctx, path, "sm", "Boshlang'ich summa", sm,
-                         [(b[0], b[1], (sum_counts or {}).get(b[0], 0)) for b in SUM_BANDS], zk=zk, **query)
-            + chip_group(ctx, path, "zk", "Zakalat", zk,
-                         [(b[0], b[1], (zk_counts or {}).get(b[0], 0)) for b in PLEDGE_BANDS], sm=sm, **query)
-            + "</div>")
+    query = {k: v for k, v in query.items() if k not in BAND_GROUPS}
+    rows = []
+    for param, bands in BAND_GROUPS.items():
+        others = {k: v for k, v in chosen.items() if k != param}
+        counts = (band_counts or {}).get(param, {})
+        rows.append(chip_group(ctx, path, param, BAND_TITLES[param], chosen.get(param, ""),
+                               [(b[0], b[1], counts.get(b[0], 0)) for b in bands], **others, **query))
+    return f'<div class="filtbox">{"".join(rows)}</div>'
 
 
 def dir_chips(ctx: Ctx, path: str, yon: str, dir_counts: dict[str, int], **query) -> str:
@@ -456,7 +456,7 @@ def _usd_short(v: float) -> str:
 
 def tenders_page(ctx: Ctx, lots: list[Lot], *, q: str, verdict: str, status: str, counts: dict[str, int],
                  health: dict[str, dict], sort: str = "deadline", direction: str = "asc", nf: dict | None = None,
-                 sm: str = "", zk: str = "", sum_counts: dict | None = None, zk_counts: dict | None = None) -> str:
+                 sm: str = "", zk: str = "", av: str = "", band_counts: dict | None = None) -> str:
     from app.web.tables import LOT_COLS, pledge_uzs, table_html
 
     nf = nf or {}
@@ -475,13 +475,13 @@ def tenders_page(ctx: Ctx, lots: list[Lot], *, q: str, verdict: str, status: str
              f'{_opt("maybe", verdict, "Shartli")}{_opt("bad", verdict, "Yo‘q")}</select>'
              f'<select name="s">{_opt("open", status, "Ochiqlar")}{_opt("bidding", status, "Qatnashayotganlar")}'
              f'{_opt("all", status, "Hammasi (yopilgan va IT emaslar bilan)")}</select>'
-             f'<input type="hidden" name="sm" value="{h(sm)}"><input type="hidden" name="zk" value="{h(zk)}">'
+             f'<input type="hidden" name="sm" value="{h(sm)}"><input type="hidden" name="zk" value="{h(zk)}"><input type="hidden" name="av" value="{h(av)}">'
              f'{num_inputs(nf)}{_sort_inputs(sort, direction)}')
-    xl = ctx.url("/lots.xlsx", q=q, v=verdict, s=status, sm=sm, zk=zk, sort=sort, dir=direction, **_nf_query(nf))
+    xl = ctx.url("/lots.xlsx", q=q, v=verdict, s=status, sm=sm, zk=zk, av=av, sort=sort, dir=direction, **_nf_query(nf))
     down = [n for n, v in health.items() if v.get("alerted")]
     health_html = (f'<div class="flash err">Hozir ishlamayapti: {h(", ".join(down))}</div>' if down else "")
     table = table_html(ctx, "/lots", lots, LOT_COLS, sort=sort, direction=direction,
-                       query={"q": q, "v": verdict, "s": status, "sm": sm, "zk": zk, **_nf_query(nf)},
+                       query={"q": q, "v": verdict, "s": status, "sm": sm, "zk": zk, "av": av, **_nf_query(nf)},
                        detail=lambda lot: ctx.url(f"/lot/{lot.id}"),
                        bulk=[("bid", "Qatnashamiz", ""), ("ignore", "Kerak emas", "ghost"),
                              ("unbid", "Qatnashmaymiz", "ghost")], noun="lot",
@@ -493,7 +493,7 @@ def tenders_page(ctx: Ctx, lots: list[Lot], *, q: str, verdict: str, status: str
                   + (f" (eng kattasi: lot {h(biggest.external_id)} — {h(tc.money_uzs(pledge_uzs(biggest)))})" if biggest else "")
                   + (f"; {unknown} ta lotning zakalati so'mda hisoblanmadi" if unknown else "")
                   + ". Birja komissiyasi bunga kirmaydi.")
-    mchips = money_chips(ctx, "/lots", sm, zk, sum_counts, zk_counts, q=q, v=verdict, s=status, **_nf_query(nf))
+    mchips = money_chips(ctx, "/lots", {"sm": sm, "zk": zk, "av": av}, band_counts, q=q, v=verdict, s=status, **_nf_query(nf))
     return layout(ctx, "tenders", f"""{health_html}{mchips}<div class="stats">{stats}</div>{help_box(money_note)}
 {filter_bar(ctx, "/lots", inner, xlsx=xl)}{table}""", title="IT tenderlar",
                   sub="Davlat xaridlari: faqat IT xizmatlari · etender.uzex.uz va xarid.uzex.uz")
@@ -744,7 +744,7 @@ CATALOG_KINDS = (("goods", "Tovarlar"), ("service", "Xizmat / ish"))
 
 def catalog_page(ctx: Ctx, rows: list, *, kind: str, q: str, src: str, region: str, regions: list[str],
                  yon: str, dir_counts: dict[str, int], counts: dict[str, int], shown_limit: int, total: int, updated: dict, next_scan, nf: dict,
-                 sm: str = "", zk: str = "", sum_counts: dict | None = None, zk_counts: dict | None = None,
+                 sm: str = "", zk: str = "", av: str = "", band_counts: dict | None = None,
                  sort: str, direction: str, uzum: list | None = None, uzum_total: int = 0, big: float = 2.0) -> str:
     from app.web.tables import CATALOG_COLS, table_html
 
@@ -764,7 +764,7 @@ def catalog_page(ctx: Ctx, rows: list, *, kind: str, q: str, src: str, region: s
              + stat("Oxirgi yangilanish", fmt_local(max(updated.values())).split(" ")[-1] if updated else "—",
                     "keyingisi: " + (fmt_local(next_scan) if next_scan else "~30 daqiqada")))
     seg = "".join(
-        f'<a class="{"on" if key == kind else ""}" href="{h(ctx.url("/all", k=key, q=q, src=src, r=region, y=yon, sm=sm, zk=zk, **_nf_query(nf)))}">'
+        f'<a class="{"on" if key == kind else ""}" href="{h(ctx.url("/all", k=key, q=q, src=src, r=region, y=yon, sm=sm, zk=zk, av=av, **_nf_query(nf)))}">'
         f'{h(label)} <span class="muted">{counts.get(key, 0)}</span></a>'
         for key, label in CATALOG_KINDS)
 
@@ -782,24 +782,24 @@ def catalog_page(ctx: Ctx, rows: list, *, kind: str, q: str, src: str, region: s
              f'<select name="src">{_opt("", src, "Barcha manbalar")}{_opt("etender", src, "etender.uzex.uz")}'
              f'{_opt("xarid", src, "xarid.uzex.uz")}</select>'
              f'<input type="hidden" name="y" value="{h(yon)}"><input type="hidden" name="sm" value="{h(sm)}">'
-             f'<input type="hidden" name="zk" value="{h(zk)}">'
+             f'<input type="hidden" name="zk" value="{h(zk)}"><input type="hidden" name="av" value="{h(av)}">'
              f'<select name="r">{region_opts}</select>'
              f'<span class="grp">Summa $ {money_inp("min", "dan")}–{money_inp("max", "gacha")}</span>'
              f'{_sort_inputs(sort, direction)}')
-    xl = ctx.url("/all.xlsx", k=kind, q=q, src=src, r=region, y=yon, sm=sm, zk=zk, sort=sort, dir=direction, **_nf_query(nf))
+    xl = ctx.url("/all.xlsx", k=kind, q=q, src=src, r=region, y=yon, sm=sm, zk=zk, av=av, sort=sort, dir=direction, **_nf_query(nf))
     note = ""
     if total > shown_limit:
         note = (f'<p class="count">Jadvalda birinchi {shown_limit} tasi ko\'rsatilgan (jami {total}). '
                 "Qidiruv yoki filtr bilan toraytiring — Excel'da hammasi bor.</p>")
     table = table_html(ctx, "/all", rows[:shown_limit], CATALOG_COLS, sort=sort, direction=direction,
-                       query={"k": kind, "q": q, "src": src, "r": region, "y": yon, "sm": sm, "zk": zk, **_nf_query(nf)},
+                       query={"k": kind, "q": q, "src": src, "r": region, "y": yon, "sm": sm, "zk": zk, "av": av, **_nf_query(nf)},
                        detail=lambda r: ctx.url(f"/all/uzum/lot/{r.id}") if r.kind == "goods" else r.url,
                        bulk=[], noun="lot", external=lambda r: r.kind != "goods",
                        foot={"title": f"Jami: {len(rows)} ta lot", "pledge": f"<b>{h(tc.money_uzs(pledge_total))}</b>"}
                        if rows else None)
     pending = sum(1 for r in goods_rows if r.pledge_uzs is None)
     base = {"k": kind, "q": q, "src": src, "r": region, "y": yon, **_nf_query(nf)}
-    mchips = money_chips(ctx, "/all", sm, zk, sum_counts, zk_counts, **base)
+    mchips = money_chips(ctx, "/all", {"sm": sm, "zk": zk, "av": av}, band_counts, **base)
     money_note = ("«Kiritiladigan pul» — <b>zakalat</b>: ariza berganda birjadagi hisobingizda "
                   "bloklanadi, yutmasangiz qaytariladi. Filtrdagi hamma lotlarda qatnashish uchun jami "
                   f"<b>{h(tc.money_uzs(pledge_total))}</b> kerak (birja komissiyasi kirmaydi)."
@@ -826,7 +826,7 @@ def catalog_page(ctx: Ctx, rows: list, *, kind: str, q: str, src: str, region: s
               f'<span class="muted">— eng katta {len(uzum)} tasi (jami {uzum_total})</span> '
               f'<a class="btn ghost" href="{h(ctx.url("/all/uzum"))}">Hammasi →</a></h2>{top}'
               f'<h2 style="margin:22px 0 8px">Lotlar</h2>')
-    return layout(ctx, "goods", f"""{dir_chips(ctx, "/all", yon, dir_counts, k=kind, q=q, src=src, r=region, sm=sm, zk=zk, **_nf_query(nf))}{mchips}
+    return layout(ctx, "goods", f"""{dir_chips(ctx, "/all", yon, dir_counts, k=kind, q=q, src=src, r=region, sm=sm, zk=zk, av=av, **_nf_query(nf))}{mchips}
 <div class="stats">{stats}</div>{help_box(info, money_note)}{uz}
 {filter_bar(ctx, "/all", inner, xlsx=xl)}{note}{table}""", title="Tovar va xizmat tenderlari",
                   sub="Davlat xaridlari: tovar yetkazib berish va xizmatlar (IT alohida) · har 30 daqiqada yangilanadi",
@@ -839,14 +839,14 @@ PRICE_FILTERS = (("big", "Katta farq"), ("over", "Tender qimmat (Uzum arzon)"), 
 
 
 def prices_page(ctx: Ctx, rows: list, *, f: str, q: str, yon: str, dir_counts: dict[str, int],
-                sm: str = "", zk: str = "", sum_counts: dict | None = None, zk_counts: dict | None = None,
+                sm: str = "", zk: str = "", av: str = "", band_counts: dict | None = None,
                 counts: dict[str, int], state: dict, big: float, shown_limit: int, sort: str, direction: str,
                 next_run) -> str:
     from app.tenders.catalog import DIRECTION_LABEL
     from app.web.tables import lot_price_cols, price_cols, table_html
 
     ftabs = "".join(
-        f'<a class="{"on" if key == f else ""}" href="{h(ctx.url("/all/uzum", f=key, q=q, y=yon, sm=sm, zk=zk))}">'
+        f'<a class="{"on" if key == f else ""}" href="{h(ctx.url("/all/uzum", f=key, q=q, y=yon, sm=sm, zk=zk, av=av))}">'
         f'{h(label)} <span class="muted">{counts.get(key, 0)}</span></a>' for key, label in PRICE_FILTERS)
     at = state.get("at")
     last = fmt_local(datetime.fromisoformat(at)) if at else "hali yo'q"
@@ -860,13 +860,13 @@ def prices_page(ctx: Ctx, rows: list, *, f: str, q: str, yon: str, dir_counts: d
     inner = (f'<input type="hidden" name="f" value="{h(f)}">'
              f'<input type="search" name="q" value="{h(q)}" placeholder="Qidirish: mahsulot, buyurtmachi, lot raqami…">'
              f'<input type="hidden" name="y" value="{h(yon)}"><input type="hidden" name="sm" value="{h(sm)}">'
-             f'<input type="hidden" name="zk" value="{h(zk)}">{_sort_inputs(sort, direction)}')
-    xl = ctx.url("/all/uzum.xlsx", f=f, q=q, y=yon, sm=sm, zk=zk, sort=sort, dir=direction)
+             f'<input type="hidden" name="zk" value="{h(zk)}"><input type="hidden" name="av" value="{h(av)}">{_sort_inputs(sort, direction)}')
+    xl = ctx.url("/all/uzum.xlsx", f=f, q=q, y=yon, sm=sm, zk=zk, av=av, sort=sort, dir=direction)
     note = (f'<p class="count">Jadvalda birinchi {shown_limit} tasi (jami {len(rows)}) — Excel\'da hammasi bor.</p>'
             if len(rows) > shown_limit else "")
     lots = f == "lots"
     table = table_html(ctx, "/all/uzum", rows[:shown_limit], lot_price_cols(big) if lots else [c for c in price_cols(big) if c.key != "status"],
-                       sort=sort, direction=direction, query={"f": f, "q": q, "y": yon, "sm": sm, "zk": zk},
+                       sort=sort, direction=direction, query={"f": f, "q": q, "y": yon, "sm": sm, "zk": zk, "av": av},
                        detail=lambda r: ctx.url(f"/all/uzum/lot/{r.lot.id}"), bulk=[],
                        noun="lot" if lots else "mahsulot")
     info = ("Tovar lotlaridagi har bir mahsulotning <b>1 dona narxi</b> Uzum Market'dagi shu nomli "
@@ -879,8 +879,8 @@ def prices_page(ctx: Ctx, rows: list, *, f: str, q: str, yon: str, dir_counts: d
             "<span class=\"muted\">Uzum chakana narxi; tenderda yetkazib berish, kafolat va QQS ham bo'lishi mumkin. "
             "Uzum'da solishtirib bo'lmaydigan mahsulotlar (kg, litr…) narxini AI taxmin qiladi — 🤖 belgisi bilan, "
             "lot sahifasida.</span>")
-    return layout(ctx, "uzum", f"""{dir_chips(ctx, "/all/uzum", yon, dir_counts, f=f, q=q, sm=sm, zk=zk)}
-{money_chips(ctx, "/all/uzum", sm, zk, sum_counts, zk_counts, f=f, q=q, y=yon)}
+    return layout(ctx, "uzum", f"""{dir_chips(ctx, "/all/uzum", yon, dir_counts, f=f, q=q, sm=sm, zk=zk, av=av)}
+{money_chips(ctx, "/all/uzum", {"sm": sm, "zk": zk, "av": av}, band_counts, f=f, q=q, y=yon)}
 <div class="stats">{stats}</div>{help_box(info)}<div class="seg" style="margin:0 0 12px">{ftabs}</div>
 {filter_bar(ctx, "/all/uzum", inner, xlsx=xl)}{note}{table}""", title="Uzum narxlari bilan solishtirish",
                   sub="Tovar tenderlaridagi narx ↔ Uzum Market").replace(

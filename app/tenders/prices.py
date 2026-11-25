@@ -643,6 +643,7 @@ class PriceWatch:
             rate = rates.get(d.get("cur") or v.get("cur") or "UZS")
             info: dict[str, Any] = {"pledge_pct": pct or None,
                                     "pledge_uzs": (amount * rate if amount and rate else None) if pct else 0.0}
+            info["advance_pct"] = d.get("advance_pct")
             a = ai.get(lot_id) or {}
             if a and not a.get("error"):
                 info["ai_verdict"] = a.get("supplier_verdict") or ""

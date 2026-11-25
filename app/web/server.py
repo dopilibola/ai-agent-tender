@@ -7,6 +7,8 @@ separate tender / freelance lists and their buttons.
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 import contextlib
 import hashlib
 import logging
@@ -206,7 +208,8 @@ async def _query_lots(request: web.Request) -> tuple[list[Lot], dict]:
     if status != "all":  # "all" = everything, incl. closed and lots the AI said are not IT services
         lots = [lot for lot in lots if (not lot.deadline_at or as_utc(lot.deadline_at) > now) and is_it_lot(lot)]
     lots = tables.apply_num_filters(lots, nf, tables._usd_cost, tables._win, lambda lot: tables._a(lot).get("fit_score"))
-    lots, bands = _money_bands(request, lots, tables.lot_uzs, tables.pledge_uzs)
+    lots, bands, _ = _chip_filters(request, lots, {"sm": tables.lot_uzs, "zk": tables.pledge_uzs,
+                                                   "av": lambda lot: lot.advance_percent})
     lots = tables.sort_rows(lots, tables.LOT_COLS, sort, direction)
     live = [lot for lot in open_all if (not lot.deadline_at or as_utc(lot.deadline_at) > now) and is_it_lot(lot)]
     counts = {
@@ -385,6 +388,7 @@ def _set_lot_infos(infos: dict, rows: list) -> None:
         info = infos.get(r.lot.id) or {}
         r.lot.pledge_pct, r.lot.pledge_uzs = info.get("pledge_pct"), info.get("pledge_uzs")
         r.lot.ai_verdict, r.lot.win = info.get("ai_verdict") or "", info.get("win")
+        r.lot.advance_pct = info.get("advance_pct")
 
 
 async def _fill_lot_infos(pw, rows: list) -> None:
@@ -419,23 +423,26 @@ def _band_of(bands, chosen: set[str]):
     return lambda v: any(_in_band(v, b) for b in picked)
 
 
-def _money_bands(request: web.Request, rows: list, uzs, pledge) -> tuple[list, dict]:
-    """Boshlang'ich summa / Zakalat chips (?sm=…&zk=…): the rows that pass, and the counts for every button
-    (each group counted with the other group applied)."""
-    sm = _keys(request, "sm", {b[0] for b in tables.SUM_BANDS})
-    zk = _keys(request, "zk", {b[0] for b in tables.PLEDGE_BANDS})
-    in_sum, in_zk = _band_of(tables.SUM_BANDS, sm), _band_of(tables.PLEDGE_BANDS, zk)
+def _chip_filters(request: web.Request, rows: list, getters: dict, extra: dict | None = None
+                  ) -> tuple[list, dict, Callable]:
+    """Band chips (?sm=…&zk=…&av=…, see tables.BAND_GROUPS) plus any extra tests {param: row → bool}.
+    Returns the rows that pass, the chosen keys and button counts for the page, and keep(row, skip) —
+    every group's counts are taken with the *other* groups applied, so a button shows what a click gives."""
+    tests = dict(extra or {})
+    out: dict = {}
+    for param, bands in tables.BAND_GROUPS.items():
+        chosen = _keys(request, param, {b[0] for b in bands})
+        out[param] = ",".join(sorted(chosen))
+        if chosen:
+            match, get = _band_of(bands, chosen), getters[param]
+            tests[param] = lambda r, m=match, g=get: m(g(r))
 
-    def ts(r) -> bool:
-        return in_sum(uzs(r)) if sm else True
+    def keep(r, skip: str = "") -> bool:
+        return all(t(r) for k, t in tests.items() if k != skip)
 
-    def tz(r) -> bool:
-        return in_zk(pledge(r)) if zk else True
-
-    sum_counts = {b[0]: sum(1 for r in rows if tz(r) and _in_band(uzs(r), b)) for b in tables.SUM_BANDS}
-    zk_counts = {b[0]: sum(1 for r in rows if ts(r) and _in_band(pledge(r), b)) for b in tables.PLEDGE_BANDS}
-    return [r for r in rows if ts(r) and tz(r)], {"sm": ",".join(sorted(sm)), "zk": ",".join(sorted(zk)),
-                                                  "sum_counts": sum_counts, "zk_counts": zk_counts}
+    out["band_counts"] = {param: {b[0]: sum(1 for r in rows if keep(r, param) and _in_band(getters[param](r), b))
+                                  for b in bands} for param, bands in tables.BAND_GROUPS.items()}
+    return [r for r in rows if keep(r)], out, keep
 
 
 async def _query_catalog(request: web.Request) -> tuple[list, dict]:
@@ -447,8 +454,6 @@ async def _query_catalog(request: web.Request) -> tuple[list, dict]:
     region = request.query.get("r", "").strip()[:128]
     yset = _directions(request)
     yon = ",".join(sorted(yset))
-    sm = _keys(request, "sm", {b[0] for b in tables.SUM_BANDS})
-    zk = _keys(request, "zk", {b[0] for b in tables.PLEDGE_BANDS})
     q = request.query.get("q", "").strip()[:100]
     sort, direction = _sort_params(request, tables.CATALOG_COLS, "deadline", "asc")
     nf = {k: v for k, v in _num_filters(request).items() if k in ("min", "max")}
@@ -468,6 +473,7 @@ async def _query_catalog(request: web.Request) -> tuple[list, dict]:
         info = infos.get(r.id) or {}
         r.pledge_pct, r.pledge_uzs = info.get("pledge_pct"), info.get("pledge_uzs")
         r.ai_verdict, r.win = info.get("ai_verdict") or "", info.get("win")
+        r.advance_pct = info.get("advance_pct")
     regions = sorted({r.customer_region for r in live if r.customer_region})
     if src:
         live = [r for r in live if r.source == src]
@@ -478,29 +484,19 @@ async def _query_catalog(request: web.Request) -> tuple[list, dict]:
         live = [r for r in live if ql in r.title.lower() or ql in (r.customer_name or "").lower()
                 or ql in r.external_id or ql in (r.customer_region or "").lower()]
     live = tables.apply_num_filters(live, nf, lambda r: r.usd, lambda r: None, lambda r: None)
-    # Each chip group counts what the page would show with the *other* groups applied, so the numbers
-    # on the buttons always match what a click gives. Kind tabs count all three groups.
-    in_sum, in_zk = _band_of(tables.SUM_BANDS, sm), _band_of(tables.PLEDGE_BANDS, zk)
-    tests = {"y": lambda r: r.direction in yset if yset else True, "sm": lambda r: in_sum(r.uzs) if sm else True,
-             "zk": lambda r: in_zk(r.pledge_uzs) if zk else True}
-
-    def keep(r, skip: str = "") -> bool:
-        return all(t(r) for k, t in tests.items() if k != skip)
-
     in_kind = [r for r in live if r.kind == kind]
+    shown, bands, keep = _chip_filters(request, in_kind, {"sm": lambda r: r.uzs, "zk": lambda r: r.pledge_uzs,
+                                                          "av": lambda r: r.advance_pct},
+                                       {"y": lambda r: r.direction in yset} if yset else None)
     dir_counts: dict[str, int] = {}
     for r in in_kind:
         if keep(r, "y"):
             dir_counts[r.direction] = dir_counts.get(r.direction, 0) + 1
-    sum_counts = {b[0]: sum(1 for r in in_kind if keep(r, "sm") and _in_band(r.uzs, b)) for b in tables.SUM_BANDS}
-    zk_counts = {b[0]: sum(1 for r in in_kind if keep(r, "zk") and _in_band(r.pledge_uzs, b)) for b in tables.PLEDGE_BANDS}
     counts = {k: sum(r.kind == k and keep(r) for r in live) for k in ("goods", "service", "it")}
-    shown = [r for r in in_kind if keep(r)]
     shown = tables.sort_rows(shown, tables.CATALOG_COLS, sort, direction)
     next_scan = d.tenders.next_scan_at() if d.tenders else None
     return shown, {"kind": kind, "q": q, "src": src, "region": region, "regions": regions, "counts": counts,
-                   "yon": yon, "dir_counts": dir_counts, "sm": ",".join(sorted(sm)), "zk": ",".join(sorted(zk)),
-                   "sum_counts": sum_counts, "zk_counts": zk_counts,
+                   "yon": yon, "dir_counts": dir_counts, **bands,
                    "updated": updated, "next_scan": next_scan, "nf": nf, "sort": sort, "direction": direction,
                    "infos": infos}
 
@@ -568,7 +564,8 @@ async def _query_prices(request: web.Request) -> tuple[list, dict]:
         dir_counts[r.lot.direction] = dir_counts.get(r.lot.direction, 0) + 1
     if yset:
         rows = [r for r in rows if r.lot.direction in yset]
-    rows, bands = _money_bands(request, rows, lambda r: r.lot.uzs, lambda r: r.lot.pledge_uzs)
+    rows, bands, _ = _chip_filters(request, rows, {"sm": lambda r: r.lot.uzs, "zk": lambda r: r.lot.pledge_uzs,
+                                                   "av": lambda r: r.lot.advance_pct})
     lots = group_by_lot(rows)
     ok = [r for r in rows if r.status == "ok"]
     groups = {"all": ok, "over": [r for r in ok if r.ratio >= big],

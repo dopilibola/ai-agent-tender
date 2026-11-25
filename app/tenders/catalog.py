@@ -107,6 +107,7 @@ class CatalogRow:
     # Filled when shown, from the goods lot card and its AI summary (app/tenders/prices.py); not stored.
     pledge_pct: float | None = None
     pledge_uzs: float | None = None  # None = card not read yet; 0 = no deposit
+    advance_pct: float | None = None  # avans %, from the card; None = unknown
     ai_verdict: str = ""
     win: list[int] | None = None
 
