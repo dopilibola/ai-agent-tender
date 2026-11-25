@@ -102,6 +102,7 @@ class CatalogRow:
     lot_type: str | None
     is_category: bool
     usd: float | None = None  # filled when shown (today's rate); not stored
+    uzs: float | None = None  # start cost in so'm, filled when shown; not stored
     direction: str = ""  # yo'nalish key, see DIRECTIONS (computed on load, so new terms apply at once)
     # Filled when shown, from the goods lot card and its AI summary (app/tenders/prices.py); not stored.
     pledge_pct: float | None = None

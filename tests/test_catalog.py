@@ -101,6 +101,11 @@ async def test_catalog_page(client):
     furn = await (await client.get("/tender/all", params={"y": "furniture"})).text()
     assert "Kompyuter stollarini" in furn and "Уголь" not in furn
     assert "Mebel va inventar <span>1</span>" in html and "Yoqilg&#x27;i va energiya <span>1</span>" in html
+    assert "Boshlang&#x27;ich summa" in html and "Zakalatsiz" in html and "5 mlrd dan ko&#x27;p" in html
+    small = await (await client.get("/tender/all", params={"sm": "s1"})).text()  # 50 mln so'm lot
+    assert "Kompyuter stollarini" in small and "Уголь" not in small  # Уголь has no price
+    big = await (await client.get("/tender/all", params={"sm": "s4,s5"})).text()
+    assert "Kompyuter stollarini" not in big and "2 ta tanlangan" not in big
     both = await (await client.get("/tender/all", params={"y": "furniture,fuel"})).text()  # several at once
     assert "Kompyuter stollarini" in both and "Уголь" in both and "2 ta tanlangan" in both
     assert 'href="/tender/all?y=fuel' in both  # clicking a chosen one removes it

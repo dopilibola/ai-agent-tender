@@ -399,6 +399,25 @@ def _directions(request: web.Request) -> set[str]:
     return {k for k in (x.strip() for x in raw.split(",")) if k in DIRECTION_LABEL}
 
 
+def _keys(request: web.Request, name: str, allowed) -> set[str]:
+    raw = ",".join(request.query.getall(name, []))
+    return {k for k in (x.strip() for x in raw.split(",")) if k in allowed}
+
+
+def _in_band(v: float | None, band: tuple) -> bool:
+    _, _, lo, hi = band
+    if v is None:
+        return False
+    if hi == 0:  # «Zakalatsiz»
+        return v == 0
+    return lo < v <= hi if lo else 0 < v <= hi
+
+
+def _band_of(bands, chosen: set[str]):
+    picked = [b for b in bands if b[0] in chosen]
+    return lambda v: any(_in_band(v, b) for b in picked)
+
+
 async def _query_catalog(request: web.Request) -> tuple[list, dict]:
     d = request.app[DEPS]
     kind = request.query.get("k", "goods")
@@ -408,6 +427,8 @@ async def _query_catalog(request: web.Request) -> tuple[list, dict]:
     region = request.query.get("r", "").strip()[:128]
     yset = _directions(request)
     yon = ",".join(sorted(yset))
+    sm = _keys(request, "sm", {b[0] for b in tables.SUM_BANDS})
+    zk = _keys(request, "zk", {b[0] for b in tables.PLEDGE_BANDS})
     q = request.query.get("q", "").strip()[:100]
     sort, direction = _sort_params(request, tables.CATALOG_COLS, "deadline", "asc")
     nf = {k: v for k, v in _num_filters(request).items() if k in ("min", "max")}
@@ -423,6 +444,7 @@ async def _query_catalog(request: web.Request) -> tuple[list, dict]:
         infos = {}
     for r in live:
         r.usd = tc.usd(r.start_cost, r.currency, rate)
+        r.uzs = r.start_cost if r.currency == "UZS" else (r.usd * rate if r.usd is not None and rate else None)
         info = infos.get(r.id) or {}
         r.pledge_pct, r.pledge_uzs = info.get("pledge_pct"), info.get("pledge_uzs")
         r.ai_verdict, r.win = info.get("ai_verdict") or "", info.get("win")
@@ -436,19 +458,29 @@ async def _query_catalog(request: web.Request) -> tuple[list, dict]:
         live = [r for r in live if ql in r.title.lower() or ql in (r.customer_name or "").lower()
                 or ql in r.external_id or ql in (r.customer_region or "").lower()]
     live = tables.apply_num_filters(live, nf, lambda r: r.usd, lambda r: None, lambda r: None)
-    # Kind tabs count the yo'nalish too; the yo'nalish list counts what the current tab would show.
-    in_kind = live if kind == "all" else [r for r in live if r.kind == kind]
+    # Each chip group counts what the page would show with the *other* groups applied, so the numbers
+    # on the buttons always match what a click gives. Kind tabs count all three groups.
+    in_sum, in_zk = _band_of(tables.SUM_BANDS, sm), _band_of(tables.PLEDGE_BANDS, zk)
+    tests = {"y": lambda r: r.direction in yset if yset else True, "sm": lambda r: in_sum(r.uzs) if sm else True,
+             "zk": lambda r: in_zk(r.pledge_uzs) if zk else True}
+
+    def keep(r, skip: str = "") -> bool:
+        return all(t(r) for k, t in tests.items() if k != skip)
+
+    in_kind = [r for r in live if r.kind == kind]
     dir_counts: dict[str, int] = {}
     for r in in_kind:
-        dir_counts[r.direction] = dir_counts.get(r.direction, 0) + 1
-    if yset:
-        live = [r for r in live if r.direction in yset]
-    counts = {k: sum(r.kind == k for r in live) for k in ("goods", "service", "it")}
-    shown = [r for r in in_kind if r.direction in yset] if yset else in_kind
+        if keep(r, "y"):
+            dir_counts[r.direction] = dir_counts.get(r.direction, 0) + 1
+    sum_counts = {b[0]: sum(1 for r in in_kind if keep(r, "sm") and _in_band(r.uzs, b)) for b in tables.SUM_BANDS}
+    zk_counts = {b[0]: sum(1 for r in in_kind if keep(r, "zk") and _in_band(r.pledge_uzs, b)) for b in tables.PLEDGE_BANDS}
+    counts = {k: sum(r.kind == k and keep(r) for r in live) for k in ("goods", "service", "it")}
+    shown = [r for r in in_kind if keep(r)]
     shown = tables.sort_rows(shown, tables.CATALOG_COLS, sort, direction)
     next_scan = d.tenders.next_scan_at() if d.tenders else None
     return shown, {"kind": kind, "q": q, "src": src, "region": region, "regions": regions, "counts": counts,
-                   "yon": yon, "dir_counts": dir_counts,
+                   "yon": yon, "dir_counts": dir_counts, "sm": ",".join(sorted(sm)), "zk": ",".join(sorted(zk)),
+                   "sum_counts": sum_counts, "zk_counts": zk_counts,
                    "updated": updated, "next_scan": next_scan, "nf": nf, "sort": sort, "direction": direction,
                    "infos": infos}
 
@@ -468,9 +500,8 @@ async def catalog_index(request: web.Request) -> web.Response:
         try:
             cmp_rows, _ = await pw.comparison()
             gaps = [r for r in cmp_rows if r.status == "ok" and (r.ratio >= big or 0 < r.ratio <= 1 / big)]
-            yset = _directions(request)
-            if yset:  # the big-gap list follows the chosen yo'nalishlar too
-                gaps = [r for r in gaps if r.lot.direction in yset]
+            ids = {r.id for r in rows}  # the big-gap list follows every filter of the page
+            gaps = [r for r in gaps if r.lot.id in ids]
             uzum_total = len(gaps)
             uzum = sorted(gaps, key=lambda r: -abs(r.overpay))[:10]
             _set_lot_infos(infos, uzum)

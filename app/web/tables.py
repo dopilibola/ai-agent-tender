@@ -426,6 +426,13 @@ def _cat_win(r) -> int | None:
     return r.win[0] if r.win and len(r.win) == 2 else None
 
 
+# Money bands for the «Tovar va xizmat» chips: (key, label, from so'm, to so'm). Several can be chosen.
+SUM_BANDS = (("s1", "50 mln gacha", 0, 50e6), ("s2", "50–200 mln", 50e6, 200e6), ("s3", "200 mln – 1 mlrd", 200e6, 1e9),
+             ("s4", "1–5 mlrd", 1e9, 5e9), ("s5", "5 mlrd dan ko'p", 5e9, float("inf")))
+PLEDGE_BANDS = (("z0", "Zakalatsiz", 0, 0), ("z1", "5 mln gacha", 0, 5e6), ("z2", "5–20 mln", 5e6, 20e6),
+                ("z3", "20–100 mln", 20e6, 100e6), ("z4", "100 mln dan ko'p", 100e6, float("inf")))
+
+
 CATALOG_COLS: list[Col] = [
     Col("title", "Nomi", lambda r: r.title.lower(), lambda c, r, n: _t(_cat_title(r), 70), _cat_title,
         "asc", 70, "wide"),

@@ -130,6 +130,10 @@ summary{cursor:pointer}
 .dirs{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 14px;margin:0 0 12px}
 .dirs>b{font-size:13px;margin-right:8px}.dirs>.muted{font-size:12px}
 .dirs .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.filtbox{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:6px 14px;margin:0 0 12px}
+.crow{display:flex;gap:12px;align-items:flex-start;padding:6px 0}.crow+.crow{border-top:1px solid var(--line)}
+.crow>b{font-size:13px;min-width:120px;padding-top:4px}.crow .chips{display:flex;flex-wrap:wrap;gap:6px}
+.chipf.zero{opacity:.45}
 .chipf{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:4px 11px;
 font-size:13px;color:var(--ink);background:var(--field)}.chipf:hover{border-color:var(--line2);background:var(--soft);text-decoration:none}
 .chipf span{font:11px var(--mono);color:var(--muted)}
@@ -319,6 +323,22 @@ def num_inputs(f: dict, *, fit: bool = True) -> str:
     if fit:
         out += f'<span class="grp">Fit ≥ {inp("fit", "ball", "sm")}</span>'
     return out
+
+
+def chip_group(ctx: Ctx, path: str, param: str, title: str, chosen_csv: str,
+               options: list[tuple[str, str, int]], **query) -> str:
+    """A row of toggle buttons for one filter (?param=a,b); «Hammasi» clears it. Counts on every button."""
+    chosen = {k for k in chosen_csv.split(",") if k}
+
+    def link(sel: set[str]) -> str:
+        return h(ctx.url(path, **{param: ",".join(sorted(sel))}, **query))
+
+    chips = [f'<a class="chipf{"" if chosen else " on"}" href="{link(set())}">Hammasi</a>']
+    for k, label, n in options:
+        on = k in chosen
+        chips.append(f'<a class="chipf{" on" if on else ""}{" zero" if not n and not on else ""}" '
+                     f'href="{link(chosen ^ {k})}">{"✓ " if on else ""}{h(label)} <span>{n}</span></a>')
+    return f'<div class="crow"><b>{h(title)}</b><div class="chips">{"".join(chips)}</div></div>'
 
 
 def dir_chips(ctx: Ctx, path: str, yon: str, dir_counts: dict[str, int], **query) -> str:
@@ -707,6 +727,7 @@ CATALOG_KINDS = (("goods", "Tovarlar"), ("service", "Xizmat / ish"))
 
 def catalog_page(ctx: Ctx, rows: list, *, kind: str, q: str, src: str, region: str, regions: list[str],
                  yon: str, dir_counts: dict[str, int], counts: dict[str, int], shown_limit: int, total: int, updated: dict, next_scan, nf: dict,
+                 sm: str = "", zk: str = "", sum_counts: dict | None = None, zk_counts: dict | None = None,
                  sort: str, direction: str, uzum: list | None = None, uzum_total: int = 0, big: float = 2.0) -> str:
     from app.web.tables import CATALOG_COLS, table_html
 
@@ -726,7 +747,7 @@ def catalog_page(ctx: Ctx, rows: list, *, kind: str, q: str, src: str, region: s
              + stat("Oxirgi yangilanish", fmt_local(max(updated.values())).split(" ")[-1] if updated else "—",
                     "keyingisi: " + (fmt_local(next_scan) if next_scan else "~30 daqiqada")))
     seg = "".join(
-        f'<a class="{"on" if key == kind else ""}" href="{h(ctx.url("/all", k=key, q=q, src=src, r=region, y=yon, **_nf_query(nf)))}">'
+        f'<a class="{"on" if key == kind else ""}" href="{h(ctx.url("/all", k=key, q=q, src=src, r=region, y=yon, sm=sm, zk=zk, **_nf_query(nf)))}">'
         f'{h(label)} <span class="muted">{counts.get(key, 0)}</span></a>'
         for key, label in CATALOG_KINDS)
 
@@ -743,22 +764,31 @@ def catalog_page(ctx: Ctx, rows: list, *, kind: str, q: str, src: str, region: s
              f'<input type="search" name="q" value="{h(q)}" placeholder="Qidirish: nomi, buyurtmachi, lot raqami…">'
              f'<select name="src">{_opt("", src, "Barcha manbalar")}{_opt("etender", src, "etender.uzex.uz")}'
              f'{_opt("xarid", src, "xarid.uzex.uz")}</select>'
-             f'<input type="hidden" name="y" value="{h(yon)}">'
+             f'<input type="hidden" name="y" value="{h(yon)}"><input type="hidden" name="sm" value="{h(sm)}">'
+             f'<input type="hidden" name="zk" value="{h(zk)}">'
              f'<select name="r">{region_opts}</select>'
              f'<span class="grp">Summa $ {money_inp("min", "dan")}–{money_inp("max", "gacha")}</span>'
              f'{_sort_inputs(sort, direction)}')
-    xl = ctx.url("/all.xlsx", k=kind, q=q, src=src, r=region, y=yon, sort=sort, dir=direction, **_nf_query(nf))
+    xl = ctx.url("/all.xlsx", k=kind, q=q, src=src, r=region, y=yon, sm=sm, zk=zk, sort=sort, dir=direction, **_nf_query(nf))
     note = ""
     if total > shown_limit:
         note = (f'<p class="count">Jadvalda birinchi {shown_limit} tasi ko\'rsatilgan (jami {total}). '
                 "Qidiruv yoki filtr bilan toraytiring — Excel'da hammasi bor.</p>")
     table = table_html(ctx, "/all", rows[:shown_limit], CATALOG_COLS, sort=sort, direction=direction,
-                       query={"k": kind, "q": q, "src": src, "r": region, "y": yon, **_nf_query(nf)},
+                       query={"k": kind, "q": q, "src": src, "r": region, "y": yon, "sm": sm, "zk": zk, **_nf_query(nf)},
                        detail=lambda r: ctx.url(f"/all/uzum/lot/{r.id}") if r.kind == "goods" else r.url,
                        bulk=[], noun="lot", external=lambda r: r.kind != "goods",
                        foot={"title": f"Jami: {len(rows)} ta lot", "pledge": f"<b>{h(tc.money_uzs(pledge_total))}</b>"}
                        if rows else None)
     pending = sum(1 for r in goods_rows if r.pledge_uzs is None)
+    from app.web.tables import PLEDGE_BANDS, SUM_BANDS
+    base = {"k": kind, "q": q, "src": src, "r": region, "y": yon, **_nf_query(nf)}
+    money_chips = ('<div class="filtbox">'
+                   + chip_group(ctx, "/all", "sm", "Boshlang'ich summa", sm,
+                                [(b[0], b[1], (sum_counts or {}).get(b[0], 0)) for b in SUM_BANDS], zk=zk, **base)
+                   + chip_group(ctx, "/all", "zk", "Zakalat", zk,
+                                [(b[0], b[1], (zk_counts or {}).get(b[0], 0)) for b in PLEDGE_BANDS], sm=sm, **base)
+                   + "</div>")
     money_note = ("«Kiritiladigan pul» — <b>zakalat</b>: ariza berganda birjadagi hisobingizda "
                   "bloklanadi, yutmasangiz qaytariladi. Filtrdagi hamma lotlarda qatnashish uchun jami "
                   f"<b>{h(tc.money_uzs(pledge_total))}</b> kerak (birja komissiyasi kirmaydi)."
@@ -786,7 +816,7 @@ def catalog_page(ctx: Ctx, rows: list, *, kind: str, q: str, src: str, region: s
               f'<a class="btn ghost" href="{h(ctx.url("/all/uzum"))}">Hammasi →</a></h2>{top}'
               f'<h2 style="margin:22px 0 8px">Lotlar</h2>')
     return layout(ctx, "goods", f"""<div class="stats">{stats}</div>{help_box(info, money_note)}
-{dir_chips(ctx, "/all", yon, dir_counts, k=kind, q=q, src=src, r=region, **_nf_query(nf))}{uz}
+{dir_chips(ctx, "/all", yon, dir_counts, k=kind, q=q, src=src, r=region, sm=sm, zk=zk, **_nf_query(nf))}{money_chips}{uz}
 {filter_bar(ctx, "/all", inner, xlsx=xl)}{note}{table}""", title="Tovar va xizmat tenderlari",
                   sub="Davlat xaridlari: tovar yetkazib berish va xizmatlar (IT alohida) · har 30 daqiqada yangilanadi",
                   tools=f'<div class="seg">{seg}</div>').replace(
