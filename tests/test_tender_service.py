@@ -229,3 +229,29 @@ def test_due_reminders(settings, sessionmaker, hours_before, expected):
     got = set(svc.due_reminders(lot, now))
     assert got - {"deposit"} == expected - {"deposit"}
     assert "deposit" in got
+
+
+async def test_one_broken_card_does_not_stop_the_scan(settings, sessionmaker):
+    """A card that will not open (slow site page) is skipped and tried again next scan; the rest are read."""
+    svc, source, sender = make_world(settings, sessionmaker)
+    real = source.get_lot
+    broken = {"523525"}
+
+    async def flaky(external_id):
+        if external_id in broken:
+            source.detail_calls.append(external_id)
+            raise ValueError("karta o'qilmadi")
+        return await real(external_id)
+
+    source.get_lot = flaky
+    await svc.run_scan(NOW)
+    assert "523525" not in await lots(sessionmaker)
+    async with sessionmaker() as s:
+        seen = (await s.scalars(select(SeenLot).where(SeenLot.external_id == "523525"))).one()
+        assert not seen.detail_checked  # stays in the queue
+        health = await svc.health()
+    assert not health.get("etender", {}).get("alerted")
+
+    broken.clear()  # the page loads on the next scan
+    await svc.run_scan(NOW + timedelta(minutes=30))
+    assert (await lots(sessionmaker))["523525"].status == LotStatus.NOTIFIED

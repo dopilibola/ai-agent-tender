@@ -160,6 +160,7 @@ class PriceCheckConfig(BaseModel):
     enabled: bool = True
     interval_min: int = Field(30, ge=10)
     max_lots_per_run: int = Field(60, ge=0)        # lot cards opened per run (item lines are cached)
+    max_phone_lots_per_run: int = Field(15, ge=0)  # of those, cards read in the phone's Chrome
     max_searches_per_run: int = Field(80, ge=0)    # Uzum searches on the phone per run
     cache_days: float = Field(3, gt=0)             # an item name is searched again after this many days
     delay_s: float = Field(4, ge=1)                # pause between two Uzum searches

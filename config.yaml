@@ -108,7 +108,9 @@ tenders:
   sources:
     etender: {enabled: true}
     xarid: {enabled: true}        # xarid.uzex.uz — taklif so'rovi (ochiq API)
-    # xt-xarid.uz: robots.txt /api/ ni taqiqlaydi va sayt so'rovlarga javob bermadi (17.11.2026) — o'chiq
+    xarid_tanlov: {enabled: true} # xarid.uzex.uz — tanlov (ochiq API, bot o'z nomi bilan)
+    xarid_auction: {enabled: true} # xarid.uzex.uz — auksion: A23 telefon Chrome'ida o'qiladi (API token so'raydi)
+    hayotbirja: {enabled: true}   # xt-xarid.uz (Hayot birja): /procedure/ sahifalari telefon Chrome'ida (robots.txt /api/ ni taqiqlaydi)
 
   prices:                         # 🛒 Uzum narxlari, tovar lotlari kartasi va AI xulosasi
     max_lots_per_run: 250         # lot kartalari (HTTP, telefon emas) bir tekshiruvda

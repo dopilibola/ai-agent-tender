@@ -211,7 +211,8 @@ class TenderService:
                 )
             ).all()
 
-        budget = self.cfg.max_detail_fetches_per_run
+        budget = min(self.cfg.max_detail_fetches_per_run, getattr(source, "max_details", 10**6))
+        fails = 0
         for seen in pending:
             summary = listed.get(seen.external_id)
             if summary is None:  # no longer open — nothing to check
@@ -220,7 +221,18 @@ class TenderService:
             if budget <= 0:
                 break
             budget -= 1
-            record = await source.get_lot(seen.external_id)
+            try:
+                record = await source.get_lot(seen.external_id)
+            except Exception as e:
+                # One slow or broken card must not stop the rest: it stays unchecked and is tried next scan.
+                # Three in a row means the site itself is down → the source is reported as failing.
+                fails += 1
+                log.warning("tenders.detail_failed",
+                            extra={"source": source.name, "lot": seen.external_id, "err": str(e)[:200]})
+                if fails >= 3:
+                    raise
+                continue
+            fails = 0
             stats.details += 1
             m = self.filter.match(summary.title, record.title, record.description)
             if m.is_it and record.is_open:

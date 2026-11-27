@@ -115,6 +115,8 @@ def items_from_record(rec: LotRecord) -> list[Item]:
                          if isinstance(p, dict) and "измерения" in (p.get("propertyName") or "")), "")
             out.append(Item(_clean(x.get("productName") or x.get("description")), _num(x.get("quantity")), unit,
                             _num(x.get("price")) or 0, _clean(x.get("productCode"))))
+    else:  # xarid_tanlov, xarid_auction, hayotbirja keep ready item lines in raw["items"]
+        out = [Item.from_json(x) for x in raw.get("items") or [] if isinstance(x, dict)]
     return [i for i in out if i.name]
 
 
@@ -473,7 +475,15 @@ class PriceWatch:
         mine = [r for r in lots if r.source in self.tenders.sources]
         new = sorted((r for r in mine if r.id not in have), key=size, reverse=True)
         old = sorted((r for r in mine if r.id in have and not have[r.id].get("d")), key=size, reverse=True)
-        todo = (new + old)[: self.cfg.max_lots_per_run]  # cards read before details were kept: once more
+        todo, phone_left = [], self.cfg.max_phone_lots_per_run
+        for r in new + old:  # cards read before details were kept: once more
+            if len(todo) >= self.cfg.max_lots_per_run:
+                break
+            if getattr(self.tenders.sources[r.source], "phone_based", False):
+                if phone_left <= 0:  # each phone card takes ~10 s of the shared phone
+                    continue
+                phone_left -= 1
+            todo.append(r)
         done = fails = 0
         for r in todo:
             try:

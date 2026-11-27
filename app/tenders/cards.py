@@ -13,7 +13,13 @@ from app.db.models import Lot, LotStatus
 from app.tenders.timeutil import fmt_local, remaining_uz
 
 UNKNOWN_CUSTOMER = "buyurtmachi noma'lum"
-SOURCE_NAME = {"etender": "etender", "xarid": "xarid"}
+SOURCE_NAME = {"etender": "etender", "xarid": "xarid", "xarid_tanlov": "xarid tanlov",
+               "xarid_auction": "xarid auksion", "hayotbirja": "Hayot birja"}
+# Full site names for the site's source filter and notes (order = order in the filter).
+SOURCE_SITE = {"etender": "etender.uzex.uz", "xarid": "xarid.uzex.uz (taklif so'rovi)",
+               "xarid_tanlov": "xarid.uzex.uz (tanlov)", "xarid_auction": "xarid.uzex.uz (auksion)",
+               "hayotbirja": "xt-xarid.uz (Hayot birja)"}
+ALL_SITES = "etender.uzex.uz, xarid.uzex.uz va xt-xarid.uz (Hayot birja)"
 VERDICT_BADGE = {"QATNASHAMIZ": "✅ QATNASHAMIZ", "SHARTLI": "🟡 SHARTLI", "YO'Q": "❌ YO'Q"}
 STATUS_UZ = {
     LotStatus.NEW: "🆕 yangi",

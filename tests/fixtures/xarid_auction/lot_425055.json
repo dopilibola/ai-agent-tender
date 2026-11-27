@@ -1,0 +1,43 @@
+{
+ "num": "26111007425055",
+ "cat": "Изделия готовые прочие",
+ "info": {
+  "Buyurtmachining nomi": "Халк таълими булими марказлашган хисобхонаси",
+  "Boshlanish sanasi": "23.11.2026 00:31:24",
+  "Tugash sanasi": "30.11.2026 10:00:00",
+  "Manzil": "Хорезмская область Шаватский район Шовот тумани Уста-Содик кўчаси 10-уй",
+  "Bog‘lanish uchun": "3454527",
+  "Yetkazib berish joyi": "Хорезмская область Шаватский район Шовот тумани Уста-Содик кўчаси 10-уй",
+  "Yetkazib berish muddati": "10 kun",
+  "Faylni tavsiflash": "“Art” o‘quv dasturi asosida tashkil etilgan maktablarni jixozlar bilan ta’minlash",
+  "Status": "Опубликован",
+  "Ishtirokchilar soni": "2"
+ },
+ "products": [
+  {
+   "n": "Комплект ударных инструментов",
+   "q": "1"
+  }
+ ],
+ "specs": [
+  [
+   "1",
+   "компл",
+   "Вид: Мембранофоны",
+   "3 000 000 So'm",
+   "2 880 000 So'm",
+   "2 820 000 So'm"
+  ],
+  [
+   "1",
+   "компл",
+   "Вид: Мембранофоны",
+   "3 000 000 So'm",
+   "2 880 000 So'm",
+   "2 820 000 So'm"
+  ]
+ ],
+ "descs": [
+  "Ritmik cholg‘ular to‘plami (marakas, tamburin, uchburchak, baraban va boshqalar)1 to‘plam (25–30 dona)"
+ ]
+}

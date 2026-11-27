@@ -496,7 +496,7 @@ def tenders_page(ctx: Ctx, lots: list[Lot], *, q: str, verdict: str, status: str
     mchips = money_chips(ctx, "/lots", {"sm": sm, "zk": zk, "av": av}, band_counts, q=q, v=verdict, s=status, **_nf_query(nf))
     return layout(ctx, "tenders", f"""{health_html}{mchips}<div class="stats">{stats}</div>{help_box(money_note)}
 {filter_bar(ctx, "/lots", inner, xlsx=xl)}{table}""", title="IT tenderlar",
-                  sub="Davlat xaridlari: faqat IT xizmatlari · etender.uzex.uz va xarid.uzex.uz")
+                  sub=f"Davlat xaridlari: faqat IT xizmatlari · {tc.ALL_SITES}")
 
 
 def _nf_query(nf: dict) -> dict:
@@ -779,8 +779,8 @@ def catalog_page(ctx: Ctx, rows: list, *, kind: str, q: str, src: str, region: s
     region_opts = _opt("", region, "Barcha hududlar") + "".join(_opt(x, region, x) for x in regions)
     inner = (f'<input type="hidden" name="k" value="{h(kind)}">'
              f'<input type="search" name="q" value="{h(q)}" placeholder="Qidirish: nomi, buyurtmachi, lot raqami…">'
-             f'<select name="src">{_opt("", src, "Barcha manbalar")}{_opt("etender", src, "etender.uzex.uz")}'
-             f'{_opt("xarid", src, "xarid.uzex.uz")}</select>'
+             f'<select name="src">{_opt("", src, "Barcha manbalar")}'
+             + "".join(_opt(k, src, v) for k, v in tc.SOURCE_SITE.items()) + "</select>"
              f'<input type="hidden" name="y" value="{h(yon)}"><input type="hidden" name="sm" value="{h(sm)}">'
              f'<input type="hidden" name="zk" value="{h(zk)}"><input type="hidden" name="av" value="{h(av)}">'
              f'<select name="r">{region_opts}</select>'
@@ -806,13 +806,14 @@ def catalog_page(ctx: Ctx, rows: list, *, kind: str, q: str, src: str, region: s
                   + (f" {pending} ta lotning kartasi hali o'qilmagan («…») — har 30 daqiqada navbatdagilari o'qiladi."
                      if pending else "")
                   + " «AI xulosa» va «Yutish %» — tovar lotini AI yetkazib beruvchi ko'zi bilan baholaydi "
-                  "(har 30 daqiqada yangi lotlar). xarid.uzex.uz lotlarida zakalat ko'rsatilmaydi.")
-    info = ("Davlat xaridlari (etender.uzex.uz va xarid.uzex.uz) dagi ochiq tovar va xizmat lotlari "
+                  "(har 30 daqiqada yangi lotlar). xarid.uzex.uz va Hayot birja lotlarida zakalat ko'rsatilmaydi.")
+    info = (f"Davlat xaridlari ({tc.ALL_SITES}) dagi ochiq tovar va xizmat lotlari "
             "(IT lotlar alohida — «IT tenderlar» bo'limida). "
             "Ro'yxat har 30 daqiqada avtomatik yangilanadi. Xizmat lot qatorini bossangiz — lot asl saytda ochiladi. "
             "Tovar lotini bossangiz — lot haqida batafsil ma'lumot va AI xulosasi ochiladi. "
             "xarid.uzex.uz ro'yxatida mahsulot nomi yo'q, faqat kategoriya ko'rinadi. "
-            f'<span class="muted">({h(upd("etender"))} · {h(upd("xarid"))})</span>')
+            "xarid auksion va Hayot birja ro'yxati A23 telefonining Chrome'ida o'qiladi. "
+            f'<span class="muted">({h(" · ".join(upd(k) for k in tc.SOURCE_NAME if k in updated))})</span>')
     uz = ""
     if uzum:
         from app.web.tables import gap_lot_cols, price_cols

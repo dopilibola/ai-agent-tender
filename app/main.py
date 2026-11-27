@@ -86,7 +86,8 @@ async def main() -> None:
     tender_service = TenderService(
         settings,
         sessionmaker,
-        build_sources(tcfg) if tcfg.enabled else {},
+        build_sources(tcfg, phone_cfg=settings.config.phone, data_dir=settings.secrets.data_dir)
+        if tcfg.enabled else {},
         feeds["tender"],
         fx=UsdRate(sessionmaker),
         analyzer=TenderAnalyzer(gemini, settings, sessionmaker) if tcfg.analysis.enabled else None,

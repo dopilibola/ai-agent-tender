@@ -450,7 +450,7 @@ async def _query_catalog(request: web.Request) -> tuple[list, dict]:
     kind = request.query.get("k", "goods")
     kind = kind if kind in ("goods", "service") else "goods"  # IT lots live on «IT tenderlar» (/lots)
     src = request.query.get("src", "")
-    src = src if src in ("etender", "xarid") else ""
+    src = src if src in tc.SOURCE_SITE else ""
     region = request.query.get("r", "").strip()[:128]
     yset = _directions(request)
     yon = ",".join(sorted(yset))
