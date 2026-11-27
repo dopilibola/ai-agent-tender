@@ -36,7 +36,7 @@ SECTIONS = {  # url part → lot type shown on the site
 OPEN_STATUSES = {"тендер очиқ", "очиқ", "эълон қилинган", "тендер открыт", "открыт", "открыта", "опубликован",
                  "опубликовано", "ochiq", "tender ochiq", "e'lon qilingan", "eʼlon qilingan"}
 GENERIC = re.compile(r"^(пгз из агенства|takliflar so|таклифлар сўрови|многолотовая процедура|тендер$|tender$|"
-                     r"отбор$|танлаш$|аукцион$)", re.I)
+                     r"отбор$|танлаш$|аукцион$|энг яхши таклиф|eng yaxshi taklif|отбор наилучших|lot \d+$)", re.I)
 MAX_MORE = 14  # «show more» presses per section (50 cards each)
 MAY_BE_EMPTY = {"local_reduction"}  # often has no lots at all
 PAGE_WAIT_S = 45  # xt-xarid.uz pages can take half a minute to render
@@ -117,10 +117,13 @@ def parse_card(section: str, r: dict, now: datetime) -> tuple[LotSummary, str] |
     cur = next((x[-3:] for x in lines if re.search(r"\d\.\d\d\s*[A-Z]{3}$", x)), "UZS")
     left = time_left(lines)
     deadline = (now + left).replace(second=0, microsecond=0) if left else None
+    title = _clean(title)
     return LotSummary(
-        source="hayotbirja", external_id=str(r["id"]), url=lot_url(r["id"]), title=_clean(title),
+        source="hayotbirja", external_id=str(r["id"]), url=lot_url(r["id"]), title=title,
         deadline_at=deadline, start_cost=cost, currency=cur, customer_name=org,
         customer_region=_clean(region) or None, lot_type=SECTIONS.get(section, section),
+        # "ПГЗ из Агенства №…" says nothing: the stored lot takes the item names from its card instead
+        title_is_category=bool(GENERIC.match(title)) or len(title) < 20,
     ), status
 
 
@@ -216,9 +219,9 @@ def parse_lot(lot_id: str, d: dict, summary: LotSummary | None = None) -> LotRec
 class HayotbirjaSource:
     name = "hayotbirja"
     title = "xt-xarid.uz (Hayot birja)"
-    scan_descriptions = True  # list titles say little: every new lot's card is read once
+    scan_descriptions = True
     phone_based = True
-    max_details = 25  # cards per scan (each ~10 s of the phone)
+    max_details = 35  # cards per scan (each ~10 s of the phone)
 
     def __init__(self, browser: PhoneBrowser, cache_dir: Path, *, sections: list[str] | None = None,
                  max_more: int = MAX_MORE):
@@ -280,6 +283,14 @@ class HayotbirjaSource:
         log.info("hayotbirja.list_open", extra={"count": len(out), "failed": failed})
         return list(out.values())
 
+    @staticmethod
+    def needs_detail(lot: LotSummary) -> bool:
+        """Open the card only when the list title says nothing ("ПГЗ из Агенства №…", "Takliflar so‘rovi");
+        a lot whose own name is in the list ("Труба водосточная", "Йўл тўсиқлари") is judged by that name,
+        so the phone is spent on the cards that can still turn out to be IT. (IT-looking names are always
+        opened — the scan does that.)"""
+        return bool(GENERIC.match(lot.title)) or len(lot.title) < 20
+
     def _remembered(self, lot: LotSummary, now: datetime) -> LotSummary:
         st = self.state.data.setdefault(lot.external_id, {})
         st["seen"] = now.isoformat()
@@ -292,7 +303,8 @@ class HayotbirjaSource:
         elif st.get("d"):
             lot.deadline_at = datetime.fromisoformat(st["d"])
         if st.get("t") and (GENERIC.match(lot.title) or len(lot.title) < 20):
-            lot.title = st["t"]
+            lot.title = st["t"]  # item names read from the card earlier
+            lot.title_is_category = False
         return lot
 
     async def get_lot(self, external_id: str) -> LotRecord:

@@ -142,3 +142,25 @@ async def test_hayotbirja_site_down_gives_up_fast(tmp_path):
     with pytest.raises(ValueError):
         await src.list_open()
     assert src.calls == ["tender", "selection"]  # no second round while nothing loads
+
+
+def test_hayotbirja_opens_only_cards_with_generic_titles():
+    def lot(title):
+        return hb.LotSummary(source="hayotbirja", external_id="1", url="u", title=title)
+
+    for t in ["ПГЗ из Агенства №419022", "Takliflar so‘rovi", "Энг яхши таклифларни танлаб олиш", "Lot 9802393",
+              "Многолотовая процедура"]:
+        assert hb.HayotbirjaSource.needs_detail(lot(t)), t
+    for t in ["Труба водосточная металлическая, Отвод", "Махсус техникани таъмирлаш хизмати"]:
+        assert not hb.HayotbirjaSource.needs_detail(lot(t)), t
+
+
+def test_hayotbirja_generic_title_is_marked_and_replaced(tmp_path):
+    cards = load("hayotbirja/list_tender.json")
+    pgz = next(r for r in cards if r["id"] == "9761468")
+    lot, _ = hb.parse_card("tender", pgz, NOW)
+    assert lot.title.startswith("ПГЗ из Агенства") and lot.title_is_category  # card name wins when stored
+    src = hb.HayotbirjaSource(browser=None, cache_dir=tmp_path)
+    src.state.data["9761468"] = {"t": "Сунъий қон айланиши аппаратлари жамланмаси"}
+    again = src._remembered(lot, NOW)
+    assert again.title == "Сунъий қон айланиши аппаратлари жамланмаси" and not again.title_is_category

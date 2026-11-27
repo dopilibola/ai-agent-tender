@@ -192,6 +192,9 @@ class TenderService:
                 m = self.filter.match(row.title)
                 hard_excluded = bool(m.excluded_by and not m.override)
                 scan_all = self.cfg.scan_descriptions and getattr(source, "scan_descriptions", True)
+                needs = getattr(source, "needs_detail", None)  # phone sources: only cards that can change the answer
+                if scan_all and needs is not None:
+                    scan_all = needs(row)
                 skip_detail = hard_excluded or (not m.is_it and not scan_all)
                 s.add(
                     SeenLot(
@@ -220,8 +223,14 @@ class TenderService:
             if summary is None:  # no longer open — nothing to check
                 await self._mark_checked(seen.id)
                 continue
+            needs = getattr(source, "needs_detail", None)
+            if needs is not None and not seen.name_matched and not needs(summary):
+                await self._mark_checked(seen.id)  # queued before needs_detail existed: the name says enough
+                continue
             if budget <= 0:
-                break
+                if needs is None:
+                    break
+                continue  # keep clearing the cards that need no visit; the rest wait for the next scan
             budget -= 1
             try:
                 record = await source.get_lot(seen.external_id)
