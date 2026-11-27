@@ -162,6 +162,10 @@ async def main() -> None:
                               id="tenders_prices", max_instances=1, coalesce=True)
             price_watch.next_run_at = lambda: price_job.next_run_time
         tender_service.prices = price_watch
+        if tcfg.chat.enabled:
+            from app.tenders.chat import LotChat
+
+            tender_service.chat = LotChat(gemini, settings, sessionmaker, tender_service)
         scheduler.add_job(tender_service.run_reminders, "interval", minutes=10, id="tenders_reminders",
                           max_instances=1, coalesce=True)
         scheduler.add_job(tender_service.send_daily_report, "cron", hour=hh, minute=mm,

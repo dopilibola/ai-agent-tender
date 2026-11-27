@@ -131,8 +131,8 @@ async def security_headers(request: web.Request, handler):
     resp.headers.setdefault("Referrer-Policy", "no-referrer")
     resp.headers.setdefault(
         "Content-Security-Policy",
-        "default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; img-src 'self' data:; form-action 'self'; "
-        "base-uri 'none'; frame-ancestors 'none'",
+        "default-src 'none'; script-src 'self'; connect-src 'self'; style-src 'unsafe-inline'; img-src 'self' data:; "
+        "form-action 'self'; base-uri 'none'; frame-ancestors 'none'",
     )
     resp.headers.setdefault("Cache-Control", "private, no-store")
     resp.headers.setdefault("X-Robots-Tag", "noindex, nofollow")
@@ -630,6 +630,107 @@ async def prices_lot_ai(request: web.Request) -> web.Response:
     raise web.HTTPSeeOther(f"{d.base}/all/uzum/lot/{lot_id}#ai")
 
 
+# ── 🤖 AI chat about one lot ────────────────────────────────────────────────
+def _chat(request: web.Request):
+    d = request.app[DEPS]
+    chat = getattr(d.tenders, "chat", None) if d.tenders else None
+    if chat is None:
+        raise web.HTTPNotFound(text="AI chat o'chirilgan (config.yaml → tenders.chat.enabled).")
+    return d, chat
+
+
+def _chat_key(request: web.Request) -> str:
+    from app.tenders.chat import KEY_RE
+
+    key = request.match_info["key"]
+    if not KEY_RE.match(key):
+        raise web.HTTPNotFound()
+    return key
+
+
+async def _chat_index(request: web.Request, *, value: str = "", error: str = "", status: int = 200) -> web.Response:
+    d, chat = _chat(request)
+    ctx = _ctx(request)
+    now = now_utc()
+    it_lots = [lot for lot in await d.tenders.open_lots(now)][:12]
+    return _html(views.chat_index_page(ctx, await chat.recent(), it_lots, value=value, error=error), status)
+
+
+async def chat_index(request: web.Request) -> web.Response:
+    return await _chat_index(request)
+
+
+async def chat_open(request: web.Request) -> web.Response:
+    from app.tenders.chat import ChatError
+
+    d, back = await _require_owner(request)
+    _, chat = _chat(request)
+    form = await request.post()
+    url = str(form.get("url") or "").strip()[:500]
+    try:
+        key = await chat.open(url, fresh=bool(form.get("fresh")))
+    except ChatError as e:
+        return await _chat_index(request, value=url, error=str(e), status=400)
+    raise web.HTTPSeeOther(f"{d.base}/chat/{key}")
+
+
+async def chat_new(request: web.Request) -> web.Response:
+    """«🤖 AI'dan so'rash» links on lot pages: GET with ?ref=<source>-<id> (opening only reads the lot)."""
+    from app.tenders.chat import ChatError
+
+    d, chat = _chat(request)
+    ref = request.query.get("ref", "")[:500]
+    try:
+        key = await chat.open(ref)
+    except ChatError as e:
+        return await _chat_index(request, value=ref, error=str(e), status=400)
+    raise web.HTTPSeeOther(f"{d.base}/chat/{key}")
+
+
+async def chat_view(request: web.Request) -> web.Response:
+    d, chat = _chat(request)
+    key = _chat_key(request)
+    data = await chat.get(key)
+    if data is None:
+        raise web.HTTPSeeOther(f"{d.base}/chat/new?" + urlencode({"ref": key}))
+    data = await chat.resume(key, data)
+    ctx = _ctx(request)
+    return _page(request, ctx, views.chat_page(ctx, key, data))
+
+
+async def chat_ask(request: web.Request) -> web.Response:
+    """Without JS: a normal form post that waits for the answer. With JS (X-Requested-With: fetch): JSON."""
+    from app.tenders.chat import ChatError
+
+    d, _ = await _require_owner(request)
+    _, chat = _chat(request)
+    key = _chat_key(request)
+    form = await request.post()
+    question = str(form.get("q") or "")
+    is_fetch = request.headers.get("X-Requested-With") == "fetch"
+    try:
+        answer = await chat.ask(key, question)
+    except ChatError as e:
+        if is_fetch:
+            return web.json_response({"ok": False, "error": str(e)}, status=400)
+        raise _flash_redirect(f"{d.base}/chat/{key}", str(e)) from None
+    if is_fetch:
+        return web.json_response({"ok": True, "html": views.chat_message(answer)})
+    raise web.HTTPSeeOther(f"{d.base}/chat/{key}#end")
+
+
+async def chat_clear(request: web.Request) -> web.Response:
+    d, _ = await _require_owner(request)
+    _, chat = _chat(request)
+    key = _chat_key(request)
+    form = await request.post()
+    if form.get("what") == "reload":
+        await chat.open(key, fresh=True)
+    else:
+        await chat.clear(key)
+    raise web.HTTPSeeOther(f"{d.base}/chat/{key}")
+
+
 # ── Owner auth + actions ────────────────────────────────────────────────────
 def _safe_next(d: Deps, value: str | None) -> str:
     home = f"{d.base}/"
@@ -845,6 +946,13 @@ def build_app(settings: Settings, sessionmaker: async_sessionmaker, *, tenders: 
     app.router.add_post(f"{b}/logout", logout)
     app.router.add_post(f"{b}/theme", set_theme)
     app.router.add_get(f"{b}/profile", profile)
+    app.router.add_get(f"{b}/chat", chat_index)
+    app.router.add_post(f"{b}/chat", chat_open)
+    app.router.add_get(f"{b}/chat/new", chat_new)
+    key = "{key:[a-z_]+-\\d+}"
+    app.router.add_get(f"{b}/chat/{key}", chat_view)
+    app.router.add_post(f"{b}/chat/{key}/ask", chat_ask)
+    app.router.add_post(f"{b}/chat/{key}/clear", chat_clear)
     app.router.add_get(f"{b}/healthz", healthz)
     return app
 

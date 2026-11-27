@@ -138,7 +138,7 @@ class GeminiClient:
 
     async def generate_text(
         self,
-        prompt: str,
+        prompt: str | list[Any],
         *,
         role: Role = "strong",
         system: str | None = None,

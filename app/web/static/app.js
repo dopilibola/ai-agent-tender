@@ -31,3 +31,63 @@ document.addEventListener('DOMContentLoaded', function () {
   });
   document.addEventListener('DOMContentLoaded', update);
 })();
+// 🤖 AI chat: send without reloading, show the question at once and the answer when it comes.
+(function () {
+  function log() { return document.getElementById('chatlog'); }
+  function bubble(cls, text) {
+    var d = document.createElement('div');
+    d.className = 'msg ' + cls;
+    d.textContent = text;
+    log().appendChild(d);
+    d.scrollIntoView({ block: 'end', behavior: 'smooth' });
+    return d;
+  }
+  var busy = false;
+  document.addEventListener('submit', function (e) {
+    var form = e.target.closest('form[data-chat]');
+    if (!form || !log() || !window.fetch) return;
+    e.preventDefault();
+    if (busy) return;
+    var data = new FormData(form);
+    if (e.submitter && e.submitter.name) data.set(e.submitter.name, e.submitter.value);
+    var q = String(data.get('q') || '').trim();
+    if (!q) return;
+    busy = true;
+    document.querySelectorAll('form[data-chat] button, form[data-chat] textarea').forEach(function (x) { x.disabled = true; });
+    bubble('user', q);
+    var wait = bubble('ai wait', 'AI hujjatlarni o‘qib javob yozmoqda');
+    var ta = document.querySelector('form.ask textarea');
+    if (ta) ta.value = '';
+    fetch(form.action, { method: 'POST', body: data, credentials: 'same-origin',
+                         headers: { 'X-Requested-With': 'fetch' } })
+      .then(function (r) { return r.json().catch(function () { return { ok: false, error: 'Server javobi tushunarsiz (' + r.status + ')' }; }); })
+      .then(function (j) {
+        if (j.ok) {
+          var t = document.createElement('template');
+          t.innerHTML = j.html;
+          wait.replaceWith(t.content.firstChild);
+        } else {
+          wait.className = 'msg err';
+          wait.textContent = j.error || 'Xato';
+        }
+      })
+      .catch(function () { wait.className = 'msg err'; wait.textContent = 'Internet yoki server bilan aloqa uzildi.'; })
+      .then(function () {
+        busy = false;
+        document.querySelectorAll('form[data-chat] button, form[data-chat] textarea').forEach(function (x) { x.disabled = false; });
+        var last = log().lastElementChild;
+        if (last) last.scrollIntoView({ block: 'end' });
+        if (ta) ta.focus();
+      });
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && !e.shiftKey && !e.isComposing && e.target.matches('form.ask textarea')) {
+      e.preventDefault();
+      e.target.form.requestSubmit();
+    }
+  });
+  document.addEventListener('DOMContentLoaded', function () {
+    var l = log();
+    if (l && l.lastElementChild) l.lastElementChild.scrollIntoView({ block: 'end' });
+  });
+})();

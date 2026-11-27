@@ -145,6 +145,13 @@ class TenderSourceConfig(BaseModel):
     enabled: bool = True
 
 
+class TenderChatConfig(BaseModel):
+    """🤖 «AI chat» page: questions about one lot (app/tenders/chat.py)."""
+
+    enabled: bool = True
+    max_requests_per_day: int = Field(200, ge=0)  # Gemini calls (questions + scan reading) a day
+
+
 class TenderAnalysisConfig(BaseModel):
     enabled: bool = True
     max_doc_tokens: int = Field(30_000, ge=1_000)  # TZ text budget per lot (~4 chars = 1 token)
@@ -187,6 +194,7 @@ class TendersConfig(BaseModel):
     keywords: TenderKeywords = TenderKeywords()
     exclude: TenderExclude = TenderExclude()
     analysis: TenderAnalysisConfig = TenderAnalysisConfig()
+    chat: TenderChatConfig = TenderChatConfig()
     prices: PriceCheckConfig = PriceCheckConfig()
 
     @field_validator("daily_report_time")

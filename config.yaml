@@ -116,6 +116,9 @@ tenders:
     max_lots_per_run: 250         # lot kartalari (HTTP, telefon emas) bir tekshiruvda
     ai_per_run: 60
     ai_max_per_day: 900
+  chat:                           # 🤖 Saytdagi «AI chat»: istalgan lot haqida savol-javob
+    enabled: true
+    max_requests_per_day: 200     # kuniga Gemini so'rovlari (savollar + skaner o'qish)
   analysis:                       # 🤖 Gemini tahlili (3-bosqich)
     enabled: true
     max_doc_tokens: 30000         # bitta lot uchun TZ matni chegarasi (~4 belgi = 1 token)

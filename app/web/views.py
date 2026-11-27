@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import re
 from datetime import datetime
 from html import escape
@@ -265,6 +266,7 @@ def layout(ctx: Ctx, active: str, body: str, *, title: str = "", flash: str = ""
             ("Davlat tenderlari", "tenders", ctx.url("/lots"), "tenders", "IT tenderlar"),
             ("", "goods", ctx.url("/all"), "goods", "Tovar va xizmat"),
             ("", "uzum", ctx.url("/all/uzum"), "cart", "Uzum narxlari"),
+            ("", "chat", ctx.url("/chat"), "bot", "AI chat"),
             ("Frilans", "jobs", ctx.url("/jobs"), "jobs", "Frilans ishlar"),
             ("Boshqa", "feed", ctx.url("/feed"), "feed", "Telegram xabarlar")]
     flash = flash or ctx.flash
@@ -299,7 +301,7 @@ def layout(ctx: Ctx, active: str, body: str, *, title: str = "", flash: str = ""
 <aside><a class="logo" href="{h(ctx.url("/"))}" title="{h(ctx.title)}"><i>{initial}</i><span>{h(ctx.title)}</span></a>
 <nav>{nav}</nav><div class="grow"></div><div class="acts">{theme_btn}{profile}{logout}</div></aside>
 <div>{top}<main>{flash_html}{body}</main>
-<footer>Tenderlar har 30 daqiqada, frilans ishlar har 5–10 daqiqada yangilanadi · Toshkent vaqti ·
+<footer>Tenderlar har 20 daqiqada, frilans ishlar har 5–10 daqiqada yangilanadi · Toshkent vaqti ·
 {h(fmt_local(now_utc()))}</footer></div></div></body></html>"""
 
 
@@ -578,7 +580,7 @@ def lot_page(ctx: Ctx, lot: Lot, *, used_usd: float, limit_usd: float) -> str:
     body = f"""<h1>{h(lot.title)}</h1>
 <p class="sub">{h(a.get("summary_uz") or "")}</p>
 <div class="actions" style="display:flex;gap:8px;flex-wrap:wrap;margin:0 0 16px">
-{ext_link(lot.url, "Asl e'lonni saytda ochish", "btn open-site")}{lot_actions(ctx, lot)}</div>
+{ext_link(lot.url, "Asl e'lonni saytda ochish", "btn open-site")}{chat_button(ctx, f"{lot.source}-{lot.external_id}", "btn ghost")}{lot_actions(ctx, lot)}</div>
 <div class="panel"><dl class="kv">{kv}</dl></div>{ai}{criteria}
 {bullets("Malaka talablari", lot.qualification)}{files}{desc}"""
     back = f'<a class="btn ghost" href="{h(ctx.url("/lots"))}">{icon("back")}Barcha lotlar</a>'
@@ -1058,7 +1060,7 @@ def price_lot_page(ctx: Ctx, lp, *, big: float, detail: dict, ai: dict | None, a
              + stat("Ortiqcha summa", tc.money_uzs(max(lp.overpay(big), 0)), f"Uzum ≥{big:g}× arzon bo'lganlar"))
     head = (f'<div class="panel"><b style="font-size:15px">{h(detail.get("title") or lot.title)}</b>'
             f'<p style="margin:10px 0 0">{ext_link(lot.url, "📄 Lotni tender saytida ochish", "btn ghost xs")} '
-            f'<a class="btn ghost xs" href="#ai">🤖 AI xulosasi</a> '
+            f'<a class="btn ghost xs" href="#ai">🤖 AI xulosasi</a> {chat_button(ctx, lot.id)} '
             f'<a class="btn ghost xs" href="#items">🛒 Mahsulotlar</a> '
             f'<a class="btn link xs" href="{h(ctx.url("/all/uzum", f="lots"))}">← Lotlar</a></p></div>')
     note = ('<p class="sub">«📄 Tender» — lot asl saytda ochiladi, «🛒 Uzum» — mahsulot Uzum\'da qidiriladi. '
@@ -1160,3 +1162,228 @@ def feed_page(ctx: Ctx, messages, *, kind: str, kinds: list[str], next_before: i
                   sub="Bot yuborgan xabarlar · har 2 daqiqada yangilanadi",
                   tools=f'<div class="seg">{tab_html}</div>' if tab_html else "").replace(
         "<title>", '<meta http-equiv="refresh" content="120"><title>', 1)
+
+
+# ── 🤖 AI chat about one lot (app/tenders/chat.py) ──────────────────────────
+_ICON["bot"] = ('<rect x="4" y="8" width="16" height="11" rx="3"/><path d="M12 8V4.5M9 13h.01M15 13h.01'
+                'M9.5 16.2c1.5.9 3.5.9 5 0"/><circle cx="12" cy="3.5" r="1"/>')
+_ICON["send"] = '<path d="M4 12 20 4l-6 16-2.5-6.5z"/><path d="M11.5 13.5 20 4"/>'
+
+CSS += """
+.chatwrap{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;align-items:start}
+.chatlog{display:flex;flex-direction:column;gap:12px;padding:4px 0 8px}
+.msg{max-width:min(760px,92%);padding:11px 15px;border-radius:14px;line-height:1.55;font-size:14px;
+  overflow-wrap:anywhere;border:1px solid var(--line)}
+.msg.user{align-self:flex-end;background:var(--brand);color:var(--on-ink);border-color:transparent;
+  border-bottom-right-radius:4px;white-space:pre-wrap}
+.msg.ai{align-self:flex-start;background:var(--card);border-bottom-left-radius:4px}
+.msg.ai p{margin:0 0 8px}.msg.ai p:last-child{margin:0}.msg.ai ul,.msg.ai ol{margin:4px 0 8px;padding-left:20px}
+.msg.ai li{margin:2px 0}.msg.ai hr{border:0;border-top:1px solid var(--line);margin:12px 0}
+.msg.ai blockquote{margin:8px 0;padding:9px 12px;border-left:3px solid var(--brand);background:var(--brand-bg);
+  border-radius:0 8px 8px 0}.msg.ai code{font-family:var(--mono);font-size:12.5px}.msg .when{display:block;font-size:11px;opacity:.6;margin-top:6px}
+.msg.err{background:var(--bad-bg);color:var(--bad);border-color:var(--bad-line)}
+.msg.wait{color:var(--muted)}.msg.wait::after{content:"";display:inline-block;width:1.2em;text-align:left;
+  animation:dots 1.2s steps(4) infinite}
+@keyframes dots{0%{content:""}25%{content:"."}50%{content:".."}75%{content:"..."}}
+@media (prefers-reduced-motion:reduce){.msg.wait::after{animation:none;content:"…"}}
+form.ask{position:sticky;bottom:0;display:flex;gap:8px;align-items:flex-end;padding:12px 0 4px;
+  background:linear-gradient(transparent,var(--bg) 30%)}
+form.ask textarea{flex:1;min-height:46px;max-height:200px;resize:vertical;padding:11px 13px;border-radius:12px;
+  font:inherit;line-height:1.4}
+form.ask button{height:46px;border-radius:12px;padding:0 16px}
+.sugs{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 6px}
+.sugs button{height:auto;padding:6px 11px;border-radius:999px;font-size:12.5px;background:var(--card);color:var(--ink);
+  border:1px solid var(--line);font-weight:500}
+.sugs button:hover{border-color:var(--brand);color:var(--brand);background:var(--brand-bg)}
+.chatside{position:sticky;top:64px}.chatside .panel{font-size:13px}.chatside dl.kv{grid-template-columns:1fr;gap:2px 0}
+.chatside dl.kv dt{margin-top:8px}.chatside ul.docs{margin:6px 0 0;padding-left:16px}
+.chatside ul.docs li{margin:3px 0}
+.newchat{display:flex;gap:8px;flex-wrap:wrap}.newchat input{flex:1;min-width:260px;height:42px}
+.newchat button{height:42px}
+.chatlist a.row{display:flex;gap:12px;align-items:center;padding:11px 4px;border-top:1px solid var(--line);
+  color:var(--ink);text-decoration:none}
+.chatlist a.row:first-child{border-top:0}.chatlist a.row:hover{background:var(--hover)}
+.chatlist .t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.loading{display:flex;gap:12px;align-items:center}
+.spin{width:18px;height:18px;border:2px solid var(--line2);border-top-color:var(--brand);border-radius:50%;
+  animation:spin .8s linear infinite;flex:none}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spin{animation:none}}
+@media (max-width:980px){.chatwrap{grid-template-columns:1fr}.chatside{order:-1;position:static}}
+"""
+
+
+def _md(text: str) -> str:
+    """Gemini's answer → safe HTML: escaped first, then **bold**, `code`, '- ' / '1. ' lists and paragraphs."""
+    out: list[str] = []
+    lst: str | None = None
+
+    def inline(s: str) -> str:
+        s = h(s)
+        s = re.sub(r"\*\*(.+?)\*\*", r"<b>\1</b>", s)
+        s = re.sub(r"(?<![\w*])\*(?!\s)(.+?)(?<!\s)\*(?![\w*])", r"<i>\1</i>", s)
+        return re.sub(r"`([^`]+)`", r"<code>\1</code>", s)
+
+    def close() -> None:
+        nonlocal lst
+        if lst:
+            out.append(f"</{lst}>")
+            lst = None
+
+    para: list[str] = []
+
+    def flush() -> None:
+        if para:
+            out.append("<p>" + "<br>".join(inline(x) for x in para) + "</p>")
+            para.clear()
+
+    quote: list[str] = []
+
+    def flush_quote() -> None:
+        if quote:
+            out.append("<blockquote>" + _md("\n".join(quote)) + "</blockquote>")
+            quote.clear()
+
+    for raw in (text or "").replace("\r", "").split("\n"):
+        line = raw.rstrip()
+        if re.match(r"^\s*>\s?", line):
+            flush()
+            close()
+            quote.append(re.sub(r"^\s*>\s?", "", line))
+            continue
+        flush_quote()
+        if re.match(r"^\s*([-*_])(\s*\1){2,}\s*$", line):
+            flush()
+            close()
+            out.append("<hr>")
+            continue
+        m_ul = re.match(r"^\s*[-*•]\s+(.*)", line)
+        m_ol = re.match(r"^\s*\d+[.)]\s+(.*)", line)
+        m_h = re.match(r"^\s*#{1,6}\s+(.*)", line)
+        if m_ul or m_ol:
+            flush()
+            kind = "ul" if m_ul else "ol"
+            if lst != kind:
+                close()
+                out.append(f"<{kind}>")
+                lst = kind
+            out.append(f"<li>{inline((m_ul or m_ol).group(1))}</li>")
+        elif not line.strip():
+            flush()
+            close()
+        elif m_h:
+            flush()
+            close()
+            out.append(f"<p><b>{inline(m_h.group(1))}</b></p>")
+        else:
+            close()
+            para.append(line)
+    flush()
+    close()
+    flush_quote()
+    return "".join(out)
+
+
+def chat_message(m: dict) -> str:
+    when = ""
+    if m.get("at"):
+        with contextlib.suppress(ValueError):
+            when = f'<span class="when">{h(fmt_local(datetime.fromisoformat(m["at"])))}</span>'
+    if m.get("role") == "user":
+        return f'<div class="msg user">{h(m.get("text"))}{when}</div>'
+    return f'<div class="msg ai">{_md(m.get("text", ""))}{when}</div>'
+
+
+def chat_index_page(ctx: Ctx, recent: list[dict], it_lots: list, *, value: str = "", error: str = "") -> str:
+    from app.tenders.chat import SOURCE_TITLE
+
+    form = (f'<form class="newchat" method="post" action="{h(ctx.url("/chat"))}">'
+            f'<input type="hidden" name="csrf" value="{h(ctx.csrf)}">'
+            f'<input type="url" name="url" value="{h(value)}" required autofocus inputmode="url" '
+            f'placeholder="Lot havolasi: https://etender.uzex.uz/lot/527202" aria-label="Lot havolasi">'
+            f'<button type="submit">{icon("bot")}Lotni ochish</button></form>')
+    err = f'<div class="flash err" style="margin-top:12px">{h(error)}</div>' if error else ""
+    help_txt = ("<p class=\"muted\" style=\"margin:10px 0 0;font-size:13px\">Ishlaydigan saytlar: "
+                + " · ".join(h(v) for v in SOURCE_TITLE.values())
+                + ". Bot lot sahifasini, pozitsiyalarni va fayllarni (TZ, shartnoma loyihasi) o'qiydi, keyin "
+                  "savollaringizga shu hujjatlar asosida javob beradi. Telefon orqali o'qiladigan saytlarda "
+                  "(auksion, Hayot birja) lot 30–60 soniyada ochiladi.</p>")
+    rows = ""
+    for c in recent:
+        n = sum(1 for m in c.get("messages", []) if m.get("role") == "user")
+        st = {"loading": '<span class="pill maybe">o\'qilmoqda</span>',
+              "error": '<span class="pill bad">xato</span>'}.get(c.get("status"), f'<span class="chip">{n} savol</span>')
+        rows += (f'<a class="row" href="{h(ctx.url("/chat/" + c["key"]))}">{icon("bot")}'
+                 f'<span class="t"><b>{h(c.get("title") or c["key"])}</b><br><span class="muted">'
+                 f'{h(SOURCE_TITLE.get(c.get("source"), c.get("source")))} · {h(c.get("customer") or "")}</span></span>'
+                 f'{st}</a>')
+    chats = (f'<h2>Suhbatlar</h2><div class="panel chatlist">{rows}</div>' if rows else "")
+    quick = ""
+    if it_lots:
+        quick = ('<h2>Ochiq IT lotlar — bir bosishda so\'rash</h2><div class="panel chatlist">' + "".join(
+            f'<a class="row" href="{h(ctx.url("/chat/new", ref=f"{lot.source}-{lot.external_id}"))}">{icon("tenders")}'
+            f'<span class="t"><b>{h(lot.title)}</b><br><span class="muted">{h(tc.SOURCE_NAME.get(lot.source, lot.source))}'
+            f' · {h(lot.customer_name or "")} · muddat {h(fmt_local(lot.deadline_at))}</span></span>'
+            f'<span class="chip">so\'rash →</span></a>' for lot in it_lots) + "</div>")
+    body = f'<div class="panel">{form}{help_txt}{err}</div>{chats}{quick}'
+    return layout(ctx, "chat", body, title="AI chat", sub="Istalgan lot haqida savol bering — AI hujjatlarini o'qib javob beradi")
+
+
+def chat_page(ctx: Ctx, key: str, chat: dict) -> str:
+    from app.tenders.chat import SOURCE_TITLE, SUGGESTIONS, deadline_text
+
+    status = chat.get("status")
+    msgs = "".join(chat_message(m) for m in chat.get("messages", []))
+    if status == "loading":
+        main = ('<div class="panel loading"><span class="spin"></span><div><b>Lot o\'qilmoqda…</b><br>'
+                '<span class="muted">Sahifa, pozitsiyalar va fayllar o\'qilyapti, skanerlar AI bilan matnga '
+                'aylantirilyapti. Bu 10 soniyadan 2 daqiqagacha oladi — sahifa o\'zi yangilanadi.</span></div></div>')
+    elif status == "error":
+        main = (f'<div class="flash err">Lotni o\'qib bo\'lmadi: {h(chat.get("error"))}</div>'
+                f'<form method="post" action="{h(ctx.url("/chat"))}"><input type="hidden" name="csrf" value="{h(ctx.csrf)}">'
+                f'<input type="hidden" name="url" value="{h(key)}"><input type="hidden" name="fresh" value="1">'
+                f'<button type="submit">Qayta urinish</button></form>')
+    else:
+        empty = ('' if msgs else '<div class="msg ai">Lot o\'qildi. Savolingizni yozing yoki quyidagilardan birini tanlang.</div>')
+        sugs = "".join(f'<button type="submit" name="q" value="{h(s)}" formnovalidate>{h(s)}</button>' for s in SUGGESTIONS)
+        main = (f'<div class="chatlog" id="chatlog">{msgs}{empty}</div>'
+                f'<form class="ask" method="post" action="{h(ctx.url(f"/chat/{key}/ask"))}" data-chat>'
+                f'<input type="hidden" name="csrf" value="{h(ctx.csrf)}">'
+                f'<textarea name="q" rows="1" maxlength="2000" required placeholder="Lot haqida savol yozing…" '
+                f'title="Enter — yuborish, Shift+Enter — yangi qator" aria-label="Savol"></textarea>'
+                f'<button type="submit" aria-label="Yuborish">{icon("send")}</button></form>'
+                f'<form method="post" action="{h(ctx.url(f"/chat/{key}/ask"))}" data-chat class="sugs">'
+                f'<input type="hidden" name="csrf" value="{h(ctx.csrf)}">{sugs}</form>')
+    docs = chat.get("docs") or []
+    doc_li = "".join(
+        f'<li>{h(d.get("label"))}: {h(d.get("file"))} <span class="muted">— '
+        f'{h(d.get("note") or (str(d.get("chars")) + " belgi"))}</span></li>' for d in docs)
+    cost = tc.money_uzs(chat.get("cost"), chat.get("currency") or "UZS") if chat.get("cost") else "noma'lum"
+    customer = chat.get("customer") or "noma'lum"
+    side = (f'<div class="chatside"><div class="panel"><b>{h(chat.get("title") or key)}</b>'
+            f'<dl class="kv"><dt class="muted">Manba</dt><dd>{h(SOURCE_TITLE.get(chat.get("source"), chat.get("source")))}'
+            f'{(" · " + h(chat.get("lot_type"))) if chat.get("lot_type") else ""}</dd>'
+            f'<dt class="muted">Buyurtmachi</dt><dd>{h(customer)}</dd>'
+            f'<dt class="muted">Boshlang\'ich narx</dt><dd><b>{h(cost)}</b></dd>'
+            f'<dt class="muted">Topshirish muddati</dt><dd>{h(deadline_text(chat))}</dd>'
+            f'<dt class="muted">Saytdagi holati</dt><dd>{h(chat.get("status_text") or "—")}</dd>'
+            f'<dt class="muted">AI o\'qigan hujjatlar</dt><dd>'
+            + (f'<ul class="docs">{doc_li}</ul>' if doc_li else "faqat lot sahifasi" + (
+                f' va {chat.get("items")} ta pozitsiya' if chat.get("items") else "")) + "</dd></dl>"
+            f'<p style="margin:12px 0 0;display:flex;gap:6px;flex-wrap:wrap">'
+            f'{ext_link(chat.get("url"), "📄 Saytda ochish", "btn ghost xs")}'
+            f'<a class="btn link xs" href="{h(ctx.url("/chat"))}">← Suhbatlar</a></p>'
+            + (f'<form method="post" action="{h(ctx.url(f"/chat/{key}/clear"))}" style="margin-top:8px;display:flex;gap:6px">'
+               f'<input type="hidden" name="csrf" value="{h(ctx.csrf)}">'
+               f'<button class="ghost xs btn" type="submit" name="what" value="clear">Suhbatni tozalash</button>'
+               f'<button class="ghost xs btn" type="submit" name="what" value="reload">Lotni qayta o\'qish</button></form>'
+               if status == "ready" else "") + "</div></div>")
+    body = f'<div class="chatwrap"><section>{main}</section>{side}</div>'
+    page = layout(ctx, "chat", body, title="AI chat", sub=chat.get("title") or key)
+    if status == "loading":
+        page = page.replace("<title>", '<meta http-equiv="refresh" content="4"><title>', 1)
+    return page
+
+
+def chat_button(ctx: Ctx, key: str, cls: str = "btn ghost xs") -> str:
+    return f'<a class="{cls}" href="{h(ctx.url("/chat/new", ref=key))}">🤖 AI\'dan so\'rash</a>'
