@@ -145,6 +145,8 @@ class TenderService:
                 except Exception:
                     log.exception("tenders.analyze_failed", extra={"lot": lot.external_id})
                     lot.analysis = {"error": "baholanmagan"}
+                if not is_it_lot(lot) and lot.status == LotStatus.NOTIFIED:  # a lot you bid on stays yours
+                    lot.status = LotStatus.CLOSED
                 await s.commit()
                 key = lot.verdict or "⚠️"
                 counts[key] = counts.get(key, 0) + 1
@@ -477,17 +479,25 @@ class TenderService:
                         log.exception("tenders.analyze_failed", extra={"lot": lot.external_id})
                         lot.analysis = {"error": "baholanmagan"}
                     await s.commit()
-                if lot.verdict != "YO'Q":  # "YO'Q" lots only appear in the daily report
-                    used = await self.deposit_used_usd(s, exclude_id=lot.id)
-                    try:
-                        await self._send(
-                            cards.lot_card(lot, used_usd=used, limit_usd=self.limit_usd, now=now),
-                            cards.lot_keyboard(lot),
-                        )
-                    except Exception:
-                        log.exception("tenders.notify_failed", extra={"lot": lot.external_id})
-                        return sent
-                    sent += 1
+                if not is_it_lot(lot):
+                    # Gemini read the documents: not an IT service (hardware, construction, ecology…) →
+                    # closed at once, never shown on the site, in /list or in the daily report.
+                    lot.status = LotStatus.CLOSED
+                    await s.commit()
+                    log.info("tenders.not_it_closed", extra={"lot": lot.external_id, "source": lot.source})
+                    continue
+                # Every IT lot is announced, "YO'Q" too (27.11.2026: the owner wants to see them all);
+                # the card shows the verdict and its reason.
+                used = await self.deposit_used_usd(s, exclude_id=lot.id)
+                try:
+                    await self._send(
+                        cards.lot_card(lot, used_usd=used, limit_usd=self.limit_usd, now=now),
+                        cards.lot_keyboard(lot),
+                    )
+                except Exception:
+                    log.exception("tenders.notify_failed", extra={"lot": lot.external_id})
+                    return sent
+                sent += 1
                 lot.status = LotStatus.NOTIFIED
                 lot.notified_at = now
                 await s.commit()
@@ -620,6 +630,7 @@ class TenderService:
                 await s.scalars(select(Lot).where(Lot.first_seen_at >= since).order_by(Lot.deadline_at))
             ).all()
         open_lots = await self.open_lots(now)
+        fresh = [lot for lot in fresh if is_it_lot(lot)]  # non-IT lots are not reported at all
         good = [lot for lot in fresh if lot.verdict != "YO'Q"]
         bad = [lot for lot in fresh if lot.verdict == "YO'Q"]
         approaching = [
@@ -634,7 +645,7 @@ class TenderService:
         if len(good) > 15:
             out.append(f"… va yana {len(good) - 15} ta (/list)")
         if bad:
-            out.append("❌ Mos emas: " + ", ".join(cards.lot_link(lot) for lot in bad))
+            out.append("❌ IT, lekin mos emas: " + ", ".join(cards.lot_link(lot) for lot in bad))
         out.append("")
         out.append(f"⏰ <b>3 kun ichida muddati tugaydi: {len(approaching)}</b>")
         out.extend(cards.one_line(lot, now) for lot in approaching[:10])

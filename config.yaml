@@ -94,7 +94,7 @@ google_sheets_id: null
 # ── 🏛 Davlat tenderlari (faqat qidiradi, baholaydi, xabar beradi; hech narsa topshirmaydi) ──
 tenders:
   enabled: true
-  poll_interval_min: 30
+  poll_interval_min: 20           # har 20 daqiqada barcha manbalar tekshiriladi
   request_delay_s: 2.5            # saytga so'rovlar orasidagi pauza (>= 2)
   page_size: 200
   scan_descriptions: true         # nomida kalit so'z bo'lmagan yangi lotlarning tavsifini ham tekshirish
@@ -167,17 +167,26 @@ tenders:
       - разработк программ
       - разработк сайт
       - разработк информационн
-    # Kamida 2 xil tushuncha kerak (yoki 1 strong bilan birga). "|" — bitta tushunchaning yozilishlari
-    # (lotin / kirill / rus): "tizim|тизим|систем" bitta so'z hisoblanadi, shuning uchun lotda
-    # "tizim" ham, "тизим" ham bo'lsa bu 2 emas, 1 ta. "elektron" olib tashlandi — deyarli har bir
-    # lot tavsifida bor ("elektron do'kon", "электронная площадка").
+      - dasturiy|дастурий            # dasturiy vosita / mahsulot / majmua
+      - avtomatlashtirilgan tizim|автоматлаштирилган тизим
+      - tizim avtomatlashtir|тизим автоматлаштир
+      - kiberxavfsiz|киберхавфсиз|кибербезопас
+      - axborot xavfsizlig|ахборот хавфсизлиг|информационн безопасн
+      - axborot kommunikatsiya|ахборот коммуникация|информационно коммуникац
+      - bulutli|облачн
+      - iaas$|saas$
+      - siem$
+    # Kamida 2 xil tushuncha kerak. "|" — bitta tushunchaning yozilishlari (lotin / kirill / rus).
+    # 27.11.2026: "ishlab chiqish" olib tashlandi — "yo'l loyihasini ishlab chiqish", "master-reja",
+    # "metodika ishlab chiqish" kabi IT bo'lmagan lotlarni "tizim" bilan birga o'tkazib yuborardi.
+    # Dasturni ishlab chiqish baribir "разработк программ", "dasturiy" va h.k. bilan ushlanadi.
+    # Qolgan noto'g'ri lotlarni Gemini o'qib yopadi (is_it_lot=false → yopiladi, ko'rsatilmaydi).
     weak:
       - portal|портал
       - platforma|платформ
       - avtomatlashtir|автоматлаштир|автоматизац
       - integratsiya|интеграц
       - bot$|бот$
-      - ishlab chiqish|ишлаб чиқиш|разработк
       - monitoring|мониторинг
       - tizim|тизим|систем
 

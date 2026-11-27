@@ -81,15 +81,29 @@ async def test_good_lot_card_shows_verdict(settings, sessionmaker):
     assert "Ignore" not in kw["system"] and "noma'lum" in kw["system"]
 
 
-async def test_no_lots_are_announced_individually_but_appear_in_report(settings, sessionmaker):
+async def test_no_lots_are_announced_too_and_appear_in_report(settings, sessionmaker):
     svc, _, sender, _ = with_analyzer(settings, sessionmaker, [analysis("YO'Q", fit_score=5)] * 10)
     await svc.run_scan(NOW)
-    assert not any("Yangi IT lot" in m for m in sender.messages)
+    card = next(m for m in sender.messages if "523525" in m)
+    assert "❌ YO'Q" in card
     async with sessionmaker() as s:
         lot = await s.scalar(select(Lot).where(Lot.external_id == "523525"))
         assert lot.status == LotStatus.NOTIFIED and lot.verdict == "YO'Q"
     report = await svc.daily_report(NOW + timedelta(hours=1))
-    assert "❌ Mos emas: " in report and "523525" in report
+    assert "❌ IT, lekin mos emas: " in report and "523525" in report
+
+
+async def test_not_it_lot_is_closed_and_never_shown(settings, sessionmaker):
+    """Gemini read the documents and said «not an IT service» → closed, no card, not in the daily report."""
+    svc, _, sender, _ = with_analyzer(settings, sessionmaker, [analysis(is_it_lot=False)] * 10)
+    await svc.run_scan(NOW)
+    assert not any("523525" in m for m in sender.messages)
+    async with sessionmaker() as s:
+        lot = await s.scalar(select(Lot).where(Lot.external_id == "523525"))
+        assert lot.status == LotStatus.CLOSED
+    assert all(lot.external_id != "523525" for lot in await svc.open_lots(NOW))
+    report = await svc.daily_report(NOW + timedelta(hours=1))
+    assert "523525" not in report
 
 
 async def test_gemini_failure_marks_unrated_and_still_notifies(settings, sessionmaker):
