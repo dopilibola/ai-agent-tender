@@ -55,182 +55,233 @@ class Ctx:
 
 
 CSS = """
-:root{color-scheme:light;--hover:#efefef;--active:#e8e8e8;--topbg:rgba(255,255,255,.92);--field:#fff;--btn-hover:#333;--on-ink:#fff;--seg-on:#fff;--good-line:#bbf7d0;--bad-line:#fecaca;--bg:#fff;--side:#fafafa;--card:#fff;--soft:#fafafa;--ink:#171717;--muted:#737373;
---faint:#a3a3a3;--line:#e5e5e5;--line2:#d4d4d4;--brand:#2563eb;--brand2:#1d4ed8;--brand-bg:#eff6ff;
---good:#15803d;--good-bg:#f0fdf4;--maybe:#a16207;--maybe-bg:#fefce8;--bad:#b91c1c;--bad-bg:#fef2f2;--chip:#f5f5f5;
---mono:ui-monospace,"SF Mono","IBM Plex Mono",Menlo,Consolas,monospace}
-:root[data-theme=dark]{color-scheme:dark;--hover:#222;--active:#2a2a2a;--topbg:rgba(10,10,10,.88);--field:#141414;--btn-hover:#d4d4d4;--on-ink:#0a0a0a;--seg-on:#2a2a2a;--good-line:#14532d;--bad-line:#7f1d1d;
---bg:#0a0a0a;--side:#111;--card:#141414;--soft:#1a1a1a;--ink:#ededed;--muted:#a1a1a1;--faint:#6b6b6b;--line:#262626;--line2:#3a3a3a;--brand:#60a5fa;--brand2:#3b82f6;--brand-bg:#172554;
---good:#4ade80;--good-bg:#052e16;--maybe:#facc15;--maybe-bg:#2a2205;--bad:#f87171;--bad-bg:#2c0b0b;--chip:#1f1f1f}
+:root{color-scheme:light;
+--bg:#f8fafd;--card:#ffffff;--soft:#f1f4f9;--field:#ffffff;--hover:#eef1f6;--active:#d3e3fd;--chip:#eef1f6;
+--ink:#1f1f1f;--muted:#5f6368;--faint:#80868b;--line:#e3e6ea;--line2:#c4c7c5;
+--side:#f8fafd;--side-ink:#1f1f1f;--side-muted:#5f6368;--side-hover:#e9edf3;--side-on:#d3e3fd;--side-on-ink:#041e49;
+--brand:#0b57d0;--brand2:#0842a0;--brand-bg:#d3e3fd;--on-ink:#ffffff;--btn-hover:#0842a0;
+--good:#146c2e;--good-bg:#e6f4ea;--good-line:#b7dfc1;--maybe:#8a5100;--maybe-bg:#fef3d6;
+--bad:#b3261e;--bad-bg:#fce8e6;--bad-line:#f2b8b5;--bid:#7a1fa2;--bid-bg:#f3e8fd;
+--topbg:rgba(248,250,253,.92);--seg-on:#ffffff;
+--e1:0 1px 2px rgba(60,64,67,.3),0 1px 3px 1px rgba(60,64,67,.15);--e0:0 1px 2px rgba(60,64,67,.12);
+--mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace}
+:root[data-theme=dark]{color-scheme:dark;
+--bg:#1b1b1b;--card:#282a2c;--soft:#303134;--field:#1f1f1f;--hover:#333537;--active:#004a77;--chip:#37393b;
+--ink:#e3e3e3;--muted:#c4c7c5;--faint:#8e918f;--line:#3c4043;--line2:#5f6368;
+--side:#1b1b1b;--side-ink:#e3e3e3;--side-muted:#c4c7c5;--side-hover:#2d2f31;--side-on:#004a77;--side-on-ink:#c2e7ff;
+--brand:#a8c7fa;--brand2:#d3e3fd;--brand-bg:#0842a0;--on-ink:#062e6f;--btn-hover:#d3e3fd;
+--good:#6dd58c;--good-bg:#0f3d21;--good-line:#1e5631;--maybe:#fdd663;--maybe-bg:#3d3000;
+--bad:#f2b8b5;--bad-bg:#601410;--bad-line:#8c1d18;--bid:#e7b7ff;--bid-bg:#4a1a63;
+--topbg:rgba(27,27,27,.9);--seg-on:#3c4043;
+--e1:0 1px 2px rgba(0,0,0,.5),0 1px 3px 1px rgba(0,0,0,.3);--e0:0 1px 2px rgba(0,0,0,.4)}
 .theme .sun,[data-theme=dark] .theme .moon{display:none}[data-theme=dark] .theme .sun{display:block}
 aside form{margin:0}
 .themes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;max-width:520px}
 .themes button{height:auto;flex-direction:column;gap:8px;padding:12px;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:12px}
-.themes button:hover{background:var(--soft)}.themes button.on{border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-bg)}
+.themes button:hover{background:var(--hover)}.themes button.on{border-color:var(--brand);box-shadow:0 0 0 2px var(--brand-bg)}
 .themes .sw{width:100%;height:44px;border-radius:8px;border:1px solid var(--line2)}
-.sw.light{background:linear-gradient(90deg,#fafafa 30%,#fff 30%)}.sw.dark{background:linear-gradient(90deg,#111 30%,#0a0a0a 30%)}
-.sw.auto{background:linear-gradient(135deg,#fff 50%,#0a0a0a 50%)}
-.avatar{width:56px;height:56px;border-radius:14px;background:var(--ink);color:var(--on-ink);display:grid;place-content:center;font-size:22px;font-weight:700}
+.sw.light{background:linear-gradient(90deg,#f8fafd 30%,#fff 30%)}.sw.dark{background:linear-gradient(90deg,#1b1b1b 30%,#282a2c 30%)}
+.sw.auto{background:linear-gradient(135deg,#fff 50%,#1b1b1b 50%)}
+.avatar{width:56px;height:56px;border-radius:50%;background:var(--brand);color:var(--on-ink);display:grid;place-content:center;font-size:22px;font-weight:500}
 .prof{display:flex;gap:16px;align-items:center}
 *{box-sizing:border-box}html{-webkit-text-size-adjust:100%}
+::selection{background:var(--brand-bg)}
 body{margin:0;background:var(--bg);color:var(--ink);
-font:14px/1.45 "IBM Plex Sans Variable","IBM Plex Sans",ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
-a{color:var(--brand);text-decoration:none}a:hover{text-decoration:underline}
-svg.i{width:18px;height:18px;flex:none;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;
-stroke-linejoin:round}
-.app{display:grid;grid-template-columns:212px minmax(0,1fr);min-height:100vh}.app>div{min-width:0}
-aside{background:var(--side);border-right:1px solid var(--line);padding:14px 10px;position:sticky;top:0;height:100vh;
+font:14px/1.5 Roboto,"Google Sans Text",ui-sans-serif,system-ui,-apple-system,"Segoe UI",Arial,sans-serif;
+font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
+a{color:var(--brand);text-decoration:none;text-underline-offset:3px}a:hover{text-decoration:underline}
+:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+svg.i{width:20px;height:20px;flex:none;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.app{display:grid;grid-template-columns:256px minmax(0,1fr);min-height:100vh}.app>div{min-width:0}
+aside{background:var(--side);color:var(--side-ink);padding:12px 12px 12px 8px;position:sticky;top:0;height:100vh;
 display:flex;flex-direction:column;gap:2px;z-index:5;overflow:auto}
-.logo{display:flex;align-items:center;gap:10px;color:var(--ink);font-weight:600;padding:2px 6px 12px}
-.logo i{width:28px;height:28px;border-radius:8px;background:var(--ink);color:var(--on-ink);display:grid;place-content:center;
-font-weight:700;font-size:13px;font-style:normal;flex:none}.logo span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.logo{display:flex;align-items:center;gap:12px;color:var(--side-ink);font-size:18px;font-weight:400;padding:6px 12px 16px;line-height:1.2}
+.logo i{width:32px;height:32px;border-radius:50%;background:var(--brand);color:var(--on-ink);display:grid;place-content:center;
+font-weight:500;font-size:15px;font-style:normal;flex:none}
+.logo span{overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;font-size:15px}
 .logo:hover{text-decoration:none}
-aside nav{display:flex;flex-direction:column;gap:2px}
-aside nav .grp{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--faint);
-padding:14px 10px 4px}
-aside nav a{display:flex;align-items:center;gap:10px;height:36px;padding:0 10px;border-radius:8px;color:var(--muted);
-font-weight:500;white-space:nowrap}
-aside nav a:hover{background:var(--hover);color:var(--ink);text-decoration:none}
-aside nav a.on{background:var(--active);color:var(--ink)}
-aside .acts{display:flex;gap:4px;padding:0 4px}
-aside .out{position:relative;width:36px;height:36px;border-radius:8px;display:grid;place-content:center;
-color:var(--muted);background:none;border:0;padding:0;cursor:pointer}
-aside .out:hover{background:var(--hover);color:var(--ink);text-decoration:none}aside .out.on{background:var(--active);color:var(--ink)}
-aside [data-tip]:hover::after{content:attr(data-tip);position:absolute;left:50%;bottom:42px;transform:translateX(-50%);
-background:var(--ink);color:var(--on-ink);font-size:12px;font-weight:500;padding:4px 8px;border-radius:6px;white-space:nowrap;
-pointer-events:none}
+aside nav{display:flex;flex-direction:column;gap:1px}
+aside nav .grp{font-size:12px;font-weight:500;color:var(--side-muted);padding:16px 16px 6px}
+aside nav a{display:flex;align-items:center;gap:16px;height:36px;padding:0 16px;border-radius:999px;color:var(--side-ink);
+font-weight:400;white-space:nowrap;font-size:14px}
+aside nav a svg.i{color:var(--side-muted)}
+aside nav a:hover{background:var(--side-hover);text-decoration:none}
+aside nav a.on{background:var(--side-on);color:var(--side-on-ink);font-weight:600}aside nav a.on svg.i{color:var(--side-on-ink)}
+aside .acts{display:flex;gap:4px;padding:8px 8px 0}
+aside .out{position:relative;width:40px;height:40px;border-radius:50%;display:grid;place-content:center;
+color:var(--side-muted);background:none;border:0;padding:0;cursor:pointer}
+aside .out:hover{background:var(--side-hover);color:var(--side-ink);text-decoration:none}aside .out.on{background:var(--side-on);color:var(--side-on-ink)}
+aside [data-tip]:hover::after{content:attr(data-tip);position:absolute;left:50%;bottom:46px;transform:translateX(-50%);
+background:#3c4043;color:#fff;font-size:12px;padding:4px 8px;border-radius:4px;white-space:nowrap;pointer-events:none}
 aside .grow{flex:1}
-.top{height:49px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px;padding:0 24px;
-position:sticky;top:0;background:var(--topbg);backdrop-filter:blur(6px);z-index:4}
-.top b{font-size:15px;font-weight:600;white-space:nowrap}.top .sub{color:var(--muted);font-size:13px;overflow:hidden;
+.top{height:64px;display:flex;align-items:center;gap:14px;padding:0 24px;position:sticky;top:0;background:var(--topbg);
+backdrop-filter:blur(8px);z-index:4}
+.top b{font-size:22px;font-weight:400;white-space:nowrap}.top .sub{color:var(--muted);font-size:13px;overflow:hidden;
 text-overflow:ellipsis;white-space:nowrap}.top .tools{margin-left:auto;display:flex;gap:8px;align-items:center}
-main{padding:20px 24px 48px;min-width:0}
-h1{font-size:20px;margin:0 0 6px;font-weight:600;letter-spacing:-.01em}
-h2{font-size:15px;margin:22px 0 8px;font-weight:600;display:flex;gap:8px;align-items:center}
-p.sub{color:var(--muted);margin:0 0 16px}
-.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:0 0 16px}
-.stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+main{padding:8px 24px 48px;min-width:0}
+h1{font-size:22px;line-height:1.3;margin:0 0 6px;font-weight:400}
+h2{font-size:16px;margin:24px 0 10px;font-weight:500;display:flex;gap:8px;align-items:center}
+p.sub{color:var(--muted);margin:0 0 16px;max-width:80ch}
+.stats{display:flex;flex-wrap:wrap;background:var(--card);border-radius:12px;box-shadow:var(--e0);border:1px solid var(--line);
+margin:0 0 16px;overflow:hidden}
+.stat{flex:1 1 170px;padding:12px 18px;border-left:1px solid var(--line)}.stat:first-child{border-left:0}
 .stat span{color:var(--muted);font-size:13px;display:block}
-.stat b{display:block;font:500 24px/1.3 var(--mono);margin:6px 0 2px;letter-spacing:-.02em}
-.stat b.blue{color:var(--brand)}.stat small{color:var(--muted);font-size:12px}
+.stat b{display:block;font-size:22px;font-weight:500;line-height:1.3;margin:4px 0 2px}
+.stat b.blue{color:var(--good)}.stat small{color:var(--muted);font-size:12px;display:block}
 form.filters{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 12px;align-items:center}
 form.filters .grp{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:13px}
 input,select,button,textarea{font:inherit;color:inherit}
-input[type=text],input[type=search],input[type=password],input[type=number],select{background:var(--field);
-border:1px solid var(--line);border-radius:8px;padding:0 10px;height:34px;outline:none;font-size:13px}
-input[type=number]{width:96px;font-family:var(--mono)}input[type=number].sm{width:70px}
-input:focus,select:focus{border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-bg)}
-input[type=search]{flex:1;min-width:220px}
-button,.btn{background:var(--ink);color:var(--on-ink);border:1px solid var(--ink);border-radius:8px;padding:0 13px;height:34px;
-font-weight:500;font-size:13px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
-button:hover,.btn:hover{background:var(--btn-hover);text-decoration:none}
-.btn.ghost,button.ghost{background:var(--field);color:var(--ink);border-color:var(--line)}
-.btn.ghost:hover,button.ghost:hover{background:var(--soft)}
-.panel.item:target{border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-bg)}
+input[type=text],input[type=search],input[type=password],input[type=number],input[type=url],select,textarea{background:var(--field);
+border:1px solid var(--line2);border-radius:8px;padding:0 12px;height:40px;outline:none;font-size:14px}
+textarea{padding:10px 12px}
+::placeholder{color:var(--faint);opacity:1}
+input[type=number]{width:96px}input[type=number].sm{width:72px}
+input:focus,select:focus,textarea:focus{border-color:var(--brand);box-shadow:inset 0 0 0 1px var(--brand)}
+input[type=search]{flex:1;min-width:240px;border-radius:999px;background:var(--soft);border-color:transparent;padding:0 18px}
+input[type=search]:focus{background:var(--field)}
+form.filters select{max-width:100%}
+button,.btn{background:var(--brand);color:var(--on-ink);border:0;border-radius:999px;padding:0 20px;height:40px;
+font-weight:500;font-size:14px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;white-space:nowrap;
+transition:box-shadow .15s,background-color .15s}
+button:hover,.btn:hover{background:var(--btn-hover);box-shadow:var(--e0);text-decoration:none}
+button:disabled{opacity:.5;cursor:default;box-shadow:none}
+.btn.ghost,button.ghost{background:transparent;color:var(--brand);border:1px solid var(--line2)}
+.btn.ghost:hover,button.ghost:hover{background:var(--brand-bg);box-shadow:none}
+.panel.item:target{border-color:var(--brand);box-shadow:0 0 0 2px var(--brand-bg)}
 summary{cursor:pointer}
-.dirs{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 14px;margin:0 0 12px}
-.dirs>b{font-size:13px;margin-right:8px}.dirs>.muted{font-size:12px}
-.dirs .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
-.filtbox{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:6px 14px;margin:0 0 12px}
-.crow{display:flex;gap:12px;align-items:flex-start;padding:6px 0}.crow+.crow{border-top:1px solid var(--line)}
-.crow>b{font-size:13px;min-width:120px;padding-top:4px}.crow .chips{display:flex;flex-wrap:wrap;gap:6px}
+.dirs{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 16px;margin:0 0 12px}
+.dirs>b{font-size:13px;font-weight:500;margin-right:8px}.dirs>.muted{font-size:12px}
+.dirs .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.filtbox{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:6px 16px;margin:0 0 12px}
+.crow{display:flex;gap:12px;align-items:flex-start;padding:8px 0}.crow+.crow{border-top:1px solid var(--line)}
+.crow>b{font-size:13px;font-weight:500;min-width:130px;padding-top:6px}.crow .chips{display:flex;flex-wrap:wrap;gap:8px}
 .chipf.zero{opacity:.45}
-.chipf{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:4px 11px;
-font-size:13px;color:var(--ink);background:var(--field)}.chipf:hover{border-color:var(--line2);background:var(--soft);text-decoration:none}
-.chipf span{font:11px var(--mono);color:var(--muted)}
-.chipf.on{background:var(--brand-bg);border-color:var(--brand);color:var(--brand);font-weight:500}.chipf.on span{color:var(--brand)}
-details.help{background:var(--soft);border:1px solid var(--line);border-radius:10px;padding:8px 14px;margin:0 0 14px;
-color:var(--muted);font-size:13px}details.help summary{font-weight:500;color:var(--ink)}details.help p{margin:8px 0 2px}
-.home{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;align-items:start}
-.home .card{min-width:0;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px;display:flex;
-flex-direction:column;gap:12px}
-.home .card h3{margin:0;font-size:16px;display:flex;align-items:center;gap:8px}
+.chipf{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line2);border-radius:8px;height:32px;padding:0 12px;
+font-size:13px;font-weight:500;color:var(--ink);background:var(--card)}
+.chipf:hover{background:var(--hover);text-decoration:none}
+.chipf span{font-size:12px;color:var(--muted)}
+.chipf.on{background:var(--brand-bg);border-color:transparent;color:var(--side-on-ink)}.chipf.on span{color:var(--side-on-ink)}
+[data-theme=dark] .chipf.on{color:var(--brand2)}
+details.help{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 16px;margin:0 0 14px;
+color:var(--muted);font-size:13px}details.help summary{font-weight:500;color:var(--ink)}details.help p{margin:8px 0 2px;max-width:90ch}
+.home{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;align-items:start}
+.home .card{min-width:0;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px 20px 16px;display:flex;
+flex-direction:column;gap:14px}
+.home .card h3{margin:0;font-size:16px;font-weight:500;display:flex;align-items:center;gap:10px}
+.home .card h3 svg.i{color:var(--muted)}
 .home .card h3 small{font-weight:400;color:var(--muted);font-size:12px;margin-left:auto}
-.home .nums{display:grid;grid-template-columns:repeat(3,auto);gap:8px}
-.home .nums div{background:var(--soft);border-radius:10px;padding:8px 10px}
-.home .nums b{display:block;font:500 17px/1.3 var(--mono);white-space:nowrap}.home .nums b.blue{color:var(--brand)}
+.home .nums{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.home .nums div{background:var(--soft);border-radius:12px;padding:10px 12px;min-width:0}
+.home .nums b{display:block;font-size:20px;font-weight:500;line-height:1.3;overflow-wrap:anywhere}.home .nums b.blue{color:var(--good)}
 .home .nums span{font-size:12px;color:var(--muted)}
-.home ol{min-width:0;margin:0;padding:0;list-style:none;display:grid;gap:2px}
-.home li{margin:0;min-width:0}.home li a{display:flex;gap:10px;align-items:center;padding:7px 8px;border-radius:8px;color:var(--ink)}
-.home li a:hover{background:var(--soft);text-decoration:none}
+.home ol{min-width:0;margin:0;padding:0;list-style:none;display:grid;gap:0}
+.home li{margin:0;min-width:0}.home li a{display:flex;gap:10px;align-items:center;padding:8px 10px;border-radius:8px;color:var(--ink)}
+.home li a:hover{background:var(--hover);text-decoration:none}
 .home li .t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.home li .w{font:12px var(--mono);color:var(--muted);white-space:nowrap}
+.home li .w{font-size:13px;font-weight:500;color:var(--muted);white-space:nowrap}
 .home .card>.btn{align-self:flex-start}
-.btn.xs{height:26px;padding:0 8px;font-size:12px;border-radius:6px;gap:4px}
-.btn.link{background:none;border-color:transparent;color:var(--muted)}.btn.link:hover{color:var(--ink);background:none}
-.seg{display:inline-flex;background:var(--chip);border-radius:9px;padding:3px;gap:2px}
-.seg a{padding:5px 11px;border-radius:7px;color:var(--muted);font-size:13px;font-weight:500}
-.seg a:hover{color:var(--ink);text-decoration:none}.seg a.on{background:var(--seg-on);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
-.badge,.pill{display:inline-flex;align-items:center;gap:5px;border-radius:6px;padding:2px 8px;font-weight:500;
-font-size:12px;white-space:nowrap;background:var(--chip);color:var(--muted);border:1px solid transparent}
-.pill::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor;opacity:.8}
+.btn.xs{height:32px;padding:0 14px;font-size:13px;gap:6px}.btn.xs svg.i{width:16px;height:16px}
+.btn.link{background:none;border:0;color:var(--brand)}.btn.link:hover{background:var(--brand-bg);box-shadow:none}
+.seg{display:inline-flex;border:1px solid var(--line2);border-radius:999px;overflow:hidden}
+.seg a{padding:7px 16px;color:var(--ink);font-size:13px;font-weight:500}.seg a+a{border-left:1px solid var(--line2)}
+.seg a:hover{background:var(--hover);text-decoration:none}.seg a.on{background:var(--brand-bg);color:var(--side-on-ink)}
+[data-theme=dark] .seg a.on{color:var(--brand2)}
+.badge,.pill{display:inline-flex;align-items:center;gap:6px;border-radius:8px;padding:2px 10px;font-weight:500;
+font-size:12px;white-space:nowrap;background:var(--chip);color:var(--muted)}
+.pill::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
 .badge.good,.pill.good{background:var(--good-bg);color:var(--good)}
 .badge.maybe,.pill.maybe{background:var(--maybe-bg);color:var(--maybe)}
 .badge.bad,.pill.bad,.pill.solid-bad{background:var(--bad-bg);color:var(--bad)}
-.pill.blue{background:var(--brand-bg);color:var(--brand)}
-.chip{background:var(--chip);border-radius:6px;padding:1px 7px;font-size:12px;color:var(--muted)}
-.tag{font-size:12px;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:1px 7px}
-.lotno{font-family:var(--mono);font-size:13px}
-.urgent{color:var(--bad)!important;font-weight:600}.soon{color:var(--maybe)!important;font-weight:600}
-.panel{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 18px;margin:0 0 12px}
-dl.kv{display:grid;grid-template-columns:minmax(120px,200px) 1fr;gap:9px 16px;margin:0}
+.pill.blue{background:var(--brand-bg);color:var(--side-on-ink)}[data-theme=dark] .pill.blue{color:var(--brand2)}
+.pill.bid{background:var(--bid-bg);color:var(--bid)}
+.chip{background:var(--chip);border-radius:8px;padding:1px 8px;font-size:12px;color:var(--muted)}
+.tag{font-size:12px;color:var(--muted);border:1px solid var(--line2);border-radius:8px;padding:1px 8px}
+.lotno{font-family:var(--mono);font-size:12.5px}
+.urgent{color:var(--bad)!important;font-weight:500}.soon{color:var(--maybe)!important;font-weight:500}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px 20px;margin:0 0 12px}
+dl.kv{display:grid;grid-template-columns:minmax(120px,200px) 1fr;gap:10px 16px;margin:0}
 dl.kv dt{color:var(--muted)}dl.kv dd{margin:0}
 ul{margin:4px 0;padding-left:20px}li{margin:3px 0}
-.prose{white-space:pre-wrap;word-wrap:break-word}
+.prose{white-space:pre-wrap;word-wrap:break-word;max-width:90ch}
 .muted{color:var(--muted)}.empty{padding:48px;text-align:center;color:var(--muted)}
-.flash{background:var(--good-bg);color:var(--good);border:1px solid var(--good-line);border-radius:10px;padding:10px 14px;
-margin:0 0 14px;font-weight:500}
-.flash.err{background:var(--bad-bg);color:var(--bad);border-color:var(--bad-line)}
+.flash{background:var(--good-bg);color:var(--good);border-radius:8px;padding:10px 16px;margin:0 0 14px;font-weight:500}
+.flash.err{background:var(--bad-bg);color:var(--bad)}
 footer{padding:0 24px 24px;color:var(--faint);font-size:12px}
 .count{color:var(--muted);margin:0 0 8px;font-size:13px}
-.bulk{display:none;gap:8px;align-items:center;margin:0 0 10px;padding:6px 8px 6px 14px;background:var(--soft);
-border:1px solid var(--line);border-radius:10px}.bulk.show{display:flex}
-.tablewrap{overflow:auto;background:var(--card);border:1px solid var(--line);border-radius:12px;max-height:calc(100vh - 120px)}
-table.grid{border-collapse:separate;border-spacing:0;width:100%;font-size:13px}
-.grid th,.grid td{padding:10px 12px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap;
-vertical-align:middle}
+.bulk{display:none;gap:8px;align-items:center;margin:0 0 10px;padding:6px 8px 6px 16px;background:var(--brand-bg);color:var(--side-on-ink);
+border-radius:12px}.bulk.show{display:flex}
+.tablewrap{overflow:auto;background:var(--card);border:1px solid var(--line);border-radius:12px;max-height:calc(100vh - 140px)}
+table.grid{border-collapse:separate;border-spacing:0;width:100%;font-size:13.5px}
+.grid th,.grid td{padding:10px 14px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap;vertical-align:middle}
 .grid tbody tr:last-child td{border-bottom:0}
-.grid thead th{position:sticky;top:0;background:var(--soft);font-weight:500;color:var(--muted);z-index:2;font-size:12px}
+.grid thead th{position:sticky;top:0;background:var(--card);font-weight:500;color:var(--muted);z-index:2;font-size:12.5px}
 .grid th a{color:var(--muted);display:flex;align-items:center;justify-content:space-between;gap:8px}
 .grid th a:hover{text-decoration:none;color:var(--ink)}
-.grid th .si{color:var(--faint);flex:none}.grid th.on .si,.grid th.on a{color:var(--ink)}
-.grid tbody tr{cursor:pointer}.grid tbody tr:hover td{background:var(--soft)}
+.grid th .si{color:var(--faint);flex:none}.grid th.on .si,.grid th.on a{color:var(--brand)}
+.grid tbody tr{cursor:pointer}.grid tbody tr:hover td{background:var(--hover);box-shadow:inset 0 -1px 0 var(--line)}
 .grid tbody tr.sel td{background:var(--brand-bg)}
 .grid td.num,.grid th.num{text-align:right}.grid th.num a{justify-content:flex-end}
-.grid td.num{font-family:var(--mono);font-size:12.5px}
+.grid td.num{font-weight:500}
 .grid td.wide{max-width:380px;overflow:hidden;text-overflow:ellipsis}
 .grid td.mid{max-width:220px;overflow:hidden;text-overflow:ellipsis}
-.grid td.dim{color:var(--muted);font-family:var(--mono);font-size:12px}
-.grid tfoot td{background:var(--soft);font-weight:600;border-top:1px solid var(--line);border-bottom:0;position:sticky;bottom:0}
-.grid .cb{width:40px;padding-right:0}
-.grid input[type=checkbox]{appearance:none;width:16px;height:16px;border:1.5px solid var(--line2);border-radius:4px;
-background:var(--field);cursor:pointer;vertical-align:middle;margin:0;display:inline-grid;place-content:center}
-.grid input[type=checkbox]:checked{background:var(--ink);border-color:var(--ink)}
-.grid input[type=checkbox]:checked::after{content:"";width:8px;height:4px;border:2px solid var(--on-ink);border-top:0;
+.grid td.dim{color:var(--muted);font-size:12px}
+.grid tfoot td{background:var(--soft);font-weight:500;border-top:1px solid var(--line);border-bottom:0;position:sticky;bottom:0}
+.grid .cb{width:44px;padding-right:0}
+.grid input[type=checkbox]{appearance:none;width:18px;height:18px;border:2px solid var(--muted);border-radius:3px;
+background:transparent;cursor:pointer;vertical-align:middle;margin:0;display:inline-grid;place-content:center}
+.grid input[type=checkbox]:checked{background:var(--brand);border-color:var(--brand)}
+.grid input[type=checkbox]:checked::after{content:"";width:9px;height:4px;border:2px solid var(--on-ink);border-top:0;
 border-right:0;transform:rotate(-45deg) translate(1px,-1px)}
-.bar{display:inline-flex;align-items:center;gap:8px}.bar i{display:inline-block;width:44px;height:5px;border-radius:3px;
-background:var(--chip);overflow:hidden}.bar i b{display:block;height:100%;background:var(--brand);border-radius:3px}
+.bar{display:inline-flex;align-items:center;gap:8px}.bar i{display:inline-block;width:44px;height:4px;border-radius:2px;
+background:var(--chip);overflow:hidden}.bar i b{display:block;height:100%;background:var(--brand);border-radius:2px}
 .nowrap{white-space:nowrap}
 .feed{display:grid;gap:10px;max-width:760px}
-.msg{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 16px 10px}
+.msg{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px 16px 10px}
 .msg .body{white-space:pre-wrap;word-wrap:break-word;overflow-wrap:anywhere}
-.msg .body pre,.msg .body code{font-family:var(--mono);font-size:12.5px;background:var(--chip);border-radius:5px;padding:0 4px}
-.msg .body blockquote{margin:4px 0;padding-left:10px;border-left:3px solid var(--line2);color:var(--muted)}
+.msg .body pre,.msg .body code{font-family:var(--mono);font-size:12.5px;background:var(--chip);border-radius:4px;padding:0 4px}
+.msg .body blockquote{margin:4px 0;padding-left:10px;border-left:1px solid var(--line2);color:var(--muted)}
 .msg .when{display:flex;justify-content:space-between;gap:8px;color:var(--faint);font-size:12px;margin-top:8px}
 .kb{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
-.kb a{flex:1 1 auto;text-align:center;background:var(--soft);border:1px solid var(--line);border-radius:8px;
-padding:5px 10px;font-weight:500;font-size:13px;color:var(--ink)}
+.kb a{flex:1 1 auto;text-align:center;border:1px solid var(--line2);border-radius:999px;padding:5px 12px;font-weight:500;font-size:13px;color:var(--brand)}
 .spoiler{background:var(--muted);color:transparent;border-radius:3px}.spoiler:hover{color:inherit;background:none}
 .tabs{margin:0 0 14px}
-.login{max-width:360px;margin:14vh auto 0;display:grid;gap:12px;padding:28px}
-.login label{display:grid;gap:5px;color:var(--muted);font-size:13px}.login button{height:38px;justify-content:center}
-.login input{height:38px!important}
+.login{max-width:400px;margin:12vh auto 0;display:grid;gap:14px;padding:36px 40px;border-radius:28px}
+.login .logo{width:48px;height:48px;border-radius:50%;background:var(--brand);color:var(--on-ink);display:grid;place-content:center;padding:0;font-size:20px}
+.login h1{font-size:24px}
+.login label{display:grid;gap:6px;color:var(--muted);font-size:13px}.login button{height:40px;justify-content:center}
+.login input{height:44px!important}
 .solo main{max-width:none}
+/* table money: plain bold sum, $ under it as a quiet second line */
+.ptag{display:inline-flex;flex-direction:column;align-items:flex-end;line-height:1.2}
+.ptag .face{display:inline-flex;flex-direction:column;align-items:flex-end}
+.ptag b{font-weight:500;white-space:nowrap}.ptag small{font-size:11.5px;color:var(--muted);white-space:nowrap}
+.ptag.big b{font-size:22px;font-weight:500}
+.stats .stat.money .ptag{display:inline-flex;margin:4px 0 2px}.stats .stat.money .ptag .face{display:inline-flex}
+/* home: «Muddati yaqin lotlar» — a plain list */
+.soonlist{background:var(--card);border:1px solid var(--line);border-radius:16px;margin:0 0 20px;overflow:hidden}
+.soonlist .head{display:flex;align-items:center;gap:12px;padding:14px 20px 10px}
+.soonlist .head h2{margin:0;font-size:16px;font-weight:500}.soonlist .head .muted{font-size:13px}
+.soonlist .head a{margin-left:auto;font-size:13px;font-weight:500}
+.soonlist a.row{display:grid;grid-template-columns:minmax(0,1fr) 150px 150px 130px;gap:16px;align-items:center;
+padding:11px 20px;border-top:1px solid var(--line);color:var(--ink)}
+.soonlist a.row:hover{background:var(--hover);text-decoration:none}
+.soonlist .t{min-width:0}.soonlist .t b{display:block;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.soonlist .t small{color:var(--muted);font-size:12px}
+.soonlist .sum{text-align:right;font-weight:500}.soonlist .sum small{display:block;color:var(--muted);font-size:12px;font-weight:400}
+.soonlist .left{font-size:13px}.soonlist .left small{display:block;color:var(--muted);font-size:12px}
+.soonlist .v{justify-self:end}
+.soonlist .none{padding:16px 20px;border-top:1px solid var(--line);color:var(--muted)}
+.ai-est{display:inline-flex;align-items:center;gap:4px}.ai-est svg.i{width:15px;height:15px;color:var(--brand)}
+details.help summary svg.i{width:16px;height:16px;vertical-align:-3px;margin-right:6px}
+.chipf svg.i,.themes svg.i{width:14px;height:14px;stroke-width:2.2}
 @media (max-width:760px){.app{grid-template-columns:1fr}aside{position:sticky;height:auto;flex-direction:row;
-align-items:center;padding:6px 10px;border-right:0;border-bottom:1px solid var(--line);overflow-x:auto}
-.logo{padding:0 6px 0 0}.logo span,aside nav .grp,aside .grow{display:none}aside nav{flex-direction:row}
-aside nav a{padding:0 9px;gap:6px}aside [data-tip]:hover::after{display:none}.top{position:static;padding:0 16px}.top .sub{display:none}
-main{padding:14px}dl.kv{grid-template-columns:1fr}input[type=search]{min-width:100%}}
+align-items:center;padding:6px 8px;overflow-x:auto;border-bottom:1px solid var(--line)}
+.logo{padding:0 6px 0 4px}.logo span,aside nav .grp,aside .grow{display:none}aside nav{flex-direction:row}
+aside nav a{padding:0 12px;gap:8px}aside .acts{padding:0}aside [data-tip]:hover::after{display:none}
+.top{position:static;padding:0 16px;height:56px}.top .sub{display:none}
+main{padding:8px 14px 32px}dl.kv{grid-template-columns:1fr}input[type=search]{min-width:100%}.stat{flex-basis:50%}
+.soonlist .head{flex-wrap:wrap;gap:2px 12px}.soonlist .head .muted{order:3;flex-basis:100%}
+.soonlist a.row{grid-template-columns:minmax(0,1fr) auto;gap:4px 12px}.soonlist .left{grid-column:1}.soonlist .v{grid-column:2;grid-row:2}}
 """
 # "Avtomatik" follows the device: same dark palette, applied by the OS setting.
 _DARK = re.search(r":root\[data-theme=dark\]\{([^}]*)\}", CSS).group(1)
@@ -339,7 +390,7 @@ def chip_group(ctx: Ctx, path: str, param: str, title: str, chosen_csv: str,
     for k, label, n in options:
         on = k in chosen
         chips.append(f'<a class="chipf{" on" if on else ""}{" zero" if not n and not on else ""}" '
-                     f'href="{link(chosen ^ {k})}">{"✓ " if on else ""}{h(label)} <span>{n}</span></a>')
+                     f'href="{link(chosen ^ {k})}">{icon("check") if on else ""}{h(label)} <span>{n}</span></a>')
     return f'<div class="crow"><b>{h(title)}</b><div class="chips">{"".join(chips)}</div></div>'
 
 
@@ -373,7 +424,7 @@ def dir_chips(ctx: Ctx, path: str, yon: str, dir_counts: dict[str, int], **query
     for k in keys:
         on = k in chosen
         chips.append(f'<a class="chipf{" on" if on else ""}" href="{link(chosen ^ {k})}" '
-                     f'title="{"Olib tashlash" if on else "Qo‘shish"}">{"✓ " if on else ""}{h(DIRECTION_LABEL.get(k, k))} '
+                     f'title="{"Olib tashlash" if on else "Qo‘shish"}">{icon("check") if on else ""}{h(DIRECTION_LABEL.get(k, k))} '
                      f'<span>{dir_counts.get(k, 0)}</span></a>')
     hint = (f'{len(chosen)} ta tanlangan — yana bosib qo\'shing yoki olib tashlang' if chosen
             else "bittasini yoki bir nechtasini bosing")
@@ -384,10 +435,13 @@ def dir_chips(ctx: Ctx, path: str, yon: str, dir_counts: dict[str, int], **query
 def help_box(*paras: str, title: str = "Bu sahifa qanday ishlaydi?") -> str:
     """Long explanations stay folded so the page shows the numbers and the table first (paras are HTML)."""
     body = "".join(f"<p>{x}</p>" for x in paras if x)
-    return f'<details class="help"><summary>ℹ️ {h(title)}</summary>{body}</details>' if body else ""
+    return f'<details class="help"><summary>{icon("info")}{h(title)}</summary>{body}</details>' if body else ""
 
 
-def stat(label: str, value, note: str = "", blue: bool = False) -> str:
+def stat(label: str, value, note: str = "", blue: bool = False, money: bool = False) -> str:
+    if money:  # the money total is written on a price tag, its caption on its own line under it
+        return (f'<div class="stat money"><span>{h(label)}</span><span class="ptag big"><span class="face">'
+                f'<b>{h(value)}</b></span></span><small>{h(note)}</small></div>')
     return (f'<div class="stat"><span>{h(label)}</span><b class="{"blue" if blue else ""}">{h(value)}</b>'
             f'<small>{h(note)}</small></div>')
 
@@ -467,7 +521,7 @@ def tenders_page(ctx: Ctx, lots: list[Lot], *, q: str, verdict: str, status: str
     unknown = sum(1 for lot in lots if lot.pledge_percent and not pledge_uzs(lot))
     biggest = max(with_pledge, key=pledge_uzs, default=None)
     stats = (stat("Hammasida qatnashish uchun", tc.money_uzs(pledge_total),
-                  f"jadvaldagi {len(lots)} ta lot zakalati · {len(with_pledge)} tasida bor", blue=True)
+                  f"jadvaldagi {len(lots)} ta lot zakalati · {len(with_pledge)} tasida bor", money=True)
              + stat("Ochiq IT lotlar", counts.get("open", 0), "muddati o'tmaganlar")
              + stat("Qatnashsa bo'ladi", counts.get("good", 0), "AI xulosasi: qatnashamiz", blue=True)
              + stat("Shartli", counts.get("maybe", 0), "qo'shimcha tekshirish kerak")
@@ -703,6 +757,34 @@ def _home_card(icon_txt: str, title: str, note: str, nums: list[tuple[str, str, 
             f'<ol>{lis}</ol></div><a class="btn ghost" href="{h(more[0])}">{h(more[1])} →</a></section>')
 
 
+_STALL_VERDICT = {"good": ("good", "Qatnashamiz"), "maybe": ("maybe", "Shartli"), "bad": ("bad", "Yo'q")}
+
+
+def soon_list(ctx: Ctx, it: list, now: datetime) -> str:
+    """«Muddati yaqin lotlar»: the open IT lots closing first — title, sum, time left, AI verdict."""
+    rows = sorted((r for r in it if r.when), key=lambda r: r.when)[:6]
+    head = (f'<div class="head"><h2>Muddati yaqin lotlar</h2><span class="muted">{len(it)} ta ochiq IT lot</span>'
+            f'<a href="{h(ctx.url("/lots"))}">Hammasini ko\'rish</a></div>')
+    if not rows:
+        return (f'<section class="soonlist">{head}<div class="none">Hozir ochiq IT lot yo\'q. Bot har 20 daqiqada '
+                "beshta saytni tekshiradi.</div></section>")
+    items = []
+    for r in rows:
+        left = (r.when - now).total_seconds()
+        urg = "urgent" if left < 86400 else "soon" if left < 3 * 86400 else ""
+        cls, label = _STALL_VERDICT.get(r.verdict, ("", "Tahlil kutilmoqda"))
+        if "Qatnash" in (r.status_text or ""):
+            cls, label = "bid", "Qatnashyapmiz"
+        usd = tc.fmt_usd(r.usd) if r.usd is not None else ""
+        items.append(
+            f'<a class="row" href="{h(r.detail)}"><span class="t"><b title="{h(r.title)}">{h(r.title)}</b>'
+            f'<small>{h(r.source)}</small></span>'
+            f'<span class="sum">{h(r.price)}<small>{h(usd)}</small></span>'
+            f'<span class="left"><span class="{urg}">{h(remaining_uz(r.when, now))}</span><small>{h(fmt_local(r.when))}</small></span>'
+            f'<span class="v"><span class="pill {cls}">{h(label)}</span></span></a>')
+    return f'<section class="soonlist">{head}{"".join(items)}</section>'
+
+
 def home_page(ctx: Ctx, *, it: list, goods: list, jobs: list, goods_pledge: float) -> str:
     """Start page: IT tenders, goods/service tenders and freelance jobs side by side — never in one list."""
     def best(rows, key):
@@ -712,33 +794,32 @@ def home_page(ctx: Ctx, *, it: list, goods: list, jobs: list, goods_pledge: floa
         return f"{w}%" if w is not None else ""
 
     it_good = [r for r in it if r.verdict in ("good", "maybe")]
-    it_card = _home_card("🏛", "IT tenderlar", "davlat xaridlari", [
+    it_card = _home_card(icon("tenders"), "IT tenderlar", "davlat xaridlari", [
         ("ochiq lot", str(len(it)), False), ("qatnashsa bo'ladi", str(sum(r.verdict == "good" for r in it)), True),
         ("shartli", str(sum(r.verdict == "maybe" for r in it)), False)],
         [(r.title, win_txt(r.win) or r.price, r.detail) for r in best(it_good, lambda r: -(r.win or 0))],
         (ctx.url("/lots"), "Hamma IT tenderlar"), "Hozircha tavsiya qilingan IT lot yo'q")
     g_ok = [r for r in goods if r.ai_verdict in ("QATNASHISH MUMKIN", "SHARTLI")]
-    goods_card = _home_card("📦", "Tovar va xizmat", "davlat xaridlari", [
+    goods_card = _home_card(icon("goods"), "Tovar va xizmat", "davlat xaridlari", [
         ("ochiq lot", str(len(goods)), False),
         ("AI: qatnashsa bo'ladi", str(sum(r.ai_verdict == "QATNASHISH MUMKIN" for r in goods)), True),
         ("zakalat (hammasi)", tc.money_uzs(goods_pledge).replace(" so'm", ""), False)],
-        [(f"{r.title} · {r.customer_name}" if r.customer_name else r.title,
+        [((f"{r.customer_name} · {r.title}" if r.is_category else f"{r.title} · {r.customer_name}")
+          if r.customer_name else r.title,
           " · ".join(x for x in (win_txt(r.win[0] if r.win else None), tc.money_uzs(r.start_cost, r.currency)) if x),
           ctx.url(f"/all/uzum/lot/{r.id}"))
          for r in best(g_ok, lambda r: (r.ai_verdict != "QATNASHISH MUMKIN", -(r.win[0] if r.win else 0),
                                         -(r.usd or 0)))],
         (ctx.url("/all"), "Hamma tovar va xizmat tenderlari"), "AI hali tovar lotlarini tahlil qilmoqda")
     j_good = [r for r in jobs if r.verdict in ("good", "maybe")]
-    jobs_card = _home_card("💼", "Frilans", "FL.ru, Kwork, Upwork…", [
+    jobs_card = _home_card(icon("jobs"), "Frilans", "FL.ru, Kwork, Upwork…", [
         ("ochiq ish", str(len(jobs)), False), ("juda mos (fit ≥ 80)", str(sum(r.verdict == "good" for r in jobs)), True),
         ("o'rtacha mos", str(sum(r.verdict == "maybe" for r in jobs)), False)],
         [(r.title, f"fit {r.fit}" if r.fit is not None else r.price, r.detail)
          for r in best(j_good, lambda r: -(r.fit or 0))],
         (ctx.url("/jobs"), "Hamma frilans ishlar"), "Hozircha mos frilans ish yo'q")
-    intro = ('<p class="sub">Uchta alohida yo\'nalish: <b>IT tenderlar</b>, <b>tovar va xizmat tenderlari</b> '
-             "(davlat xaridlari) va <b>frilans</b> ishlar. Har birini chap menyudan oching.</p>")
-    return layout(ctx, "orders", f'{intro}<div class="home">{it_card}{goods_card}{jobs_card}</div>',
-                  title="Bosh sahifa", sub="Bugungi eng yaxshi imkoniyatlar")
+    return layout(ctx, "orders", f'{soon_list(ctx, it, now_utc())}<div class="home">{it_card}{goods_card}{jobs_card}</div>',
+                  title="Bosh sahifa", sub="Bugun nima yangi, nima mos, qancha pul va qachon yopiladi")
 
 
 CATALOG_KINDS = (("goods", "Tovarlar"), ("service", "Xizmat / ish"))
@@ -760,7 +841,7 @@ def catalog_page(ctx: Ctx, rows: list, *, kind: str, q: str, src: str, region: s
     good = sum(1 for r in rows if r.ai_verdict == "QATNASHISH MUMKIN")
     goods_rows = [r for r in rows if r.kind == "goods"]
     stats = (stat("Hammasida qatnashish uchun", tc.money_uzs(pledge_total),
-                  f"{len(known)} ta lot zakalati · {with_pledge} tasida bor", blue=True)
+                  f"{len(known)} ta lot zakalati · {with_pledge} tasida bor", money=True)
              + stat("Tovar yetkazib berish", counts.get("goods", 0), "ochiq lotlar, muddati o'tmagan")
              + stat("AI: qatnashsa bo'ladi", good, f"{sum(1 for r in goods_rows if r.ai_verdict)} ta lot tahlil qilingan")
              + stat("Oxirgi yangilanish", fmt_local(max(updated.values())).split(" ")[-1] if updated else "—",
@@ -820,12 +901,13 @@ def catalog_page(ctx: Ctx, rows: list, *, kind: str, q: str, src: str, region: s
     if uzum:
         from app.web.tables import gap_lot_cols, price_cols
         pc = {c.key: c for c in price_cols(big)}
-        cols = ([pc[k] for k in ("name", "no", "qty", "tender", "uzum", "ratio", "over")] + gap_lot_cols()
-                + [pc["go"]])
+        gl = {c.key: c for c in gap_lot_cols()}  # the lot's money and verdict right after the item name
+        cols = ([pc["name"], gl["lprice"], gl["verdict"]] + [pc[k] for k in ("tender", "uzum", "ratio", "over", "no", "qty")]
+                + [gl["pledge"], gl["win"], pc["go"]])
         top = table_html(ctx, "/all/uzum", uzum, cols, sort="over", direction="desc", query={"f": "big"},
                          detail=lambda r: ctx.url(f"/all/uzum/lot/{r.lot.id}"), bulk=[], noun="mahsulot")
         top = re.sub(r'<p class="count">[^<]*</p>', "", top, count=1)
-        uz = (f'<h2 style="margin:18px 0 8px">🛒 Uzum narxi bilan katta farqlar '
+        uz = (f'<h2 style="margin:18px 0 8px">{icon("cart")}Uzum narxi bilan katta farqlar '
               f'<span class="muted">— eng katta {len(uzum)} tasi (jami {uzum_total})</span> '
               f'<a class="btn ghost" href="{h(ctx.url("/all/uzum"))}">Hammasi →</a></h2>{top}'
               f'<h2 style="margin:22px 0 8px">Lotlar</h2>')
@@ -877,10 +959,10 @@ def prices_page(ctx: Ctx, rows: list, *, f: str, q: str, yon: str, dir_counts: d
             "(har 30 daqiqada yangi mahsulotlar). Faqat dona/komplekt/pachka bilan o'lchanadigan mahsulotlar; "
             "nomi Uzum'dagi kamida 3 ta mahsulotga mos kelganlari ko'rsatiladi (20 baravardan ortiq farq — boshqa "
             "mahsulot deb hisoblanadi va chiqarilmaydi). «Uzum narxi» ustiga bosing — "
-            "Uzum'dagi qidiruv ochiladi; «📄 Tender» / «🛒 Uzum» tugmalari — lot asl saytda yoki mahsulot Uzum'da ochiladi; "
+            "Uzum'dagi qidiruv ochiladi; «Tender» / «Uzum» tugmalari — lot asl saytda yoki mahsulot Uzum'da ochiladi; "
             "qatorning boshqa joyini bosing — lotdagi <b>hamma mahsulotlar</b> ro'yxati ochiladi. "
             "<span class=\"muted\">Uzum chakana narxi; tenderda yetkazib berish, kafolat va QQS ham bo'lishi mumkin. "
-            "Uzum'da solishtirib bo'lmaydigan mahsulotlar (kg, litr…) narxini AI taxmin qiladi — 🤖 belgisi bilan, "
+            "Uzum'da solishtirib bo'lmaydigan mahsulotlar (kg, litr…) narxini AI taxmin qiladi — «AI» belgisi bilan, "
             "lot sahifasida.</span>")
     return layout(ctx, "uzum", f"""{dir_chips(ctx, "/all/uzum", yon, dir_counts, f=f, q=q, sm=sm, zk=zk, av=av)}
 {money_chips(ctx, "/all/uzum", {"sm": sm, "zk": zk, "av": av}, band_counts, f=f, q=q, y=yon)}
@@ -947,8 +1029,8 @@ def _ai_block(ctx: Ctx, lp, ai: dict | None, busy: bool) -> str:
     form = (f'<form method="post" action="{h(ctx.url(f"/all/uzum/lot/{lp.id}/ai"))}" style="display:inline">'
             f'<input type="hidden" name="csrf" value="{h(ctx.csrf or "")}">'
             f'<input type="hidden" name="back" value="{h(ctx.url(f"/all/uzum/lot/{lp.id}"))}">'
-            f'<button class="ghost" type="submit">🔄 Qayta tahlil qilish</button></form>')
-    head = '<h2 id="ai">🤖 AI xulosasi'
+            f'<button class="ghost" type="submit">{icon("refresh")}Qayta tahlil qilish</button></form>')
+    head = f'<h2 id="ai">{icon("bot")}AI xulosasi'
     if ai is None and busy:
         return (f'{head}</h2><div class="panel"><b>AI lotni tahlil qilmoqda…</b> '
                 '<span class="muted">10–30 soniya; sahifa o\'zi yangilanadi.</span></div>')
@@ -981,7 +1063,7 @@ def _ai_block(ctx: Ctx, lp, ai: dict | None, busy: bool) -> str:
             f'<p><b>Narxlar:</b> {h(ai.get("price_comment_uz") or "")}</p>'
             f'<p><b>Yetkazib beruvchi uchun:</b> {h(ai.get("supplier_reason_uz") or "")}</p>{margin}'
             + bullets("Muhim shartlar", ai.get("key_conditions"))
-            + bullets("⚠️ Shubhali joylar", ai.get("red_flags"))
+            + bullets("Shubhali joylar", ai.get("red_flags"))
             + bullets("Risklar", ai.get("risks"))
             + bullets("Mahsulotlar bo'yicha", notes)
             + bullets("Buyurtmachiga savollar", ai.get("questions_for_customer_uz"))
@@ -999,7 +1081,7 @@ def _item_cards(rows) -> str:
             lines.append(("Mahsulot kodi", it.code))
         lines.append(("Holat", r.status_text))
         if r.status == "ai":
-            lines.append(("🤖 AI bozor narxi", f"{tc.money_uzs(r.uzum_med)} — {r.note}"))
+            lines.append(("AI bozor narxi", f"{tc.money_uzs(r.uzum_med)} — {r.note}"))
         elif r.uzum_med:
             lines.append(("Uzum narxi", f"o'rtacha {tc.money_uzs(r.uzum_med)} · eng arzoni {tc.money_uzs(r.uzum_min)} "
                                         f"· {r.n} ta mos mahsulot"))
@@ -1012,8 +1094,8 @@ def _item_cards(rows) -> str:
         kv = "".join(f"<dt>{h(k)}</dt><dd>{h(v)}</dd>" for k, v in lines)
         if r.best:
             kv += f"<dt>Uzum'dagi misol</dt><dd>{ext_link(r.best.url, r.best.title)}</dd>"
-        btn = ext_link(r.lot.url, "📄 Tender", "btn ghost xs") + (
-            " " + ext_link(r.uzum_url, "🛒 Uzum", "btn ghost xs") if r.status != "unit" else "")
+        btn = ext_btn(r.lot.url, "doc", "Tender") + (
+            " " + ext_btn(r.uzum_url, "cart", "Uzum") if r.status != "unit" else "")
         out.append(f'<div class="panel item" id="i-{r.idx}"><p style="margin:0 0 10px"><b>{h(it.name)}</b> '
                    f'{btn}</p><dl class="kv">{kv}</dl></div>')
     return "".join(out)
@@ -1033,7 +1115,7 @@ def _lot_totals(ok, tender_sum: float, uzum_sum: float) -> dict[str, str]:
         word = "tender arzon (Uzum qimmat)"
     n_ai = sum(1 for r in ok if r.status == "ai")
     return {"name": f"Jami: {len(ok)} ta mahsulot <span class=\"muted\">(narx × miqdor · Uzum {len(ok) - n_ai}, "
-                    f"🤖 AI {n_ai})</span>",
+                    f"AI {n_ai})</span>",
             "tender": h(tc.money_uzs(tender_sum)), "uzum": h(tc.money_uzs(uzum_sum)), "ratio": side,
             "over": gap, "status": h(word)}
 
@@ -1055,18 +1137,18 @@ def price_lot_page(ctx: Ctx, lp, *, big: float, detail: dict, ai: dict | None, a
                        foot=_lot_totals(ok, tender_sum, uzum_sum) if ok else None)
     n_ai = sum(1 for r in ok if r.status == "ai")
     stats = (stat("Lotdagi mahsulotlar", len(lp.rows), "hammasi quyida", blue=True)
-             + stat("Narxi hisoblandi", f"{len(ok)} / {len(lp.rows)}", f"Uzum: {len(ok) - n_ai} · 🤖 AI taxmini: {n_ai}")
+             + stat("Narxi hisoblandi", f"{len(ok)} / {len(lp.rows)}", f"Uzum: {len(ok) - n_ai} · AI taxmini: {n_ai}")
              + stat("Hisoblanganlar: tenderda", tc.money_uzs(tender_sum), f"bozor narxida {tc.money_uzs(uzum_sum)}")
              + stat("Ortiqcha summa", tc.money_uzs(max(lp.overpay(big), 0)), f"Uzum ≥{big:g}× arzon bo'lganlar"))
     head = (f'<div class="panel"><b style="font-size:15px">{h(detail.get("title") or lot.title)}</b>'
-            f'<p style="margin:10px 0 0">{ext_link(lot.url, "📄 Lotni tender saytida ochish", "btn ghost xs")} '
-            f'<a class="btn ghost xs" href="#ai">🤖 AI xulosasi</a> {chat_button(ctx, lot.id)} '
-            f'<a class="btn ghost xs" href="#items">🛒 Mahsulotlar</a> '
+            f'<p style="margin:10px 0 0;display:flex;gap:6px;flex-wrap:wrap">{ext_btn(lot.url, "doc", "Lotni tender saytida ochish")} '
+            f'<a class="btn ghost xs" href="#ai">{icon("bot")}AI xulosasi</a> {chat_button(ctx, lot.id)} '
+            f'<a class="btn ghost xs" href="#items">{icon("cart")}Mahsulotlar</a> '
             f'<a class="btn link xs" href="{h(ctx.url("/all/uzum", f="lots"))}">← Lotlar</a></p></div>')
-    note = ('<p class="sub">«📄 Tender» — lot asl saytda ochiladi, «🛒 Uzum» — mahsulot Uzum\'da qidiriladi. '
+    note = ('<p class="sub">«Tender» — lot asl saytda ochiladi, «Uzum» — mahsulot Uzum\'da qidiriladi. '
             "Qatorning boshqa joyini bossangiz — shu mahsulot haqida batafsil ma'lumot (pastda) ochiladi. "
             "«Navbatda» bo'lganlarini telefon keyingi tekshiruvlarda qidiradi. Uzum'da solishtirib bo'lmagan "
-            "mahsulotlar (kg/litr/metr, Uzum'da yo'q) narxini AI bozor narxi bo'yicha taxmin qiladi — «🤖» belgisi.</p>")
+            "mahsulotlar (kg/litr/metr, Uzum'da yo'q) narxini AI bozor narxi bo'yicha taxmin qiladi — «AI» belgisi.</p>")
     body = (f'{head}<div class="stats">{stats}</div>{_ai_block(ctx, lp, ai, ai_busy)}{_lot_info(lot, detail)}'
             f'<h2 id="items">Mahsulotlar va Uzum narxlari</h2>{note}{table}'
             f'<h2>Mahsulotlar batafsil</h2>{_item_cards(rows)}')
@@ -1097,7 +1179,7 @@ required {"" if user else "autofocus"}></label>
 def profile_page(ctx: Ctx, *, user: str, session_until: str, stats: list[tuple[str, int]]) -> str:
     opts = "".join(
         f'<button type="submit" name="theme" value="{k}" class="{"on" if ctx.theme == k else ""}">'
-        f'<span class="sw {k}"></span>{h(label)}{" ✓" if ctx.theme == k else ""}</button>'
+        f'<span class="sw {k}"></span>{h(label)}{icon("check") if ctx.theme == k else ""}</button>'
         for k, label in THEMES.items())
     tiles = "".join(f'<div class="stat"><span>{h(label)}</span><b>{n}</b></div>' for label, n in stats)
     body = f"""<div class="panel prof"><div class="avatar">{h(user[:1].upper() or "A")}</div>
@@ -1107,7 +1189,7 @@ def profile_page(ctx: Ctx, *, user: str, session_until: str, stats: list[tuple[s
 <input type="hidden" name="csrf" value="{h(ctx.csrf)}"><input type="hidden" name="back" value="{h(ctx.url("/profile"))}">
 {opts}</form>
 <p class="muted">"Avtomatik" — telefon yoki kompyuter sozlamasiga qarab o'zi qora/oq bo'ladi. Chap paneldagi
-🌙/☀️ tugmasi ham istalgan paytda almashtiradi.</p>
+oy/quyosh tugmasi ham istalgan paytda almashtiradi.</p>
 <h2>Statistika</h2><div class="stats">{tiles}</div>
 <h2>Hisob</h2><div class="panel"><dl class="kv"><dt>Login</dt><dd>{h(user)}</dd>
 <dt>Sessiya tugashi</dt><dd>{h(session_until)}</dd><dt>Parolni o'zgartirish</dt>
@@ -1128,7 +1210,7 @@ def _msg_buttons(ctx: Ctx, rows: list[list[dict]]) -> str:
         for b in row:
             url, cb = b.get("url"), b.get("cb") or ""
             if url and safe_url(url):
-                href, text, external = url, b.get("text") or "🔗", True
+                href, text, external = url, b.get("text") or "Havola", True
             else:
                 parts = cb.split(":")
                 if len(parts) != 3 or not parts[2].isdigit():
@@ -1165,6 +1247,10 @@ def feed_page(ctx: Ctx, messages, *, kind: str, kinds: list[str], next_before: i
 
 
 # ── 🤖 AI chat about one lot (app/tenders/chat.py) ──────────────────────────
+_ICON["info"] = '<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.01"/>'
+_ICON["doc"] = '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/>'
+_ICON["refresh"] = '<path d="M20 11a8 8 0 0 0-14.3-4.9L4 8M4 4v4h4M4 13a8 8 0 0 0 14.3 4.9L20 16M20 20v-4h-4"/>'
+_ICON["check"] = '<path d="m5 12.5 4.5 4.5L19 7.5"/>'
 _ICON["bot"] = ('<rect x="4" y="8" width="16" height="11" rx="3"/><path d="M12 8V4.5M9 13h.01M15 13h.01'
                 'M9.5 16.2c1.5.9 3.5.9 5 0"/><circle cx="12" cy="3.5" r="1"/>')
 _ICON["send"] = '<path d="M4 12 20 4l-6 16-2.5-6.5z"/><path d="M11.5 13.5 20 4"/>'
@@ -1179,8 +1265,7 @@ CSS += """
 .msg.ai{align-self:flex-start;background:var(--card);border-bottom-left-radius:4px}
 .msg.ai p{margin:0 0 8px}.msg.ai p:last-child{margin:0}.msg.ai ul,.msg.ai ol{margin:4px 0 8px;padding-left:20px}
 .msg.ai li{margin:2px 0}.msg.ai hr{border:0;border-top:1px solid var(--line);margin:12px 0}
-.msg.ai blockquote{margin:8px 0;padding:9px 12px;border-left:3px solid var(--brand);background:var(--brand-bg);
-  border-radius:0 8px 8px 0}.msg.ai code{font-family:var(--mono);font-size:12.5px}.msg .when{display:block;font-size:11px;opacity:.6;margin-top:6px}
+.msg.ai blockquote{margin:8px 0;padding:9px 12px;background:var(--brand-bg);border-radius:8px}.msg.ai code{font-family:var(--mono);font-size:12.5px}.msg .when{display:block;font-size:11px;opacity:.6;margin-top:6px}
 .msg.err{background:var(--bad-bg);color:var(--bad);border-color:var(--bad-line)}
 .msg.wait{color:var(--muted)}.msg.wait::after{content:"";display:inline-block;width:1.2em;text-align:left;
   animation:dots 1.2s steps(4) infinite}
@@ -1371,9 +1456,9 @@ def chat_page(ctx: Ctx, key: str, chat: dict) -> str:
             + (f'<ul class="docs">{doc_li}</ul>' if doc_li else "faqat lot sahifasi" + (
                 f' va {chat.get("items")} ta pozitsiya' if chat.get("items") else "")) + "</dd></dl>"
             f'<p style="margin:12px 0 0;display:flex;gap:6px;flex-wrap:wrap">'
-            f'{ext_link(chat.get("url"), "📄 Saytda ochish", "btn ghost xs")}'
+            f'{ext_btn(chat.get("url"), "doc", "Saytda ochish")}'
             f'<a class="btn link xs" href="{h(ctx.url("/chat"))}">← Suhbatlar</a></p>'
-            + (f'<form method="post" action="{h(ctx.url(f"/chat/{key}/clear"))}" style="margin-top:8px;display:flex;gap:6px">'
+            + (f'<form method="post" action="{h(ctx.url(f"/chat/{key}/clear"))}" style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">'
                f'<input type="hidden" name="csrf" value="{h(ctx.csrf)}">'
                f'<button class="ghost xs btn" type="submit" name="what" value="clear">Suhbatni tozalash</button>'
                f'<button class="ghost xs btn" type="submit" name="what" value="reload">Lotni qayta o\'qish</button></form>'
@@ -1386,4 +1471,13 @@ def chat_page(ctx: Ctx, key: str, chat: dict) -> str:
 
 
 def chat_button(ctx: Ctx, key: str, cls: str = "btn ghost xs") -> str:
-    return f'<a class="{cls}" href="{h(ctx.url("/chat/new", ref=key))}">🤖 AI\'dan so\'rash</a>'
+    return f'<a class="{cls}" href="{h(ctx.url("/chat/new", ref=key))}">{icon("bot")}AI\'dan so\'rash</a>'
+
+
+def ext_btn(url: str | None, ic: str, text: str, cls: str = "btn ghost xs") -> str:
+    """ext_link with a drawn icon in front (no emoji in the UI)."""
+    u = safe_url(url)
+    if not u:
+        return h(text)
+    return (f'<a class="{cls}" href="{h(u)}" target="_blank" rel="noopener noreferrer nofollow">'
+            f'{icon(ic)}{h(text)}</a>')

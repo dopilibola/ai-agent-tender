@@ -13,8 +13,10 @@ not jitter between scans.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import re
+import time
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -37,7 +39,12 @@ OPEN_STATUSES = {"тендер очиқ", "очиқ", "эълон қилинга
                  "опубликовано", "ochiq", "tender ochiq", "e'lon qilingan", "eʼlon qilingan"}
 GENERIC = re.compile(r"^(пгз из агенства|takliflar so|таклифлар сўрови|многолотовая процедура|тендер$|tender$|"
                      r"отбор$|танлаш$|аукцион$|энг яхши таклиф|eng yaxshi taklif|отбор наилучших|lot \d+$)", re.I)
-MAX_MORE = 14  # «show more» presses per section (50 cards each)
+MAX_MORE = 6  # «show more» presses per section (50 cards each)
+# xt-xarid.uz answers «429» (too many requests) when read too often (seen 27–28.11.2026), so be gentle:
+LIST_EVERY_S = 3600       # the list pages are read at most once an hour; scans in between reuse that list
+PAGE_PAUSE_S = 8          # pause after every page of this site
+BACKOFF_S = 3 * 3600      # after a 429 the site is left alone this long
+RATE_LIMIT_JS = r"/(^|\D)429(\D|$)|Too Many Requests|слишком много запросов/i.test(document.body.innerText.slice(0, 400))"
 MAY_BE_EMPTY = {"local_reduction"}  # often has no lots at all
 PAGE_WAIT_S = 45  # xt-xarid.uz pages can take half a minute to render
 DEADLINE_SLACK_S = 15 * 60
@@ -70,6 +77,10 @@ DETAIL_JS = r"""(async () => {
   }
   return {main, more};
 })()"""
+
+
+class RateLimited(RuntimeError):
+    """The site answered 429: too many requests from us."""
 
 
 def lot_url(lot_id: int | str) -> str:
@@ -221,7 +232,7 @@ class HayotbirjaSource:
     title = "xt-xarid.uz (Hayot birja)"
     scan_descriptions = True
     phone_based = True
-    max_details = 35  # cards per scan (each ~10 s of the phone)
+    max_details = 15  # cards per scan (each ~10 s of the phone + a pause for the site)
 
     def __init__(self, browser: PhoneBrowser, cache_dir: Path, *, sections: list[str] | None = None,
                  max_more: int = MAX_MORE):
@@ -231,10 +242,24 @@ class HayotbirjaSource:
         self.sections = sections or list(SECTIONS)
         self.max_more = max_more
         self._listed: dict[str, LotSummary] = {}
+        self._listed_at = 0.0     # monotonic time of the last full listing
+        self._backoff_until = 0.0  # monotonic time: no requests to the site before this
+
+    def _limited(self) -> bool:
+        return time.monotonic() < self._backoff_until
+
+    def _hit_limit(self) -> None:
+        self._backoff_until = time.monotonic() + BACKOFF_S
+        log.warning("hayotbirja.rate_limited", extra={"pause_h": BACKOFF_S / 3600})
+
+    async def _pause(self) -> None:
+        await asyncio.sleep(PAGE_PAUSE_S)
 
     async def _section(self, section: str) -> list[dict]:
         async with self.browser.page(f"{SITE}/procedure/{section}") as tab:
-            await self.browser.wait_for(tab, LIST_READY_JS, limit_s=PAGE_WAIT_S)
+            await self.browser.wait_for(tab, f"({LIST_READY_JS}) || ({RATE_LIMIT_JS})", limit_s=PAGE_WAIT_S)
+            if await tab.eval(RATE_LIMIT_JS):
+                raise RateLimited("xt-xarid.uz: 429 — juda ko'p so'rov")
             for _ in range(self.max_more):
                 before = await tab.eval(MORE_JS)
                 if before is False:
@@ -246,6 +271,7 @@ class HayotbirjaSource:
                 if tail and not any(is_open_status((r.get("lines") or ["", ""])[1]) for r in tail):
                     break  # newest first: the last 50 are all closed → the rest is history
             cards = await tab.eval(LIST_JS) or []
+        await self._pause()
         if not cards and section not in MAY_BE_EMPTY:
             raise ValueError("ro'yxat bo'sh (sahifa vaqtida yuklanmadi)")
         return cards
@@ -253,6 +279,10 @@ class HayotbirjaSource:
     async def list_open(self) -> list[LotSummary]:
         """Open lots of every section. If a section will not load even on a second try, the whole listing
         fails: a partial list would drop that section's lots from the site until the next scan."""
+        if self._listed and (time.monotonic() - self._listed_at < LIST_EVERY_S or self._limited()):
+            return list(self._listed.values())  # read within the hour, or the site asked us to wait
+        if self._limited():
+            raise ValueError("xt-xarid.uz so'rovlarni vaqtincha cheklagan (429) — keyinroq o'qiladi")
         now = now_utc()
         out: dict[str, LotSummary] = {}
         todo, failed = list(self.sections), []
@@ -261,6 +291,11 @@ class HayotbirjaSource:
             for section in todo:
                 try:
                     cards = await self._section(section)
+                except RateLimited:
+                    self._hit_limit()
+                    if self._listed:
+                        return list(self._listed.values())
+                    raise
                 except Exception as e:
                     failed.append(section)
                     log.warning("hayotbirja.section_failed",
@@ -280,6 +315,7 @@ class HayotbirjaSource:
         self.state.save(keep=set(out) | {k for k, v in self.state.data.items() if v.get("seen", "") > (
             now - timedelta(days=3)).isoformat()})
         self._listed = out
+        self._listed_at = time.monotonic()
         log.info("hayotbirja.list_open", extra={"count": len(out), "failed": failed})
         return list(out.values())
 
@@ -310,7 +346,13 @@ class HayotbirjaSource:
     async def get_lot(self, external_id: str) -> LotRecord:
         cached = self.cards.get(external_id)
         if cached is None:
+            if self._limited():
+                raise RateLimited("xt-xarid.uz: kutish (429)")
             cached = await self.browser.read(lot_url(external_id), DETAIL_READY_JS, DETAIL_JS, limit_s=PAGE_WAIT_S)
+            await self._pause()
+            if cached and re.search(r"(^|\D)429(\D|$)", (cached.get("main") or "")[:400]):
+                self._hit_limit()
+                raise RateLimited("xt-xarid.uz: 429 — juda ko'p so'rov")
             if not cached or not cached.get("main"):
                 raise ValueError(f"hayotbirja {external_id}: karta o'qilmadi")
             self.cards.put(external_id, cached)

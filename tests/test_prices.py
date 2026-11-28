@@ -196,15 +196,15 @@ async def test_prices_page(watch, settings, sessionmaker):
         assert pw.analyzer.calls == 1 and "AI lotni tahlil qilmoqda" not in one  # done by the run itself
         assert "Narx: QIMMAT" in one and "Printer 4 baravar qimmat" in one and "Qayta tahlil" in one
         assert "<tfoot>" in one and "Jami: 3 ta mahsulot" in one and "+15.9 mln so&#x27;m" in one
-        assert "🤖 13 000 so&#x27;m" in one and "A-92 benzin, 1 litr" in one
+        assert 'class="ai-est"' in one and "13 000 so&#x27;m" in one and "A-92 benzin, 1 litr" in one
         assert 'data-href="#i-0"' in one and 'id="i-0"' in one  # row → the item's own details
         assert pw.analyzer.calls == 1
         r = await c.post("/tender/all/uzum/lot/etender-10/ai", data={"csrf": "bad"}, allow_redirects=False)
         assert r.status == 403
         assert "Printer Canon" in one and "Stul ofis" in one and "Benzin" in one  # every item of the lot
         assert "AI bozor narxi taxmini" in one and "Solishtirildi" in one
-        assert "📄 Tender" in one and "🛒 Uzum" in one and 'href="https://etender.uzex.uz/lot/10"' in one
-        assert "📄 Tender" in html and "🛒 Uzum" in html and "📄 Tender" in main
+        assert "Tender</a>" in one and "Uzum</a>" in one and 'href="https://etender.uzex.uz/lot/10"' in one
+        assert "Tender</a>" in html and "Uzum</a>" in html and "Tender</a>" in main
         assert (await c.get("/tender/all/uzum/lot/etender-999")).status == 404
         r = await c.get("/tender/all/uzum.xlsx", params={"f": "lots"})
         assert r.status == 200 and "uzum_lotlar" in r.headers["Content-Disposition"]

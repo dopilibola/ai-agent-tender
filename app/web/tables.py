@@ -97,7 +97,7 @@ def lot_status_pill(lot: Lot, now: datetime | None = None) -> str:
     cls, label = {
         LotStatus.NEW: ("blue", "Yangi"),
         LotStatus.NOTIFIED: ("blue", "Xabar qilingan"),
-        LotStatus.BIDDING: ("good", "Qatnashyapmiz"),
+        LotStatus.BIDDING: ("bid", "Qatnashyapmiz"),  # lapis: the one colour kept for lots the team bids on
         LotStatus.IGNORED: ("", "Kerak emas"),
     }.get(lot.status, ("", str(lot.status)))
     return f'<span class="pill {cls}">{h(label)}</span>'
@@ -134,13 +134,20 @@ def _deadline_cell(_ctx: Ctx, lot: Lot, now: datetime) -> str:
             f'{h(fmt_local(lot.deadline_at))}</span>')
 
 
+def ptag(main: str, sub: str = "", title: str = "") -> str:
+    """Narx yorlig'i: money shown as a cardboard price tag (the site's one ornament)."""
+    tip = f' title="{h(title)}"' if title else ""
+    small = f"<small>{h(sub)}</small>" if sub else ""
+    return f'<span class="ptag"{tip}><span class="face"><b>{h(main)}</b>{small}</span></span>'
+
+
 def _lot_no_sort(lot: Lot):
     return int(lot.external_id) if lot.external_id.isdigit() else None
 
 
 def _lot_price(lot: Lot) -> str:
     usd = _usd_cost(lot)
-    return f'<span title="{h(tc.fmt_usd(usd))}">{h(tc.money_uzs(lot.start_cost, lot.currency))}</span>'
+    return ptag(tc.money_uzs(lot.start_cost, lot.currency), title=tc.fmt_usd(usd) if usd is not None else "")
 
 
 def _lot_reason_cell(lot: Lot) -> str:
@@ -172,6 +179,12 @@ def _pledge_cell(lot: Lot) -> str:
     amount = tc.money_uzs(v) if v else tc.money_uzs(lot.pledge_amount, lot.currency)
     return f'<span>{h(amount)} <span class="muted">· {lot.pledge_percent:g}%</span></span>'
 
+
+
+def _ordered(cols: list[Col], first: list[str]) -> list[Col]:
+    """`first` keys in that order, then the rest as defined."""
+    by = {c.key: c for c in cols}
+    return [by[k] for k in first if k in by] + [c for c in cols if c.key not in first]
 
 LOT_COLS: list[Col] = [
     Col("title", "Tavsif", lambda lot: (_a(lot).get("summary_uz") or lot.title).lower(),
@@ -210,6 +223,8 @@ LOT_COLS: list[Col] = [
         lambda c, lot, n: _dt(lot.updated_at), lambda lot: fmt_local(lot.updated_at), "desc", 18, "dim"),
     Col("url", "Havola", None, lambda c, lot, n: "", lambda lot: lot.url, width=40, cls="hidden"),
 ]
+# Money, verdict and deadline first: they are what the team decides on, so they never hide behind a scroll.
+LOT_COLS = _ordered(LOT_COLS, ["title", "price", "verdict", "deadline", "pledge", "advance", "no", "source", "customer"])
 
 
 # ── Freelance jobs ──────────────────────────────────────────────────────────
@@ -348,7 +363,7 @@ ORDER_COLS: list[Col] = [
     Col("who", "Buyurtmachi", lambda o: o.who.lower() or None, lambda c, o, n: _t(o.who, 26), lambda o: o.who,
         "asc", 32, "mid"),
     Col("price", "Summa", lambda o: o.usd,
-        lambda c, o, n: f'<span title="{h(o.price)}">{h(f"${o.usd:,.0f}" if o.usd is not None else o.price)}</span>',
+        lambda c, o, n: ptag(f"${o.usd:,.0f}" if o.usd is not None else o.price, title=o.price if o.usd is not None else ""),
         lambda o: round(o.usd) if o.usd is not None else o.price, "desc", 14, "num"),
     Col("win", "Yutish %", lambda o: o.win, lambda c, o, n: win_bar(o.win, o.win_text), lambda o: o.win,
         "desc", 9, "num"),
@@ -387,7 +402,7 @@ def cat_usd(r) -> float | None:
 
 def _cat_price(r) -> str:
     u = cat_usd(r)
-    return f'<span title="{h(tc.fmt_usd(u))}">{h(tc.money_uzs(r.start_cost, r.currency))}</span>'
+    return ptag(tc.money_uzs(r.start_cost, r.currency), title=tc.fmt_usd(u) if u is not None else "")
 
 
 def _cat_title(r) -> str:
@@ -486,6 +501,8 @@ CATALOG_COLS: list[Col] = [
         lambda c, r, n: _t(r.customer_region, 24), lambda r: r.customer_region or "", "asc", 24, "mid"),
     Col("url", "Havola", None, lambda c, r, n: "", lambda r: r.url, width=40, cls="hidden"),
 ]
+CATALOG_COLS = _ordered(CATALOG_COLS, ["title", "price", "verdict", "deadline", "pledge", "advance", "win", "kind", "dir",
+                                       "no", "source", "customer"])
 
 
 # ── Rendering ───────────────────────────────────────────────────────────────
@@ -565,7 +582,8 @@ def _ratio_cell(r, big: float) -> str:
 
 def _uzum_cell(r) -> str:
     if r.status == "ai":
-        return (f'<span title="{h("AI bozor narxi taxmini: " + r.note)}">🤖 {h(tc.money_uzs(r.uzum_med))}</span>')
+        return (f'<span class="ai-est" title="{h("AI bozor narxi taxmini: " + r.note)}">{views.icon("bot")}'
+                f'{h(tc.money_uzs(r.uzum_med))}</span>')
     if not r.uzum_med:
         return f'<span class="muted">{ext_link(r.uzum_url, "qidirish")}</span>' if r.status != "unit" else "—"
     tip = (f"{r.n} ta mos mahsulot · eng arzoni {tc.money_uzs(r.uzum_min)}"
@@ -575,8 +593,8 @@ def _uzum_cell(r) -> str:
 
 def _go_cell(r) -> str:
     """Two buttons: the lot on the tender site and the item's search on Uzum."""
-    return (ext_link(r.lot.url, "📄 Tender", "btn ghost xs")
-            + (" " + ext_link(r.uzum_url, "🛒 Uzum", "btn ghost xs") if r.status != "unit" else ""))
+    return (views.ext_btn(r.lot.url, "doc", "Tender")
+            + (" " + views.ext_btn(r.uzum_url, "cart", "Uzum") if r.status != "unit" else ""))
 
 
 def price_cols(big: float) -> list[Col]:
@@ -652,6 +670,6 @@ def lot_price_cols(big: float) -> list[Col]:
             lambda r: fmt_local(r.lot.deadline_at) if r.lot.deadline_at else "", "asc", 18),
         Col("customer", "Buyurtmachi", lambda r: (r.lot.customer_name or "").lower() or None,
             lambda c, r, n: _t(r.lot.customer_name, 30), lambda r: r.lot.customer_name or "", "asc", 36, "mid"),
-        Col("go", "Ochish", None, lambda c, r, n: ext_link(r.lot.url, "📄 Tender", "btn ghost xs"), width=20),
+        Col("go", "Ochish", None, lambda c, r, n: views.ext_btn(r.lot.url, "doc", "Tender"), width=20),
         Col("url", "Lot havola", None, lambda c, r, n: "", lambda r: r.lot.url, width=40, cls="hidden"),
     ]

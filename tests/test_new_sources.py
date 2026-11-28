@@ -164,3 +164,31 @@ def test_hayotbirja_generic_title_is_marked_and_replaced(tmp_path):
     src.state.data["9761468"] = {"t": "Сунъий қон айланиши аппаратлари жамланмаси"}
     again = src._remembered(lot, NOW)
     assert again.title == "Сунъий қон айланиши аппаратлари жамланмаси" and not again.title_is_category
+
+
+async def test_hayotbirja_list_is_reused_within_the_hour(tmp_path):
+    src = _Sections(tmp_path, {})
+    first = await src.list_open()
+    calls = list(src.calls)
+    again = await src.list_open()  # 20 minutes later: no new page loads
+    assert src.calls == calls and {x.external_id for x in again} == {x.external_id for x in first}
+
+
+async def test_hayotbirja_429_backs_off_and_keeps_the_last_list(tmp_path):
+    src = _Sections(tmp_path, {})
+    first = await src.list_open()
+    src._listed_at = 0  # an hour later
+
+    async def limited(section):
+        src.calls.append(section)
+        raise hb.RateLimited("429")
+
+    src._section = limited
+    kept = await src.list_open()
+    assert len(kept) == len(first) and src._limited()
+    n = len(src.calls)
+    src._listed_at = 0
+    await src.list_open()  # during the back-off the site is not asked at all
+    assert len(src.calls) == n
+    with pytest.raises(hb.RateLimited):
+        await src.get_lot("1")  # a card not in the cache waits too

@@ -131,7 +131,8 @@ async def security_headers(request: web.Request, handler):
     resp.headers.setdefault("Referrer-Policy", "no-referrer")
     resp.headers.setdefault(
         "Content-Security-Policy",
-        "default-src 'none'; script-src 'self'; connect-src 'self'; style-src 'unsafe-inline'; img-src 'self' data:; "
+        "default-src 'none'; script-src 'self'; connect-src 'self'; style-src 'unsafe-inline'; "
+        "img-src 'self' data:; "
         "form-action 'self'; base-uri 'none'; frame-ancestors 'none'",
     )
     resp.headers.setdefault("Cache-Control", "private, no-store")

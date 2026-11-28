@@ -243,8 +243,9 @@ async def test_home_keeps_sections_apart(client):
     await login(client)
     html = await (await client.get("/tender/")).text()
     assert "Bosh sahifa" in html and "IT tenderlar" in html and "Tovar va xizmat" in html and "Frilans" in html
-    it, rest = html.split("🏛", 1)[1].split("📦", 1)
-    goods, jobs = rest.split("💼", 1)
+    stall, *cards = html.split('<section class="card">')
+    it, goods, jobs = cards
+    assert "Muddati yaqin lotlar" in stall and "Veb-portal" in stall and "Telegram bot kerak" not in stall  # IT only
     assert "Veb-portal" in it and "Telegram bot kerak" not in it  # the IT tender card has no freelance jobs
     assert "Telegram bot kerak" in jobs and "Veb-portal" not in jobs
     assert "Veb-portal" not in goods and "Telegram bot kerak" not in goods
