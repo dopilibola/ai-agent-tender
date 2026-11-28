@@ -97,7 +97,7 @@ def lot_status_pill(lot: Lot, now: datetime | None = None) -> str:
     cls, label = {
         LotStatus.NEW: ("blue", "Yangi"),
         LotStatus.NOTIFIED: ("blue", "Xabar qilingan"),
-        LotStatus.BIDDING: ("bid", "Qatnashyapmiz"),  # lapis: the one colour kept for lots the team bids on
+        LotStatus.BIDDING: ("bid", "Qatnashyapmiz"),  # its own colour: lots the team bids on
         LotStatus.IGNORED: ("", "Kerak emas"),
     }.get(lot.status, ("", str(lot.status)))
     return f'<span class="pill {cls}">{h(label)}</span>'
@@ -135,7 +135,7 @@ def _deadline_cell(_ctx: Ctx, lot: Lot, now: datetime) -> str:
 
 
 def ptag(main: str, sub: str = "", title: str = "") -> str:
-    """Narx yorlig'i: money shown as a cardboard price tag (the site's one ornament)."""
+    """A money cell: the sum, with an optional quiet second line (e.g. the $ value)."""
     tip = f' title="{h(title)}"' if title else ""
     small = f"<small>{h(sub)}</small>" if sub else ""
     return f'<span class="ptag"{tip}><span class="face"><b>{h(main)}</b>{small}</span></span>'
@@ -516,13 +516,13 @@ def table_html(ctx: Ctx, path: str, rows: list, cols: list[Col], *, sort: str, d
         if c.cls == "hidden":
             continue
         if c.sort is None:
-            head.append(f'<th class="{c.cls}">{h(c.label)}</th>')
+            head.append(f'<th class="{c.cls}{" wrap" if len(c.label) > 14 else ""}">{h(c.label)}</th>')
             continue
         is_cur = c.key == sort
         new_dir = ("asc" if direction == "desc" else "desc") if is_cur else c.first_dir
         icon = (SORT_UP if direction == "asc" else SORT_DOWN) if is_cur else SORT_ICON
         href = ctx.url(path, **{**query, "sort": c.key, "dir": new_dir})
-        head.append(f'<th class="{c.cls}{" on" if is_cur else ""}"><a href="{h(href)}" '
+        head.append(f'<th class="{c.cls}{" on" if is_cur else ""}{" wrap" if len(c.label) > 14 else ""}"><a href="{h(href)}" '
                     f'title="Saralash">{h(c.label)}{icon}</a></th>')
     body = []
     for r in rows:

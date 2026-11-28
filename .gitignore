@@ -14,3 +14,11 @@ screenshots/
 *.db
 *.db-wal
 *.db-shm
+
+# Impeccable design-tool working files (screenshots, question rounds); DESIGN.md, design.json and surfaces/ are kept
+.impeccable/review/
+.impeccable/questions/
+.impeccable/mocks/
+.impeccable/build/
+.impeccable/direction-round*.json
+.impeccable/config.local.json

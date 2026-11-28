@@ -57,7 +57,7 @@ document.addEventListener('DOMContentLoaded', function () {
     bubble('user', q);
     var wait = bubble('ai wait', 'AI hujjatlarni o‘qib javob yozmoqda');
     var ta = document.querySelector('form.ask textarea');
-    if (ta) ta.value = '';
+    if (ta) { ta.value = ''; ta.style.height = ''; }
     fetch(form.action, { method: 'POST', body: data, credentials: 'same-origin',
                          headers: { 'X-Requested-With': 'fetch' } })
       .then(function (r) { return r.json().catch(function () { return { ok: false, error: 'Server javobi tushunarsiz (' + r.status + ')' }; }); })
@@ -91,3 +91,9 @@ document.addEventListener('DOMContentLoaded', function () {
     if (l && l.lastElementChild) l.lastElementChild.scrollIntoView({ block: 'end' });
   });
 })();
+// Chat composer grows with its text (no resize grip).
+document.addEventListener('input', function (e) {
+  if (!e.target.matches('form.ask textarea')) return;
+  e.target.style.height = 'auto';
+  e.target.style.height = Math.min(e.target.scrollHeight + 2, 200) + 'px';
+});

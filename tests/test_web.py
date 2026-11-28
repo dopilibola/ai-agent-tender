@@ -292,3 +292,20 @@ async def test_non_it_lots_hidden(client, sessionmaker):
         html = await (await client.get(path)).text()
         assert "FortiGate" not in html and "Veb-portal" in html, path
     assert "FortiGate" in await (await client.get("/tender/lots?s=all")).text()
+
+
+async def test_dark_theme_stays_on_every_page(client):
+    """The theme is one cookie for the whole site: once dark, every page renders dark."""
+    await login(client)
+    token = await csrf(client)
+    r = await client.post("/tender/theme", data={"csrf": token, "theme": "dark", "back": "/tender/"},
+                          allow_redirects=False)
+    assert r.status == 303
+    pages = ["/tender/", "/tender/lots", "/tender/all", "/tender/all/uzum", "/tender/jobs", "/tender/feed",
+             "/tender/profile", "/tender/chat", "/tender/lot/1"]
+    for path in pages:
+        resp = await client.get(path)
+        html = await resp.text()
+        if resp.status == 404:
+            continue
+        assert 'data-theme="dark"' in html, path

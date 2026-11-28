@@ -1,0 +1,1044 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-28T00:54:43+00:00",
+  "title": "Design System: IT tenderlar va frilans ishlar",
+  "extensions": {
+    "colorMeta": {
+      "app-ground": {
+        "role": "neutral",
+        "displayName": "App Ground",
+        "canonical": "#f8fafd",
+        "tonalRamp": [
+          "#11223c",
+          "#1d3b67",
+          "#2a5493",
+          "#366dbe",
+          "#5c8bd1",
+          "#88aadd",
+          "#bccfec",
+          "#ebf1f9"
+        ]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Surface",
+        "canonical": "#ffffff",
+        "tonalRamp": [
+          "#262626",
+          "#424242",
+          "#5e5e5e",
+          "#7a7a7a",
+          "#969696",
+          "#b2b2b2",
+          "#d4d4d4",
+          "#f2f2f2"
+        ]
+      },
+      "soft-surface": {
+        "role": "neutral",
+        "displayName": "Soft Surface",
+        "canonical": "#f1f4f9",
+        "tonalRamp": [
+          "#172236",
+          "#283c5d",
+          "#395584",
+          "#496eab",
+          "#6d8cc0",
+          "#94abd1",
+          "#c2cfe5",
+          "#edf1f7"
+        ]
+      },
+      "hover": {
+        "role": "neutral",
+        "displayName": "Hover Tint",
+        "canonical": "#eef1f6",
+        "tonalRamp": [
+          "#1a2332",
+          "#2e3d57",
+          "#41577b",
+          "#5571a0",
+          "#768eb7",
+          "#9badca",
+          "#c6d0e1",
+          "#eef1f6"
+        ]
+      },
+      "chip": {
+        "role": "neutral",
+        "displayName": "Chip Grey",
+        "canonical": "#eef1f6",
+        "tonalRamp": [
+          "#1a2332",
+          "#2e3d57",
+          "#41577b",
+          "#5571a0",
+          "#768eb7",
+          "#9badca",
+          "#c6d0e1",
+          "#eef1f6"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "#1f1f1f",
+        "tonalRamp": [
+          "#262626",
+          "#424242",
+          "#5e5e5e",
+          "#7a7a7a",
+          "#969696",
+          "#b2b2b2",
+          "#d4d4d4",
+          "#f2f2f2"
+        ]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Muted Grey",
+        "canonical": "#5f6368",
+        "tonalRamp": [
+          "#252628",
+          "#3f4245",
+          "#5a5e63",
+          "#757a80",
+          "#92969b",
+          "#afb2b6",
+          "#d2d3d6",
+          "#f2f2f3"
+        ]
+      },
+      "faint": {
+        "role": "neutral",
+        "displayName": "Faint Grey",
+        "canonical": "#80868b",
+        "tonalRamp": [
+          "#252628",
+          "#3f4345",
+          "#5a5f63",
+          "#757b80",
+          "#92979b",
+          "#afb3b6",
+          "#d2d4d6",
+          "#f2f2f3"
+        ]
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "Line",
+        "canonical": "#e3e6ea",
+        "tonalRamp": [
+          "#21252c",
+          "#39414c",
+          "#515c6c",
+          "#69788c",
+          "#8894a5",
+          "#a8b1bd",
+          "#cdd3da",
+          "#f0f2f4"
+        ]
+      },
+      "line-strong": {
+        "role": "neutral",
+        "displayName": "Line Strong",
+        "canonical": "#c4c7c5",
+        "tonalRamp": [
+          "#252726",
+          "#414442",
+          "#5c615e",
+          "#777e79",
+          "#949996",
+          "#b1b4b2",
+          "#d3d5d3",
+          "#f2f3f2"
+        ]
+      },
+      "nav-hover": {
+        "role": "neutral",
+        "displayName": "Nav Hover",
+        "canonical": "#e9edf3",
+        "tonalRamp": [
+          "#1b2431",
+          "#2f3e56",
+          "#43597a",
+          "#56739e",
+          "#7890b5",
+          "#9caec9",
+          "#c7d1e0",
+          "#eef2f6"
+        ]
+      },
+      "nav-on": {
+        "role": "neutral",
+        "displayName": "Nav On",
+        "canonical": "#d3e3fd",
+        "tonalRamp": [
+          "#031e49",
+          "#06347f",
+          "#084ab4",
+          "#0b60ea",
+          "#3780f6",
+          "#6da2f8",
+          "#accafb",
+          "#e7effe"
+        ]
+      },
+      "nav-on-ink": {
+        "role": "neutral",
+        "displayName": "Nav On Ink",
+        "canonical": "#041e49",
+        "tonalRamp": [
+          "#041e49",
+          "#07347e",
+          "#0a4ab3",
+          "#0d5fe8",
+          "#397ff4",
+          "#6ea2f7",
+          "#adcafa",
+          "#e7effe"
+        ]
+      },
+      "google-blue": {
+        "role": "primary",
+        "displayName": "Google Blue",
+        "canonical": "#0b57d0",
+        "tonalRamp": [
+          "#041e49",
+          "#07357e",
+          "#094bb3",
+          "#0c61e9",
+          "#3881f4",
+          "#6ea3f7",
+          "#adcbfb",
+          "#e7f0fe"
+        ]
+      },
+      "google-blue-deep": {
+        "role": "primary",
+        "displayName": "Deep Google Blue",
+        "canonical": "#0842a0",
+        "tonalRamp": [
+          "#041e49",
+          "#06347e",
+          "#094ab4",
+          "#0c60e9",
+          "#3880f5",
+          "#6da2f8",
+          "#accafb",
+          "#e7f0fe"
+        ]
+      },
+      "blue-wash": {
+        "role": "primary",
+        "displayName": "Blue Wash",
+        "canonical": "#d3e3fd",
+        "tonalRamp": [
+          "#031e49",
+          "#06347f",
+          "#084ab4",
+          "#0b60ea",
+          "#3780f6",
+          "#6da2f8",
+          "#accafb",
+          "#e7effe"
+        ]
+      },
+      "on-blue": {
+        "role": "primary",
+        "displayName": "On Blue",
+        "canonical": "#ffffff",
+        "tonalRamp": [
+          "#262626",
+          "#424242",
+          "#5e5e5e",
+          "#7a7a7a",
+          "#969696",
+          "#b2b2b2",
+          "#d4d4d4",
+          "#f2f2f2"
+        ]
+      },
+      "good": {
+        "role": "status",
+        "displayName": "Good Green",
+        "canonical": "#146c2e",
+        "tonalRamp": [
+          "#0c411b",
+          "#157030",
+          "#1d9f44",
+          "#26cf58",
+          "#4fde79",
+          "#7ee79d",
+          "#b6f1c7",
+          "#e9fbef"
+        ]
+      },
+      "good-wash": {
+        "role": "status",
+        "displayName": "Good Wash",
+        "canonical": "#e6f4ea",
+        "tonalRamp": [
+          "#173520",
+          "#295c37",
+          "#3a834f",
+          "#4baa66",
+          "#6ebf85",
+          "#95d0a6",
+          "#c3e5cc",
+          "#edf7f0"
+        ]
+      },
+      "maybe": {
+        "role": "status",
+        "displayName": "Maybe Amber",
+        "canonical": "#8a5100",
+        "tonalRamp": [
+          "#4c2d00",
+          "#854e00",
+          "#bd6f00",
+          "#f59000",
+          "#ffa92e",
+          "#ffc066",
+          "#ffdba8",
+          "#fff4e5"
+        ]
+      },
+      "maybe-wash": {
+        "role": "status",
+        "displayName": "Maybe Wash",
+        "canonical": "#fef3d6",
+        "tonalRamp": [
+          "#4b3702",
+          "#815f03",
+          "#b88704",
+          "#efaf06",
+          "#fac333",
+          "#fbd36a",
+          "#fde6aa",
+          "#fef8e6"
+        ]
+      },
+      "bad": {
+        "role": "status",
+        "displayName": "Bad Red",
+        "canonical": "#b3261e",
+        "tonalRamp": [
+          "#420e0b",
+          "#721813",
+          "#a2221b",
+          "#d22d23",
+          "#e1544c",
+          "#e9827c",
+          "#f3b8b5",
+          "#fbeae9"
+        ]
+      },
+      "bad-wash": {
+        "role": "status",
+        "displayName": "Bad Wash",
+        "canonical": "#fce8e6",
+        "tonalRamp": [
+          "#440e08",
+          "#76180e",
+          "#a82214",
+          "#db2c1a",
+          "#e95344",
+          "#ef8176",
+          "#f6b8b2",
+          "#fceae8"
+        ]
+      },
+      "bad-line": {
+        "role": "status",
+        "displayName": "Bad Line",
+        "canonical": "#f2b8b5",
+        "tonalRamp": [
+          "#410e0b",
+          "#711814",
+          "#a1231c",
+          "#d02d25",
+          "#e0544d",
+          "#e8827d",
+          "#f2b8b5",
+          "#fbeae9"
+        ]
+      },
+      "bid": {
+        "role": "status",
+        "displayName": "Bid Purple",
+        "canonical": "#7a1fa2",
+        "tonalRamp": [
+          "#300c40",
+          "#54156f",
+          "#771e9e",
+          "#9b27cd",
+          "#b24fdd",
+          "#c77fe6",
+          "#dfb6f1",
+          "#f6eafb"
+        ]
+      },
+      "bid-wash": {
+        "role": "status",
+        "displayName": "Bid Wash",
+        "canonical": "#f3e8fd",
+        "tonalRamp": [
+          "#280646",
+          "#450b7a",
+          "#620fae",
+          "#7f14e1",
+          "#9b3fee",
+          "#b672f3",
+          "#d5aff8",
+          "#f3e8fd"
+        ]
+      },
+      "tooltip": {
+        "role": "neutral",
+        "displayName": "Tooltip Grey",
+        "canonical": "#3c4043",
+        "tonalRamp": [
+          "#242728",
+          "#3f4346",
+          "#595f64",
+          "#747b81",
+          "#91979c",
+          "#aeb3b7",
+          "#d1d4d6",
+          "#f2f2f3"
+        ]
+      },
+      "dark-app-ground": {
+        "role": "neutral",
+        "displayName": "App Ground (dark theme)",
+        "canonical": "#1b1b1b",
+        "tonalRamp": [
+          "#262626",
+          "#424242",
+          "#5e5e5e",
+          "#7a7a7a",
+          "#969696",
+          "#b2b2b2",
+          "#d4d4d4",
+          "#f2f2f2"
+        ]
+      },
+      "dark-surface": {
+        "role": "neutral",
+        "displayName": "Surface (dark theme)",
+        "canonical": "#282a2c",
+        "tonalRamp": [
+          "#242628",
+          "#3f4245",
+          "#5a5e63",
+          "#757a80",
+          "#91969b",
+          "#afb2b6",
+          "#d2d4d6",
+          "#f2f2f3"
+        ]
+      },
+      "dark-soft-surface": {
+        "role": "neutral",
+        "displayName": "Soft Surface (dark theme)",
+        "canonical": "#303134",
+        "tonalRamp": [
+          "#252528",
+          "#404145",
+          "#5b5c62",
+          "#76787f",
+          "#92949b",
+          "#afb1b6",
+          "#d2d3d5",
+          "#f2f2f3"
+        ]
+      },
+      "dark-field": {
+        "role": "neutral",
+        "displayName": "Field (dark theme)",
+        "canonical": "#1f1f1f",
+        "tonalRamp": [
+          "#262626",
+          "#424242",
+          "#5e5e5e",
+          "#7a7a7a",
+          "#969696",
+          "#b2b2b2",
+          "#d4d4d4",
+          "#f2f2f2"
+        ]
+      },
+      "dark-hover": {
+        "role": "neutral",
+        "displayName": "Hover Tint (dark theme)",
+        "canonical": "#333537",
+        "tonalRamp": [
+          "#252628",
+          "#404245",
+          "#5b5e62",
+          "#767a7f",
+          "#93969a",
+          "#b0b2b5",
+          "#d2d4d5",
+          "#f2f2f3"
+        ]
+      },
+      "dark-chip": {
+        "role": "neutral",
+        "displayName": "Chip Grey (dark theme)",
+        "canonical": "#37393b",
+        "tonalRamp": [
+          "#252628",
+          "#404245",
+          "#5b5e62",
+          "#767a7f",
+          "#93969a",
+          "#b0b2b5",
+          "#d2d4d5",
+          "#f2f2f3"
+        ]
+      },
+      "dark-ink": {
+        "role": "neutral",
+        "displayName": "Ink (dark theme)",
+        "canonical": "#e3e3e3",
+        "tonalRamp": [
+          "#262626",
+          "#424242",
+          "#5e5e5e",
+          "#7a7a7a",
+          "#969696",
+          "#b2b2b2",
+          "#d4d4d4",
+          "#f2f2f2"
+        ]
+      },
+      "dark-muted": {
+        "role": "neutral",
+        "displayName": "Muted Grey (dark theme)",
+        "canonical": "#c4c7c5",
+        "tonalRamp": [
+          "#252726",
+          "#414442",
+          "#5c615e",
+          "#777e79",
+          "#949996",
+          "#b1b4b2",
+          "#d3d5d3",
+          "#f2f3f2"
+        ]
+      },
+      "dark-faint": {
+        "role": "neutral",
+        "displayName": "Faint Grey (dark theme)",
+        "canonical": "#8e918f",
+        "tonalRamp": [
+          "#262726",
+          "#414342",
+          "#5d605e",
+          "#797c7a",
+          "#959896",
+          "#b1b4b2",
+          "#d3d4d3",
+          "#f2f2f2"
+        ]
+      },
+      "dark-line": {
+        "role": "neutral",
+        "displayName": "Line (dark theme)",
+        "canonical": "#3c4043",
+        "tonalRamp": [
+          "#242728",
+          "#3f4346",
+          "#595f64",
+          "#747b81",
+          "#91979c",
+          "#aeb3b7",
+          "#d1d4d6",
+          "#f2f2f3"
+        ]
+      },
+      "dark-line-strong": {
+        "role": "neutral",
+        "displayName": "Line Strong (dark theme)",
+        "canonical": "#5f6368",
+        "tonalRamp": [
+          "#252628",
+          "#3f4245",
+          "#5a5e63",
+          "#757a80",
+          "#92969b",
+          "#afb2b6",
+          "#d2d3d6",
+          "#f2f2f3"
+        ]
+      },
+      "dark-nav-hover": {
+        "role": "neutral",
+        "displayName": "Nav Hover (dark theme)",
+        "canonical": "#2d2f31",
+        "tonalRamp": [
+          "#252628",
+          "#3f4245",
+          "#5a5e62",
+          "#757a80",
+          "#92969b",
+          "#afb2b6",
+          "#d2d4d5",
+          "#f2f2f3"
+        ]
+      },
+      "dark-nav-on": {
+        "role": "neutral",
+        "displayName": "Nav On (dark theme)",
+        "canonical": "#004a77",
+        "tonalRamp": [
+          "#00304c",
+          "#005285",
+          "#0075bd",
+          "#0098f5",
+          "#2eb0ff",
+          "#66c5ff",
+          "#a8deff",
+          "#e5f5ff"
+        ]
+      },
+      "dark-nav-on-ink": {
+        "role": "neutral",
+        "displayName": "Nav On Ink (dark theme)",
+        "canonical": "#c2e7ff",
+        "tonalRamp": [
+          "#002e4c",
+          "#005085",
+          "#0072bd",
+          "#0094f5",
+          "#2eadff",
+          "#66c3ff",
+          "#a8ddff",
+          "#e5f5ff"
+        ]
+      },
+      "dark-blue": {
+        "role": "primary",
+        "displayName": "Google Blue (dark theme)",
+        "canonical": "#a8c7fa",
+        "tonalRamp": [
+          "#041e48",
+          "#07347d",
+          "#0a4ab2",
+          "#0d60e7",
+          "#3980f4",
+          "#6ea2f7",
+          "#adcafa",
+          "#e7effe"
+        ]
+      },
+      "dark-blue-light": {
+        "role": "primary",
+        "displayName": "Light Google Blue (dark theme)",
+        "canonical": "#d3e3fd",
+        "tonalRamp": [
+          "#031e49",
+          "#06347f",
+          "#084ab4",
+          "#0b60ea",
+          "#3780f6",
+          "#6da2f8",
+          "#accafb",
+          "#e7effe"
+        ]
+      },
+      "dark-blue-wash": {
+        "role": "primary",
+        "displayName": "Blue Wash (dark theme)",
+        "canonical": "#0842a0",
+        "tonalRamp": [
+          "#041e49",
+          "#06347e",
+          "#094ab4",
+          "#0c60e9",
+          "#3880f5",
+          "#6da2f8",
+          "#accafb",
+          "#e7f0fe"
+        ]
+      },
+      "dark-on-blue": {
+        "role": "primary",
+        "displayName": "On Blue (dark theme)",
+        "canonical": "#062e6f",
+        "tonalRamp": [
+          "#041e49",
+          "#07347e",
+          "#0a4ab3",
+          "#0d60e8",
+          "#3980f4",
+          "#6ea2f7",
+          "#adcafb",
+          "#e7f0fe"
+        ]
+      },
+      "dark-good": {
+        "role": "status",
+        "displayName": "Good Green (dark theme)",
+        "canonical": "#6dd58c",
+        "tonalRamp": [
+          "#113b1e",
+          "#1e6733",
+          "#2a9349",
+          "#37be5f",
+          "#5dd07f",
+          "#88dda1",
+          "#bcecca",
+          "#ebf9ef"
+        ]
+      },
+      "dark-good-wash": {
+        "role": "status",
+        "displayName": "Good Wash (dark theme)",
+        "canonical": "#0f3d21",
+        "tonalRamp": [
+          "#0f3d21",
+          "#1a6a3a",
+          "#259752",
+          "#30c46a",
+          "#57d689",
+          "#84e1a8",
+          "#b9eece",
+          "#ebfaf1"
+        ]
+      },
+      "dark-maybe": {
+        "role": "status",
+        "displayName": "Maybe Amber (dark theme)",
+        "canonical": "#fdd663",
+        "tonalRamp": [
+          "#4c3901",
+          "#836202",
+          "#ba8c02",
+          "#f2b503",
+          "#fcc931",
+          "#fdd768",
+          "#fee9a9",
+          "#fff8e6"
+        ]
+      },
+      "dark-maybe-wash": {
+        "role": "status",
+        "displayName": "Maybe Wash (dark theme)",
+        "canonical": "#3d3000",
+        "tonalRamp": [
+          "#4c3c00",
+          "#856800",
+          "#bd9400",
+          "#f5c100",
+          "#ffd22e",
+          "#ffde66",
+          "#ffeda8",
+          "#fffae5"
+        ]
+      },
+      "dark-bad": {
+        "role": "status",
+        "displayName": "Bad Red (dark theme)",
+        "canonical": "#f2b8b5",
+        "tonalRamp": [
+          "#410e0b",
+          "#711814",
+          "#a1231c",
+          "#d02d25",
+          "#e0544d",
+          "#e8827d",
+          "#f2b8b5",
+          "#fbeae9"
+        ]
+      },
+      "dark-bad-wash": {
+        "role": "status",
+        "displayName": "Bad Wash (dark theme)",
+        "canonical": "#601410",
+        "tonalRamp": [
+          "#420e0b",
+          "#721813",
+          "#a2221b",
+          "#d22c23",
+          "#e1534c",
+          "#e9817c",
+          "#f3b8b5",
+          "#fbeae9"
+        ]
+      },
+      "dark-bad-line": {
+        "role": "status",
+        "displayName": "Bad Line (dark theme)",
+        "canonical": "#8c1d18",
+        "tonalRamp": [
+          "#410e0b",
+          "#711713",
+          "#a1211c",
+          "#d12b24",
+          "#e0534c",
+          "#e9817c",
+          "#f2b8b5",
+          "#fbeae9"
+        ]
+      },
+      "dark-bid": {
+        "role": "status",
+        "displayName": "Bid Purple (dark theme)",
+        "canonical": "#e7b7ff",
+        "tonalRamp": [
+          "#33004c",
+          "#580085",
+          "#7e00bd",
+          "#a300f5",
+          "#b92eff",
+          "#cc66ff",
+          "#e2a8ff",
+          "#f6e5ff"
+        ]
+      },
+      "dark-bid-wash": {
+        "role": "status",
+        "displayName": "Bid Wash (dark theme)",
+        "canonical": "#4a1a63",
+        "tonalRamp": [
+          "#2d103d",
+          "#4e1c69",
+          "#702795",
+          "#9133c2",
+          "#aa59d4",
+          "#c186df",
+          "#dcbaed",
+          "#f5ebfa"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "page-title": {
+        "displayName": "Page Title",
+        "purpose": "Top-bar title and h1; regular weight, as in Gmail."
+      },
+      "stat-value": {
+        "displayName": "Stat Value",
+        "purpose": "Big figures in the stats strip and the money total."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Section headings, home-card titles, the closing-soon heading."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Default text, nav items, buttons and inputs."
+      },
+      "table": {
+        "displayName": "Table",
+        "purpose": "Table cells; money cells at 500."
+      },
+      "table-header": {
+        "displayName": "Table Header",
+        "purpose": "Muted column headers; labels over 14 characters wrap."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Pills, chips, captions, sidebar group headings, dollar lines."
+      },
+      "mono": {
+        "displayName": "Mono",
+        "purpose": "Lot numbers and inline code only."
+      }
+    },
+    "shadows": [
+      {
+        "name": "e0-hairline-lift",
+        "value": "0 1px 2px rgba(60,64,67,.12)",
+        "purpose": "Stats strip at rest and button hover (light theme)."
+      },
+      {
+        "name": "e0-hairline-lift-dark",
+        "value": "0 1px 2px rgba(0,0,0,.4)",
+        "purpose": "Same role in dark theme."
+      },
+      {
+        "name": "selection-ring",
+        "value": "0 0 0 2px var(--brand-bg)",
+        "purpose": "Chosen theme swatch and targeted item panel."
+      },
+      {
+        "name": "focus-inset",
+        "value": "inset 0 0 0 1px var(--brand)",
+        "purpose": "Input focus, paired with a blue border."
+      }
+    ],
+    "motion": [
+      {
+        "name": "state-fade",
+        "value": "0.15s ease (box-shadow, background-color)",
+        "purpose": "Button hover; the only UI transition."
+      },
+      {
+        "name": "spinner",
+        "value": "rotate 0.8s linear infinite",
+        "purpose": "Lot loading in AI chat; stops under prefers-reduced-motion."
+      },
+      {
+        "name": "typing-dots",
+        "value": "1.2s steps(4) infinite",
+        "purpose": "AI answering bubble; static ellipsis under prefers-reduced-motion."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "mobile",
+        "value": "760px",
+        "purpose": "Sidebar becomes a horizontal strip; top bar 56px; stats two per row."
+      },
+      {
+        "name": "chat-stack",
+        "value": "980px",
+        "purpose": "Chat facts panel moves above the conversation."
+      }
+    ],
+    "themes": {
+      "mechanism": "data-theme attribute on <html> from a server cookie: light, dark, auto (auto follows prefers-color-scheme with the dark token set).",
+      "darkTokens": "Every colour token has a dark- counterpart in the frontmatter; see DESIGN.md Colors."
+    }
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Pill-shaped Google-blue action; deepens and lifts on hover.",
+      "html": "<button class=\"ds-btn\">Qatnashamiz</button>",
+      "css": ":host{--bg:#f8fafd;--card:#fff;--soft:#f1f4f9;--field:#fff;--hover:#eef1f6;--chip:#eef1f6;--ink:#1f1f1f;--muted:#5f6368;--faint:#80868b;--line:#e3e6ea;--line2:#c4c7c5;--side-hover:#e9edf3;--side-on:#d3e3fd;--side-on-ink:#041e49;--brand:#0b57d0;--brand-bg:#d3e3fd;--on-ink:#fff;--btn-hover:#0842a0;--good:#146c2e;--good-bg:#e6f4ea;--maybe:#8a5100;--maybe-bg:#fef3d6;--bad:#b3261e;--bad-bg:#fce8e6;--bid:#7a1fa2;--bid-bg:#f3e8fd;--e0:0 1px 2px rgba(60,64,67,.12);font:14px/1.5 Roboto,'Google Sans Text',ui-sans-serif,system-ui,-apple-system,'Segoe UI',Arial,sans-serif;font-variant-numeric:tabular-nums;color:var(--ink)} .ds-btn{background:var(--brand);color:var(--on-ink);border:0;border-radius:999px;padding:0 20px;height:40px;font:inherit;font-weight:500;cursor:pointer;display:inline-flex;align-items:center;gap:8px;transition:box-shadow .15s,background-color .15s} .ds-btn:hover{background:var(--btn-hover);box-shadow:var(--e0)} .ds-btn:focus-visible{outline:2px solid var(--brand);outline-offset:2px}"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Outlined secondary action, e.g. a card's 'see all' link.",
+      "html": "<a class=\"ds-ghost\" href=\"#\">Hamma IT tenderlar<svg class=\"ds-i\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M5 12h14M13 6l6 6-6 6\"/></svg></a>",
+      "css": ":host{--bg:#f8fafd;--card:#fff;--soft:#f1f4f9;--field:#fff;--hover:#eef1f6;--chip:#eef1f6;--ink:#1f1f1f;--muted:#5f6368;--faint:#80868b;--line:#e3e6ea;--line2:#c4c7c5;--side-hover:#e9edf3;--side-on:#d3e3fd;--side-on-ink:#041e49;--brand:#0b57d0;--brand-bg:#d3e3fd;--on-ink:#fff;--btn-hover:#0842a0;--good:#146c2e;--good-bg:#e6f4ea;--maybe:#8a5100;--maybe-bg:#fef3d6;--bad:#b3261e;--bad-bg:#fce8e6;--bid:#7a1fa2;--bid-bg:#f3e8fd;--e0:0 1px 2px rgba(60,64,67,.12);font:14px/1.5 Roboto,'Google Sans Text',ui-sans-serif,system-ui,-apple-system,'Segoe UI',Arial,sans-serif;font-variant-numeric:tabular-nums;color:var(--ink)} .ds-i{width:18px;height:18px;flex:none;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round} .ds-ghost{background:transparent;color:var(--brand);border:1px solid var(--line2);border-radius:999px;padding:0 20px;height:40px;font-weight:500;display:inline-flex;align-items:center;gap:8px;text-decoration:none;transition:background-color .15s} .ds-ghost:hover{background:var(--brand-bg)} .ds-ghost:focus-visible{outline:2px solid var(--brand);outline-offset:2px}"
+    },
+    {
+      "name": "Search and Field",
+      "kind": "input",
+      "refersTo": "input-search",
+      "description": "Pill search on soft grey plus an 8px-cornered field; blue border and inset ring on focus.",
+      "html": "<div class=\"ds-row\"><input class=\"ds-search\" type=\"search\" placeholder=\"Qidirish: nomi, buyurtmachi, lot raqami…\"><input class=\"ds-field\" type=\"text\" placeholder=\"dan\"></div>",
+      "css": ":host{--bg:#f8fafd;--card:#fff;--soft:#f1f4f9;--field:#fff;--hover:#eef1f6;--chip:#eef1f6;--ink:#1f1f1f;--muted:#5f6368;--faint:#80868b;--line:#e3e6ea;--line2:#c4c7c5;--side-hover:#e9edf3;--side-on:#d3e3fd;--side-on-ink:#041e49;--brand:#0b57d0;--brand-bg:#d3e3fd;--on-ink:#fff;--btn-hover:#0842a0;--good:#146c2e;--good-bg:#e6f4ea;--maybe:#8a5100;--maybe-bg:#fef3d6;--bad:#b3261e;--bad-bg:#fce8e6;--bid:#7a1fa2;--bid-bg:#f3e8fd;--e0:0 1px 2px rgba(60,64,67,.12);font:14px/1.5 Roboto,'Google Sans Text',ui-sans-serif,system-ui,-apple-system,'Segoe UI',Arial,sans-serif;font-variant-numeric:tabular-nums;color:var(--ink)} .ds-row{display:flex;gap:8px} .ds-search,.ds-field{font:inherit;color:inherit;height:40px;outline:none;border:1px solid var(--line2);border-radius:8px;padding:0 12px;background:var(--field)} .ds-search{flex:1;min-width:260px;border-radius:999px;background:var(--soft);border-color:transparent;padding:0 18px} .ds-field{width:96px} .ds-search::placeholder,.ds-field::placeholder{color:var(--faint)} .ds-search:focus,.ds-field:focus{border-color:var(--brand);box-shadow:inset 0 0 0 1px var(--brand);background:var(--field)}"
+    },
+    {
+      "name": "Sidebar Navigation",
+      "kind": "nav",
+      "refersTo": "nav-item-active",
+      "description": "Pill nav items with muted line icons; the active item is light blue.",
+      "html": "<nav class=\"ds-nav\"><span class=\"ds-grp\">Davlat tenderlari</span><a class=\"on\" href=\"#\"><svg class=\"ds-i\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M3 21h18M5 21v-9M10 21v-9M14 21v-9M19 21v-9M2.5 9.5 12 4l9.5 5.5z\"/></svg>IT tenderlar</a><a href=\"#\"><svg class=\"ds-i\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M21 8 12 3 3 8v8l9 5 9-5z\"/><path d=\"M3 8l9 5 9-5M12 13v8M7.5 5.5l9 5\"/></svg>Tovar va xizmat</a></nav>",
+      "css": ":host{--bg:#f8fafd;--card:#fff;--soft:#f1f4f9;--field:#fff;--hover:#eef1f6;--chip:#eef1f6;--ink:#1f1f1f;--muted:#5f6368;--faint:#80868b;--line:#e3e6ea;--line2:#c4c7c5;--side-hover:#e9edf3;--side-on:#d3e3fd;--side-on-ink:#041e49;--brand:#0b57d0;--brand-bg:#d3e3fd;--on-ink:#fff;--btn-hover:#0842a0;--good:#146c2e;--good-bg:#e6f4ea;--maybe:#8a5100;--maybe-bg:#fef3d6;--bad:#b3261e;--bad-bg:#fce8e6;--bid:#7a1fa2;--bid-bg:#f3e8fd;--e0:0 1px 2px rgba(60,64,67,.12);font:14px/1.5 Roboto,'Google Sans Text',ui-sans-serif,system-ui,-apple-system,'Segoe UI',Arial,sans-serif;font-variant-numeric:tabular-nums;color:var(--ink)} .ds-i{width:18px;height:18px;flex:none;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round} .ds-nav{display:flex;flex-direction:column;gap:1px;width:240px;background:var(--bg);padding:8px} .ds-grp{font-size:12px;font-weight:500;color:var(--muted);padding:16px 16px 6px} .ds-nav a{display:flex;align-items:center;gap:16px;height:36px;padding:0 16px;border-radius:999px;color:var(--ink);text-decoration:none} .ds-nav a .ds-i{width:20px;height:20px;color:var(--muted)} .ds-nav a:hover{background:var(--side-hover)} .ds-nav a.on{background:var(--side-on);color:var(--side-on-ink);font-weight:600} .ds-nav a.on .ds-i{color:var(--side-on-ink)} .ds-nav a:focus-visible{outline:2px solid var(--brand);outline-offset:2px}"
+    },
+    {
+      "name": "Filter Chips",
+      "kind": "chip",
+      "refersTo": "filter-chip-on",
+      "description": "8px-cornered outlined chips with a muted count; selected turns blue wash, empty fades.",
+      "html": "<div class=\"ds-chips\"><a class=\"ds-chip on\" href=\"#\">Hammasi</a><a class=\"ds-chip\" href=\"#\">50–200 mln <span>3</span></a><a class=\"ds-chip zero\" href=\"#\">50 mln gacha <span>0</span></a></div>",
+      "css": ":host{--bg:#f8fafd;--card:#fff;--soft:#f1f4f9;--field:#fff;--hover:#eef1f6;--chip:#eef1f6;--ink:#1f1f1f;--muted:#5f6368;--faint:#80868b;--line:#e3e6ea;--line2:#c4c7c5;--side-hover:#e9edf3;--side-on:#d3e3fd;--side-on-ink:#041e49;--brand:#0b57d0;--brand-bg:#d3e3fd;--on-ink:#fff;--btn-hover:#0842a0;--good:#146c2e;--good-bg:#e6f4ea;--maybe:#8a5100;--maybe-bg:#fef3d6;--bad:#b3261e;--bad-bg:#fce8e6;--bid:#7a1fa2;--bid-bg:#f3e8fd;--e0:0 1px 2px rgba(60,64,67,.12);font:14px/1.5 Roboto,'Google Sans Text',ui-sans-serif,system-ui,-apple-system,'Segoe UI',Arial,sans-serif;font-variant-numeric:tabular-nums;color:var(--ink)} .ds-chips{display:flex;flex-wrap:wrap;gap:8px} .ds-chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line2);border-radius:8px;height:32px;padding:0 12px;font-size:13px;font-weight:500;color:var(--ink);background:var(--card);text-decoration:none} .ds-chip span{font-size:12px;color:var(--muted)} .ds-chip:hover{background:var(--hover)} .ds-chip.on{background:var(--brand-bg);border-color:transparent;color:var(--side-on-ink)} .ds-chip.zero{opacity:.45} .ds-chip:focus-visible{outline:2px solid var(--brand);outline-offset:2px}"
+    },
+    {
+      "name": "Status Pills",
+      "kind": "chip",
+      "refersTo": "pill-good",
+      "description": "Tonal verdict and status labels with a leading dot.",
+      "html": "<div class=\"ds-pills\"><span class=\"ds-pill good\">Qatnashamiz</span><span class=\"ds-pill maybe\">Shartli</span><span class=\"ds-pill bad\">Yo'q</span><span class=\"ds-pill blue\">Yangi</span><span class=\"ds-pill bid\">Qatnashyapmiz</span><span class=\"ds-pill\">Kutilmoqda</span></div>",
+      "css": ":host{--bg:#f8fafd;--card:#fff;--soft:#f1f4f9;--field:#fff;--hover:#eef1f6;--chip:#eef1f6;--ink:#1f1f1f;--muted:#5f6368;--faint:#80868b;--line:#e3e6ea;--line2:#c4c7c5;--side-hover:#e9edf3;--side-on:#d3e3fd;--side-on-ink:#041e49;--brand:#0b57d0;--brand-bg:#d3e3fd;--on-ink:#fff;--btn-hover:#0842a0;--good:#146c2e;--good-bg:#e6f4ea;--maybe:#8a5100;--maybe-bg:#fef3d6;--bad:#b3261e;--bad-bg:#fce8e6;--bid:#7a1fa2;--bid-bg:#f3e8fd;--e0:0 1px 2px rgba(60,64,67,.12);font:14px/1.5 Roboto,'Google Sans Text',ui-sans-serif,system-ui,-apple-system,'Segoe UI',Arial,sans-serif;font-variant-numeric:tabular-nums;color:var(--ink)} .ds-pills{display:flex;flex-wrap:wrap;gap:8px} .ds-pill{display:inline-flex;align-items:center;gap:6px;border-radius:8px;padding:2px 10px;font-weight:500;font-size:12px;white-space:nowrap;background:var(--chip);color:var(--muted)} .ds-pill::before{content:'';width:6px;height:6px;border-radius:50%;background:currentColor} .ds-pill.good{background:var(--good-bg);color:var(--good)} .ds-pill.maybe{background:var(--maybe-bg);color:var(--maybe)} .ds-pill.bad{background:var(--bad-bg);color:var(--bad)} .ds-pill.blue{background:var(--brand-bg);color:var(--side-on-ink)} .ds-pill.bid{background:var(--bid-bg);color:var(--bid)}"
+    },
+    {
+      "name": "Stats Strip",
+      "kind": "card",
+      "refersTo": "stats-strip",
+      "description": "One bordered strip of figures divided by hairlines; money total first.",
+      "html": "<div class=\"ds-stats\"><div class=\"ds-stat\"><span>Hammasida qatnashish uchun</span><b>312.9 mln so'm</b><small>11 ta lot zakalati</small></div><div class=\"ds-stat\"><span>Ochiq IT lotlar</span><b>11</b><small>muddati o'tmaganlar</small></div><div class=\"ds-stat\"><span>Qatnashsa bo'ladi</span><b class=\"g\">2</b><small>AI xulosasi</small></div></div>",
+      "css": ":host{--bg:#f8fafd;--card:#fff;--soft:#f1f4f9;--field:#fff;--hover:#eef1f6;--chip:#eef1f6;--ink:#1f1f1f;--muted:#5f6368;--faint:#80868b;--line:#e3e6ea;--line2:#c4c7c5;--side-hover:#e9edf3;--side-on:#d3e3fd;--side-on-ink:#041e49;--brand:#0b57d0;--brand-bg:#d3e3fd;--on-ink:#fff;--btn-hover:#0842a0;--good:#146c2e;--good-bg:#e6f4ea;--maybe:#8a5100;--maybe-bg:#fef3d6;--bad:#b3261e;--bad-bg:#fce8e6;--bid:#7a1fa2;--bid-bg:#f3e8fd;--e0:0 1px 2px rgba(60,64,67,.12);font:14px/1.5 Roboto,'Google Sans Text',ui-sans-serif,system-ui,-apple-system,'Segoe UI',Arial,sans-serif;font-variant-numeric:tabular-nums;color:var(--ink)} .ds-stats{display:flex;flex-wrap:wrap;background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:var(--e0);overflow:hidden} .ds-stat{flex:1 1 170px;padding:12px 18px;border-left:1px solid var(--line)} .ds-stat:first-child{border-left:0} .ds-stat>span{display:block;color:var(--muted);font-size:13px} .ds-stat b{display:block;font-size:22px;font-weight:500;line-height:1.3;margin:4px 0 2px} .ds-stat b.g{color:var(--good)} .ds-stat small{display:block;color:var(--muted);font-size:12px}"
+    },
+    {
+      "name": "Closing-Soon List",
+      "kind": "custom",
+      "refersTo": "card",
+      "description": "Home page's first block: lots closing first with sum, time left and verdict.",
+      "html": "<section class=\"ds-soon\"><div class=\"ds-head\"><h2>Muddati yaqin lotlar</h2><span>11 ta ochiq IT lot</span><a href=\"#\">Hammasini ko'rish</a></div><a class=\"ds-r\" href=\"#\"><span class=\"t\"><b>Axborot tizimini texnik qo'llab-quvvatlash xizmatlari</b><small>etender Nº 525340</small></span><span class=\"sum\">550 mln so'm<small>≈ $45,816</small></span><span class=\"left\"><span class=\"soon\">2 kun 7 soat qoldi</span><small>30.11.2026 13:36</small></span><span class=\"v\"><span class=\"ds-pill maybe\">Shartli</span></span></a></section>",
+      "css": ":host{--bg:#f8fafd;--card:#fff;--soft:#f1f4f9;--field:#fff;--hover:#eef1f6;--chip:#eef1f6;--ink:#1f1f1f;--muted:#5f6368;--faint:#80868b;--line:#e3e6ea;--line2:#c4c7c5;--side-hover:#e9edf3;--side-on:#d3e3fd;--side-on-ink:#041e49;--brand:#0b57d0;--brand-bg:#d3e3fd;--on-ink:#fff;--btn-hover:#0842a0;--good:#146c2e;--good-bg:#e6f4ea;--maybe:#8a5100;--maybe-bg:#fef3d6;--bad:#b3261e;--bad-bg:#fce8e6;--bid:#7a1fa2;--bid-bg:#f3e8fd;--e0:0 1px 2px rgba(60,64,67,.12);font:14px/1.5 Roboto,'Google Sans Text',ui-sans-serif,system-ui,-apple-system,'Segoe UI',Arial,sans-serif;font-variant-numeric:tabular-nums;color:var(--ink)} .ds-soon{background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden} .ds-head{display:flex;align-items:center;gap:12px;padding:14px 20px 10px} .ds-head h2{margin:0;font-size:16px;font-weight:500} .ds-head span{color:var(--muted);font-size:13px} .ds-head a{margin-left:auto;font-size:13px;font-weight:500;color:var(--brand);text-decoration:none} .ds-r{display:grid;grid-template-columns:minmax(0,1fr) 150px 150px 130px;gap:16px;align-items:center;padding:11px 20px;border-top:1px solid var(--line);color:var(--ink);text-decoration:none} .ds-r:hover{background:var(--hover)} .ds-r:focus-visible{outline:2px solid var(--brand);outline-offset:-2px} .ds-r .t{min-width:0} .ds-r .t b{display:block;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap} .ds-r small{display:block;color:var(--muted);font-size:12px;font-weight:400} .ds-r .sum{text-align:right;font-weight:500} .ds-r .left{font-size:13px} .ds-r .soon{color:var(--maybe);font-weight:500} .ds-r .v{justify-self:end} .ds-pill{display:inline-flex;align-items:center;gap:6px;border-radius:8px;padding:2px 10px;font-weight:500;font-size:12px} .ds-pill::before{content:'';width:6px;height:6px;border-radius:50%;background:currentColor} .ds-pill.maybe{background:var(--maybe-bg);color:var(--maybe)}"
+    },
+    {
+      "name": "Lot Table",
+      "kind": "custom",
+      "refersTo": "table-frame",
+      "description": "White framed table, sticky muted header; money, AI verdict and deadline lead.",
+      "html": "<div class=\"ds-tw\"><table class=\"ds-grid\"><thead><tr><th>Tavsif</th><th class=\"num\">Narx</th><th>AI xulosa</th><th class=\"on\">Muddat</th><th class=\"num wrap\">Kiritiladigan pul (zakalat)</th></tr></thead><tbody><tr><td>Madaniyat jamg'armasi uchun axborot tizimi</td><td class=\"num\"><b>75 mln so'm</b><small>$6,249</small></td><td><span class=\"ds-pill maybe\">Shartli</span></td><td class=\"soon\">30.11.2026 13:10</td><td class=\"num\">yo'q</td></tr><tr class=\"sel\"><td>Tahliliy panellar va GAT xaritalar</td><td class=\"num\"><b>10.65 mlrd so'm</b><small>$887,283</small></td><td><span class=\"ds-pill bad\">Yo'q</span></td><td>01.12.2026 11:08</td><td class=\"num\">159.8 mln so'm · 1.5%</td></tr></tbody></table></div>",
+      "css": ":host{--bg:#f8fafd;--card:#fff;--soft:#f1f4f9;--field:#fff;--hover:#eef1f6;--chip:#eef1f6;--ink:#1f1f1f;--muted:#5f6368;--faint:#80868b;--line:#e3e6ea;--line2:#c4c7c5;--side-hover:#e9edf3;--side-on:#d3e3fd;--side-on-ink:#041e49;--brand:#0b57d0;--brand-bg:#d3e3fd;--on-ink:#fff;--btn-hover:#0842a0;--good:#146c2e;--good-bg:#e6f4ea;--maybe:#8a5100;--maybe-bg:#fef3d6;--bad:#b3261e;--bad-bg:#fce8e6;--bid:#7a1fa2;--bid-bg:#f3e8fd;--e0:0 1px 2px rgba(60,64,67,.12);font:14px/1.5 Roboto,'Google Sans Text',ui-sans-serif,system-ui,-apple-system,'Segoe UI',Arial,sans-serif;font-variant-numeric:tabular-nums;color:var(--ink)} .ds-tw{overflow:auto;border:1px solid var(--line);border-radius:12px;background:var(--card)} .ds-grid{border-collapse:separate;border-spacing:0;width:100%;font-size:13.5px} .ds-grid th,.ds-grid td{padding:10px 12px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap;vertical-align:middle} .ds-grid tbody tr:last-child td{border-bottom:0} .ds-grid thead th{background:var(--card);font-weight:500;color:var(--muted);font-size:12.5px;line-height:1.3} .ds-grid th.wrap{white-space:normal;min-width:96px;max-width:130px} .ds-grid th.on{color:var(--brand)} .ds-grid .num{text-align:right} .ds-grid td.num{font-weight:500} .ds-grid td.num b{display:block;font-weight:500} .ds-grid td.num small{display:block;font-size:11.5px;color:var(--muted);font-weight:400} .ds-grid tbody tr{cursor:pointer} .ds-grid tbody tr:hover td{background:var(--hover)} .ds-grid tbody tr.sel td{background:var(--brand-bg)} .ds-grid .soon{color:var(--maybe);font-weight:500} .ds-pill{display:inline-flex;align-items:center;gap:6px;border-radius:8px;padding:2px 10px;font-weight:500;font-size:12px} .ds-pill::before{content:'';width:6px;height:6px;border-radius:50%;background:currentColor} .ds-pill.maybe{background:var(--maybe-bg);color:var(--maybe)} .ds-pill.bad{background:var(--bad-bg);color:var(--bad)}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Quiet Workspace",
+    "overview": "**Creative North Star: \"The Quiet Workspace\"**\n\nThe site is the category standard played straight, at Google Workspace craft: a Gmail / Drive shell that disappears into the task. A faint blue-grey app ground holds a sidebar of pill-shaped nav items; content sits on white surfaces with thin grey dividers, gentle 8–16px corners and almost no shadow. One Google blue carries every action, link, focus ring and selected state. Everything else is grey, except the status colours that report a lot's verdict and urgency.\n\nDensity is high but calm. The same few people read many rows a day, for hours, so the tables use 13.5px tabular figures, sticky headers and a fixed reading order: description, money, AI verdict, deadline, then the rest. The home page opens with a plain \"Muddati yaqin lotlar\" list (title, sum, time left, verdict pill), followed by three section cards. Light and dark themes are equal citizens; dark uses Google's dark greys with a light-blue accent.\n\nThe user rejected a themed redesign (bazaar ornament, price-tag cards, handwritten lettering) as too unusual. This system has no ornament, no decorative type and no invented affordances. If a component would look out of place in Gmail or Drive, it does not belong here.",
+    "keyCharacteristics": [
+      "Faint blue-grey ground, white content surfaces, hairline grey dividers.",
+      "Pill navigation with a light-blue active state; pill buttons; 8px-cornered chips and status pills.",
+      "One blue accent; green / amber / red / purple only as status.",
+      "System sans (Roboto where present), tabular figures everywhere, no web fonts.",
+      "Flat by default: one faint shadow on the stats strip and on button hover, nothing more.",
+      "Money, AI verdict and deadline are the first data columns of every lot table."
+    ],
+    "rules": [
+      {
+        "name": "The One Blue Rule",
+        "body": "Blue means \"you can act here\" or \"this is selected\". Never use it for decoration, headings or status.",
+        "section": "colors"
+      },
+      {
+        "name": "The Wash-Not-Fill Rule",
+        "body": "Status and selection are a pale wash with a strong ink of the same hue. A saturated fill is reserved for the primary button and the user's chat bubble.",
+        "section": "colors"
+      },
+      {
+        "name": "The Zero Is Not Good News Rule",
+        "body": "A count in the good colour turns green only when it is above zero; a zero stays in ink.",
+        "section": "colors"
+      },
+      {
+        "name": "The Two-Weight Rule",
+        "body": "Use 400 and 500; 600 marks only the active nav item. Hierarchy comes from size and the muted colour, not from bold.",
+        "section": "typography"
+      },
+      {
+        "name": "The No-Ornament Type Rule",
+        "body": "No display faces, script or handwriting, uppercase kickers or letter-spaced labels.",
+        "section": "typography"
+      },
+      {
+        "name": "The Flat-By-Default Rule",
+        "body": "Cards, panels, tables and chips have a border, not a shadow. A shadow appears only on the stats strip and as hover feedback on buttons.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do keep one accent: Google Blue (`#0b57d0` light, `#a8c7fa` dark) for actions, links, focus and selection only.",
+      "Do put money, AI verdict and deadline in the first data columns of every lot table, right after the description.",
+      "Do show status as a tonal pill (strong ink on a pale wash of the same hue) with a leading dot.",
+      "Do use pill shapes (999px) for nav items, buttons and search, and 8 / 12 / 16px corners for chips, strips and cards.",
+      "Do separate with 1px grey borders and tonal layers; reserve the hairline shadow for the stats strip and button hover.",
+      "Do design every new screen in both themes using the paired dark tokens, and check WCAG AA in each.",
+      "Do use the system sans at 400 / 500 with tabular figures, and draw icons as inline line SVGs."
+    ],
+    "donts": [
+      "Don't introduce a themed world, ornament, textures or decorative illustration; the user rejected the bazaar-themed redesign as too unusual.",
+      "Don't load web fonts or use display, script or handwriting faces.",
+      "Don't frame money in tags, badges or coloured boxes; a sum is bold text with dollars under it.",
+      "Don't use blue for status, or green / amber / red / purple for anything but status.",
+      "Don't colour a zero count as good news.",
+      "Don't use emoji or text glyphs as icons in the UI.",
+      "Don't add a logo or brand mark beyond the initial disc and the product name."
+    ]
+  }
+}

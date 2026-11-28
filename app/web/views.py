@@ -114,8 +114,7 @@ aside .out:hover{background:var(--side-hover);color:var(--side-ink);text-decorat
 aside [data-tip]:hover::after{content:attr(data-tip);position:absolute;left:50%;bottom:46px;transform:translateX(-50%);
 background:#3c4043;color:#fff;font-size:12px;padding:4px 8px;border-radius:4px;white-space:nowrap;pointer-events:none}
 aside .grow{flex:1}
-.top{height:64px;display:flex;align-items:center;gap:14px;padding:0 24px;position:sticky;top:0;background:var(--topbg);
-backdrop-filter:blur(8px);z-index:4}
+.top{height:64px;display:flex;align-items:center;gap:14px;padding:0 24px;position:sticky;top:0;background:var(--bg);z-index:4}
 .top b{font-size:22px;font-weight:400;white-space:nowrap}.top .sub{color:var(--muted);font-size:13px;overflow:hidden;
 text-overflow:ellipsis;white-space:nowrap}.top .tools{margin-left:auto;display:flex;gap:8px;align-items:center}
 main{padding:8px 24px 48px;min-width:0}
@@ -125,11 +124,11 @@ p.sub{color:var(--muted);margin:0 0 16px;max-width:80ch}
 .stats{display:flex;flex-wrap:wrap;background:var(--card);border-radius:12px;box-shadow:var(--e0);border:1px solid var(--line);
 margin:0 0 16px;overflow:hidden}
 .stat{flex:1 1 170px;padding:12px 18px;border-left:1px solid var(--line)}.stat:first-child{border-left:0}
-.stat span{color:var(--muted);font-size:13px;display:block}
+.stat>span{color:var(--muted);font-size:13px;display:block}
 .stat b{display:block;font-size:22px;font-weight:500;line-height:1.3;margin:4px 0 2px}
 .stat b.blue{color:var(--good)}.stat small{color:var(--muted);font-size:12px;display:block}
 form.filters{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 12px;align-items:center}
-form.filters .grp{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:13px}
+form.filters .grp{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:13px;white-space:nowrap}
 input,select,button,textarea{font:inherit;color:inherit}
 input[type=text],input[type=search],input[type=password],input[type=number],input[type=url],select,textarea{background:var(--field);
 border:1px solid var(--line2);border-radius:8px;padding:0 12px;height:40px;outline:none;font-size:14px}
@@ -137,7 +136,7 @@ textarea{padding:10px 12px}
 ::placeholder{color:var(--faint);opacity:1}
 input[type=number]{width:96px}input[type=number].sm{width:72px}
 input:focus,select:focus,textarea:focus{border-color:var(--brand);box-shadow:inset 0 0 0 1px var(--brand)}
-input[type=search]{flex:1;min-width:240px;border-radius:999px;background:var(--soft);border-color:transparent;padding:0 18px}
+input[type=search]{flex:1 1 340px;min-width:300px;border-radius:999px;background:var(--soft);border-color:transparent;padding:0 18px}
 input[type=search]:focus{background:var(--field)}
 form.filters select{max-width:100%}
 button,.btn{background:var(--brand);color:var(--on-ink);border:0;border-radius:999px;padding:0 20px;height:40px;
@@ -148,7 +147,8 @@ button:disabled{opacity:.5;cursor:default;box-shadow:none}
 .btn.ghost,button.ghost{background:transparent;color:var(--brand);border:1px solid var(--line2)}
 .btn.ghost:hover,button.ghost:hover{background:var(--brand-bg);box-shadow:none}
 .panel.item:target{border-color:var(--brand);box-shadow:0 0 0 2px var(--brand-bg)}
-summary{cursor:pointer}
+summary{cursor:pointer;list-style:none}summary::-webkit-details-marker{display:none}
+*{scrollbar-color:var(--line2) transparent;scrollbar-width:thin}
 .dirs{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 16px;margin:0 0 12px}
 .dirs>b{font-size:13px;font-weight:500;margin-right:8px}.dirs>.muted{font-size:12px}
 .dirs .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
@@ -172,7 +172,7 @@ flex-direction:column;gap:14px}
 .home .card h3 small{font-weight:400;color:var(--muted);font-size:12px;margin-left:auto}
 .home .nums{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
 .home .nums div{background:var(--soft);border-radius:12px;padding:10px 12px;min-width:0}
-.home .nums b{display:block;font-size:20px;font-weight:500;line-height:1.3;overflow-wrap:anywhere}.home .nums b.blue{color:var(--good)}
+.home .nums b{display:block;font-size:18px;font-weight:500;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.home .nums b.blue{color:var(--good)}
 .home .nums span{font-size:12px;color:var(--muted)}
 .home ol{min-width:0;margin:0;padding:0;list-style:none;display:grid;gap:0}
 .home li{margin:0;min-width:0}.home li a{display:flex;gap:10px;align-items:center;padding:8px 10px;border-radius:8px;color:var(--ink)}
@@ -181,7 +181,7 @@ flex-direction:column;gap:14px}
 .home li .w{font-size:13px;font-weight:500;color:var(--muted);white-space:nowrap}
 .home .card>.btn{align-self:flex-start}
 .btn.xs{height:32px;padding:0 14px;font-size:13px;gap:6px}.btn.xs svg.i{width:16px;height:16px}
-.btn.link{background:none;border:0;color:var(--brand)}.btn.link:hover{background:var(--brand-bg);box-shadow:none}
+.btn.link{background:none;border:0;color:var(--brand)}.btn svg.i{width:18px;height:18px}.btn.link:hover{background:var(--brand-bg);box-shadow:none}
 .seg{display:inline-flex;border:1px solid var(--line2);border-radius:999px;overflow:hidden}
 .seg a{padding:7px 16px;color:var(--ink);font-size:13px;font-weight:500}.seg a+a{border-left:1px solid var(--line2)}
 .seg a:hover{background:var(--hover);text-decoration:none}.seg a.on{background:var(--brand-bg);color:var(--side-on-ink)}
@@ -204,17 +204,20 @@ dl.kv dt{color:var(--muted)}dl.kv dd{margin:0}
 ul{margin:4px 0;padding-left:20px}li{margin:3px 0}
 .prose{white-space:pre-wrap;word-wrap:break-word;max-width:90ch}
 .muted{color:var(--muted)}.empty{padding:48px;text-align:center;color:var(--muted)}
-.flash{background:var(--good-bg);color:var(--good);border-radius:8px;padding:10px 16px;margin:0 0 14px;font-weight:500}
+.flash{display:flex;align-items:center;gap:10px;background:var(--good-bg);color:var(--good);border-radius:8px;padding:10px 16px;margin:0 0 14px;font-weight:500}
 .flash.err{background:var(--bad-bg);color:var(--bad)}
 footer{padding:0 24px 24px;color:var(--faint);font-size:12px}
 .count{color:var(--muted);margin:0 0 8px;font-size:13px}
 .bulk{display:none;gap:8px;align-items:center;margin:0 0 10px;padding:6px 8px 6px 16px;background:var(--brand-bg);color:var(--side-on-ink);
 border-radius:12px}.bulk.show{display:flex}
-.tablewrap{overflow:auto;background:var(--card);border:1px solid var(--line);border-radius:12px;max-height:calc(100vh - 140px)}
+.tablewrap{overflow:auto;border:1px solid var(--line);border-radius:12px;max-height:calc(100vh - 140px);
+background:linear-gradient(to left,var(--card) 40%,transparent) right center/40px 100% no-repeat local,
+radial-gradient(farthest-side at 100% 50%,rgba(60,64,67,.22),transparent) right center/16px 100% no-repeat scroll,var(--card)}
 table.grid{border-collapse:separate;border-spacing:0;width:100%;font-size:13.5px}
-.grid th,.grid td{padding:10px 14px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap;vertical-align:middle}
+.grid th,.grid td{padding:10px 12px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap;vertical-align:middle}
 .grid tbody tr:last-child td{border-bottom:0}
-.grid thead th{position:sticky;top:0;background:var(--card);font-weight:500;color:var(--muted);z-index:2;font-size:12.5px}
+.grid thead th{position:sticky;top:0;background:var(--card);font-weight:500;color:var(--muted);z-index:2;font-size:12.5px;line-height:1.3}
+.grid thead th.wrap{white-space:normal;min-width:96px;max-width:130px}
 .grid th a{color:var(--muted);display:flex;align-items:center;justify-content:space-between;gap:8px}
 .grid th a:hover{text-decoration:none;color:var(--ink)}
 .grid th .si{color:var(--faint);flex:none}.grid th.on .si,.grid th.on a{color:var(--brand)}
@@ -222,8 +225,8 @@ table.grid{border-collapse:separate;border-spacing:0;width:100%;font-size:13.5px
 .grid tbody tr.sel td{background:var(--brand-bg)}
 .grid td.num,.grid th.num{text-align:right}.grid th.num a{justify-content:flex-end}
 .grid td.num{font-weight:500}
-.grid td.wide{max-width:380px;overflow:hidden;text-overflow:ellipsis}
-.grid td.mid{max-width:220px;overflow:hidden;text-overflow:ellipsis}
+.grid td.wide{max-width:300px;overflow:hidden;text-overflow:ellipsis}
+.grid td.mid{max-width:180px;overflow:hidden;text-overflow:ellipsis}
 .grid td.dim{color:var(--muted);font-size:12px}
 .grid tfoot td{background:var(--soft);font-weight:500;border-top:1px solid var(--line);border-bottom:0;position:sticky;bottom:0}
 .grid .cb{width:44px;padding-right:0}
@@ -256,7 +259,7 @@ background:var(--chip);overflow:hidden}.bar i b{display:block;height:100%;backgr
 .ptag .face{display:inline-flex;flex-direction:column;align-items:flex-end}
 .ptag b{font-weight:500;white-space:nowrap}.ptag small{font-size:11.5px;color:var(--muted);white-space:nowrap}
 .ptag.big b{font-size:22px;font-weight:500}
-.stats .stat.money .ptag{display:inline-flex;margin:4px 0 2px}.stats .stat.money .ptag .face{display:inline-flex}
+.stats .stat.money .ptag{display:inline-flex;margin:4px 0 2px;color:var(--ink)}.stats .stat.money .ptag .face{display:inline-flex}
 /* home: «Muddati yaqin lotlar» — a plain list */
 .soonlist{background:var(--card);border:1px solid var(--line);border-radius:16px;margin:0 0 20px;overflow:hidden}
 .soonlist .head{display:flex;align-items:center;gap:12px;padding:14px 20px 10px}
@@ -303,6 +306,9 @@ _ICON = {
     "sun": '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
     "user": '<circle cx="12" cy="8" r="4"/><path d="M4 20c1.5-3.5 4.5-5 8-5s6.5 1.5 8 5"/>',
     "back": '<path d="M15 18l-6-6 6-6"/>',
+    "next": '<path d="M5 12h14M13 6l6 6-6 6"/>',
+    "prev": '<path d="M19 12H5M11 6l-6 6 6 6"/>',
+    "alert": '<circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5M12 16.5v.01"/>',
     "ext": '<path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>',
 }
 
@@ -321,7 +327,8 @@ def layout(ctx: Ctx, active: str, body: str, *, title: str = "", flash: str = ""
             ("Frilans", "jobs", ctx.url("/jobs"), "jobs", "Frilans ishlar"),
             ("Boshqa", "feed", ctx.url("/feed"), "feed", "Telegram xabarlar")]
     flash = flash or ctx.flash
-    flash_html = f'<div class="flash{" err" if error else ""}">{h(flash)}</div>' if flash else ""
+    flash_html = (f'<div class="flash{" err" if error else ""}">{icon("alert") if error else ""}{h(flash)}</div>'
+                  if flash else "")
     page_title = f"{title} — {ctx.title}" if title else ctx.title
     head = f"""<!DOCTYPE html>
 <html lang="uz" data-theme="{h(ctx.theme)}"><head><meta charset="utf-8">
@@ -439,10 +446,11 @@ def help_box(*paras: str, title: str = "Bu sahifa qanday ishlaydi?") -> str:
 
 
 def stat(label: str, value, note: str = "", blue: bool = False, money: bool = False) -> str:
-    if money:  # the money total is written on a price tag, its caption on its own line under it
+    if money:  # the money total, its caption on its own line under it
         return (f'<div class="stat money"><span>{h(label)}</span><span class="ptag big"><span class="face">'
                 f'<b>{h(value)}</b></span></span><small>{h(note)}</small></div>')
-    return (f'<div class="stat"><span>{h(label)}</span><b class="{"blue" if blue else ""}">{h(value)}</b>'
+    green = blue and str(value).strip() not in ("0", "")  # a zero is not good news
+    return (f'<div class="stat"><span>{h(label)}</span><b class="{"blue" if green else ""}">{h(value)}</b>'
             f'<small>{h(note)}</small></div>')
 
 
@@ -535,7 +543,7 @@ def tenders_page(ctx: Ctx, lots: list[Lot], *, q: str, verdict: str, status: str
              f'{num_inputs(nf)}{_sort_inputs(sort, direction)}')
     xl = ctx.url("/lots.xlsx", q=q, v=verdict, s=status, sm=sm, zk=zk, av=av, sort=sort, dir=direction, **_nf_query(nf))
     down = [n for n, v in health.items() if v.get("alerted")]
-    health_html = (f'<div class="flash err">Hozir ishlamayapti: {h(", ".join(down))}</div>' if down else "")
+    health_html = (f'<div class="flash err">{icon("alert")}Hozir ishlamayapti: {h(", ".join(down))}</div>' if down else "")
     table = table_html(ctx, "/lots", lots, LOT_COLS, sort=sort, direction=direction,
                        query={"q": q, "v": verdict, "s": status, "sm": sm, "zk": zk, "av": av, **_nf_query(nf)},
                        detail=lambda lot: ctx.url(f"/lot/{lot.id}"),
@@ -748,16 +756,16 @@ def job_page(ctx: Ctx, job: Job, proposal: Proposal | None) -> str:
 def _home_card(icon_txt: str, title: str, note: str, nums: list[tuple[str, str, bool]], items: list[tuple[str, str, str]],
                more: tuple[str, str], empty: str) -> str:
     """One section of the start page: 3 numbers, the best few items, a link to the full table."""
-    nums_html = "".join(f'<div><b class="{"blue" if blue else ""}">{h(v)}</b><span>{h(k)}</span></div>'
+    nums_html = "".join(f'<div><b class="{"blue" if blue and str(v) not in ("0", "") else ""}">{h(v)}</b><span>{h(k)}</span></div>'
                         for k, v, blue in nums)
     lis = "".join(f'<li><a href="{h(url)}"><span class="t" title="{h(t)}">{h(t)}</span><span class="w">{h(w)}</span></a></li>'
                   for t, w, url in items) or f'<li class="muted" style="padding:7px 8px">{h(empty)}</li>'
     return (f'<section class="card"><h3>{icon_txt} {h(title)}<small>{h(note)}</small></h3>'
             f'<div class="nums">{nums_html}</div><div><div class="count" style="margin:0 0 4px">Eng yaxshilari</div>'
-            f'<ol>{lis}</ol></div><a class="btn ghost" href="{h(more[0])}">{h(more[1])} →</a></section>')
+            f'<ol>{lis}</ol></div><a class="btn ghost" href="{h(more[0])}">{h(more[1])}{icon("next")}</a></section>')
 
 
-_STALL_VERDICT = {"good": ("good", "Qatnashamiz"), "maybe": ("maybe", "Shartli"), "bad": ("bad", "Yo'q")}
+_VERDICT_PILL = {"good": ("good", "Qatnashamiz"), "maybe": ("maybe", "Shartli"), "bad": ("bad", "Yo'q")}
 
 
 def soon_list(ctx: Ctx, it: list, now: datetime) -> str:
@@ -772,7 +780,7 @@ def soon_list(ctx: Ctx, it: list, now: datetime) -> str:
     for r in rows:
         left = (r.when - now).total_seconds()
         urg = "urgent" if left < 86400 else "soon" if left < 3 * 86400 else ""
-        cls, label = _STALL_VERDICT.get(r.verdict, ("", "Tahlil kutilmoqda"))
+        cls, label = _VERDICT_PILL.get(r.verdict, ("", "Tahlil kutilmoqda"))
         if "Qatnash" in (r.status_text or ""):
             cls, label = "bid", "Qatnashyapmiz"
         usd = tc.fmt_usd(r.usd) if r.usd is not None else ""
@@ -800,10 +808,12 @@ def home_page(ctx: Ctx, *, it: list, goods: list, jobs: list, goods_pledge: floa
         [(r.title, win_txt(r.win) or r.price, r.detail) for r in best(it_good, lambda r: -(r.win or 0))],
         (ctx.url("/lots"), "Hamma IT tenderlar"), "Hozircha tavsiya qilingan IT lot yo'q")
     g_ok = [r for r in goods if r.ai_verdict in ("QATNASHISH MUMKIN", "SHARTLI")]
+    # the unit goes into the label, so the tile shows the whole number at any width ("25.53" / "mlrd so'm · …")
+    pledge_num, _, pledge_unit = tc.money_uzs(goods_pledge).partition(" ")
     goods_card = _home_card(icon("goods"), "Tovar va xizmat", "davlat xaridlari", [
         ("ochiq lot", str(len(goods)), False),
         ("AI: qatnashsa bo'ladi", str(sum(r.ai_verdict == "QATNASHISH MUMKIN" for r in goods)), True),
-        ("zakalat (hammasi)", tc.money_uzs(goods_pledge).replace(" so'm", ""), False)],
+        (f"{pledge_unit} · jami zakalat", pledge_num, False)],
         [((f"{r.customer_name} · {r.title}" if r.is_category else f"{r.title} · {r.customer_name}")
           if r.customer_name else r.title,
           " · ".join(x for x in (win_txt(r.win[0] if r.win else None), tc.money_uzs(r.start_cost, r.currency)) if x),
@@ -909,7 +919,7 @@ def catalog_page(ctx: Ctx, rows: list, *, kind: str, q: str, src: str, region: s
         top = re.sub(r'<p class="count">[^<]*</p>', "", top, count=1)
         uz = (f'<h2 style="margin:18px 0 8px">{icon("cart")}Uzum narxi bilan katta farqlar '
               f'<span class="muted">— eng katta {len(uzum)} tasi (jami {uzum_total})</span> '
-              f'<a class="btn ghost" href="{h(ctx.url("/all/uzum"))}">Hammasi →</a></h2>{top}'
+              f'<a class="btn ghost" href="{h(ctx.url("/all/uzum"))}">Hammasi{icon("next")}</a></h2>{top}'
               f'<h2 style="margin:22px 0 8px">Lotlar</h2>')
     return layout(ctx, "goods", f"""{dir_chips(ctx, "/all", yon, dir_counts, k=kind, q=q, src=src, r=region, sm=sm, zk=zk, av=av, **_nf_query(nf))}{mchips}
 <div class="stats">{stats}</div>{help_box(info, money_note)}{uz}
@@ -1144,7 +1154,7 @@ def price_lot_page(ctx: Ctx, lp, *, big: float, detail: dict, ai: dict | None, a
             f'<p style="margin:10px 0 0;display:flex;gap:6px;flex-wrap:wrap">{ext_btn(lot.url, "doc", "Lotni tender saytida ochish")} '
             f'<a class="btn ghost xs" href="#ai">{icon("bot")}AI xulosasi</a> {chat_button(ctx, lot.id)} '
             f'<a class="btn ghost xs" href="#items">{icon("cart")}Mahsulotlar</a> '
-            f'<a class="btn link xs" href="{h(ctx.url("/all/uzum", f="lots"))}">← Lotlar</a></p></div>')
+            f'<a class="btn link xs" href="{h(ctx.url("/all/uzum", f="lots"))}">{icon("prev")}Lotlar</a></p></div>')
     note = ('<p class="sub">«Tender» — lot asl saytda ochiladi, «Uzum» — mahsulot Uzum\'da qidiriladi. '
             "Qatorning boshqa joyini bossangiz — shu mahsulot haqida batafsil ma'lumot (pastda) ochiladi. "
             "«Navbatda» bo'lganlarini telefon keyingi tekshiruvlarda qidiradi. Uzum'da solishtirib bo'lmagan "
@@ -1258,24 +1268,24 @@ _ICON["send"] = '<path d="M4 12 20 4l-6 16-2.5-6.5z"/><path d="M11.5 13.5 20 4"/
 CSS += """
 .chatwrap{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;align-items:start}
 .chatlog{display:flex;flex-direction:column;gap:12px;padding:4px 0 8px}
-.msg{max-width:min(760px,92%);padding:11px 15px;border-radius:14px;line-height:1.55;font-size:14px;
+.chatlog .msg{max-width:min(760px,92%);padding:11px 15px;border-radius:14px;line-height:1.55;font-size:14px;
   overflow-wrap:anywhere;border:1px solid var(--line)}
-.msg.user{align-self:flex-end;background:var(--brand);color:var(--on-ink);border-color:transparent;
+.chatlog .msg.user{align-self:flex-end;background:var(--brand);color:var(--on-ink);border-color:transparent;
   border-bottom-right-radius:4px;white-space:pre-wrap}
-.msg.ai{align-self:flex-start;background:var(--card);border-bottom-left-radius:4px}
-.msg.ai p{margin:0 0 8px}.msg.ai p:last-child{margin:0}.msg.ai ul,.msg.ai ol{margin:4px 0 8px;padding-left:20px}
-.msg.ai li{margin:2px 0}.msg.ai hr{border:0;border-top:1px solid var(--line);margin:12px 0}
-.msg.ai blockquote{margin:8px 0;padding:9px 12px;background:var(--brand-bg);border-radius:8px}.msg.ai code{font-family:var(--mono);font-size:12.5px}.msg .when{display:block;font-size:11px;opacity:.6;margin-top:6px}
-.msg.err{background:var(--bad-bg);color:var(--bad);border-color:var(--bad-line)}
-.msg.wait{color:var(--muted)}.msg.wait::after{content:"";display:inline-block;width:1.2em;text-align:left;
+.chatlog .msg.ai{align-self:flex-start;background:var(--card);border-bottom-left-radius:4px}
+.chatlog .msg.ai p{margin:0 0 8px}.chatlog .msg.ai p:last-child{margin:0}.chatlog .msg.ai ul,.chatlog .msg.ai ol{margin:4px 0 8px;padding-left:20px}
+.chatlog .msg.ai li{margin:2px 0}.chatlog .msg.ai hr{border:0;border-top:1px solid var(--line);margin:12px 0}
+.chatlog .msg.ai blockquote{margin:8px 0;padding:9px 12px;background:var(--brand-bg);border-radius:8px}.chatlog .msg.ai code{font-family:var(--mono);font-size:12.5px}.chatlog .msg .when{display:block;font-size:11px;opacity:.6;margin-top:6px}
+.chatlog .msg.err{background:var(--bad-bg);color:var(--bad);border-color:var(--bad-line)}
+.chatlog .msg.wait{color:var(--muted)}.chatlog .msg.wait::after{content:"";display:inline-block;width:1.2em;text-align:left;
   animation:dots 1.2s steps(4) infinite}
 @keyframes dots{0%{content:""}25%{content:"."}50%{content:".."}75%{content:"..."}}
 @media (prefers-reduced-motion:reduce){.msg.wait::after{animation:none;content:"…"}}
 form.ask{position:sticky;bottom:0;display:flex;gap:8px;align-items:flex-end;padding:12px 0 4px;
   background:linear-gradient(transparent,var(--bg) 30%)}
-form.ask textarea{flex:1;min-height:46px;max-height:200px;resize:vertical;padding:11px 13px;border-radius:12px;
+form.ask textarea{flex:1;min-height:46px;max-height:200px;resize:none;overflow-y:auto;padding:11px 13px;border-radius:12px;
   font:inherit;line-height:1.4}
-form.ask button{height:46px;border-radius:12px;padding:0 16px}
+form.ask button{width:46px;height:46px;border-radius:50%;padding:0;justify-content:center;flex:none}
 .sugs{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 6px}
 .sugs button{height:auto;padding:6px 11px;border-radius:999px;font-size:12.5px;background:var(--card);color:var(--ink);
   border:1px solid var(--line);font-weight:500}
@@ -1409,7 +1419,7 @@ def chat_index_page(ctx: Ctx, recent: list[dict], it_lots: list, *, value: str =
             f'<a class="row" href="{h(ctx.url("/chat/new", ref=f"{lot.source}-{lot.external_id}"))}">{icon("tenders")}'
             f'<span class="t"><b>{h(lot.title)}</b><br><span class="muted">{h(tc.SOURCE_NAME.get(lot.source, lot.source))}'
             f' · {h(lot.customer_name or "")} · muddat {h(fmt_local(lot.deadline_at))}</span></span>'
-            f'<span class="chip">so\'rash →</span></a>' for lot in it_lots) + "</div>")
+            f'<span class="chip">so\'rash</span></a>' for lot in it_lots) + "</div>")
     body = f'<div class="panel">{form}{help_txt}{err}</div>{chats}{quick}'
     return layout(ctx, "chat", body, title="AI chat", sub="Istalgan lot haqida savol bering — AI hujjatlarini o'qib javob beradi")
 
@@ -1457,7 +1467,7 @@ def chat_page(ctx: Ctx, key: str, chat: dict) -> str:
                 f' va {chat.get("items")} ta pozitsiya' if chat.get("items") else "")) + "</dd></dl>"
             f'<p style="margin:12px 0 0;display:flex;gap:6px;flex-wrap:wrap">'
             f'{ext_btn(chat.get("url"), "doc", "Saytda ochish")}'
-            f'<a class="btn link xs" href="{h(ctx.url("/chat"))}">← Suhbatlar</a></p>'
+            f'<a class="btn link xs" href="{h(ctx.url("/chat"))}">{icon("prev")}Suhbatlar</a></p>'
             + (f'<form method="post" action="{h(ctx.url(f"/chat/{key}/clear"))}" style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">'
                f'<input type="hidden" name="csrf" value="{h(ctx.csrf)}">'
                f'<button class="ghost xs btn" type="submit" name="what" value="clear">Suhbatni tozalash</button>'
