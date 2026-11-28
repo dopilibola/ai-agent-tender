@@ -243,13 +243,14 @@ class HayotbirjaSource:
         self.max_more = max_more
         self._listed: dict[str, LotSummary] = {}
         self._listed_at = 0.0     # monotonic time of the last full listing
-        self._backoff_until = 0.0  # monotonic time: no requests to the site before this
 
     def _limited(self) -> bool:
-        return time.monotonic() < self._backoff_until
+        # wall-clock, kept in the state file: a restart of the bot must not cut the site's wait short
+        return time.time() < float(self.state.data.get("_backoff_until", 0) or 0)
 
     def _hit_limit(self) -> None:
-        self._backoff_until = time.monotonic() + BACKOFF_S
+        self.state.data["_backoff_until"] = time.time() + BACKOFF_S
+        self.state.save()
         log.warning("hayotbirja.rate_limited", extra={"pause_h": BACKOFF_S / 3600})
 
     async def _pause(self) -> None:
@@ -312,7 +313,8 @@ class HayotbirjaSource:
             todo = failed
         if failed:
             raise ValueError(f"hayotbirja: bo'limlar ochilmadi ({', '.join(failed)})")
-        self.state.save(keep=set(out) | {k for k, v in self.state.data.items() if v.get("seen", "") > (
+        self.state.save(keep=set(out) | {"_backoff_until"} | {k for k, v in self.state.data.items()
+                                                            if isinstance(v, dict) and v.get("seen", "") > (
             now - timedelta(days=3)).isoformat()})
         self._listed = out
         self._listed_at = time.monotonic()

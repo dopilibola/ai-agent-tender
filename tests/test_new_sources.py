@@ -192,3 +192,13 @@ async def test_hayotbirja_429_backs_off_and_keeps_the_last_list(tmp_path):
     assert len(src.calls) == n
     with pytest.raises(hb.RateLimited):
         await src.get_lot("1")  # a card not in the cache waits too
+
+
+async def test_hayotbirja_backoff_survives_a_restart(tmp_path):
+    src = _Sections(tmp_path, {})
+    src._hit_limit()
+    again = _Sections(tmp_path, {})  # the bot was restarted
+    assert again._limited()
+    with pytest.raises(ValueError):
+        await again.list_open()  # no list kept in memory yet, and the site is not asked
+    assert again.calls == []
